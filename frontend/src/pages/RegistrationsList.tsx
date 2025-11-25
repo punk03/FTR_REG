@@ -48,7 +48,6 @@ interface FiltersState {
   eventId: number | '';
   search: string;
   paymentStatus: string;
-  registrationStatus: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -151,10 +150,6 @@ export const RegistrationsList: React.FC = () => {
 
       if (paymentStatusFilter) {
         params.paymentStatus = paymentStatusFilter;
-      }
-
-      if (registrationStatusFilter) {
-        params.status = registrationStatusFilter;
       }
 
       if (dateFrom) {
