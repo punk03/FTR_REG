@@ -642,22 +642,37 @@ start_application() {
     if pgrep -f "serve.*dist" > /dev/null || pgrep -f "vite.*preview" > /dev/null || pgrep -f "node.*serve" > /dev/null; then
         print_warning "Frontend server is already running"
     else
-        # Use npx serve (no global install needed) or vite preview
-        # Try vite preview first (already available), fallback to npx serve
+        # Use npx serve with proper SPA configuration
         if command -v npx &> /dev/null; then
-            # Start frontend server using npx serve (port 3000 to avoid root requirement)
+            # Start frontend server using npx serve with SPA mode
+            # -s flag enables single-page app mode (all routes serve index.html)
+            # -l sets the port
             print_info "Starting frontend on port 3000..."
-            nohup npx -y serve -s dist -l 3000 > ../frontend.log 2>&1 &
+            nohup npx -y serve@latest -s dist -l 3000 > ../frontend.log 2>&1 &
             FRONTEND_PID=$!
             echo $FRONTEND_PID > ../frontend.pid
             print_success "Frontend started (PID: $FRONTEND_PID) on port 3000"
+            
+            # Wait longer for serve to start
+            sleep 5
+            
+            # Verify it's running
+            if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+                print_error "Frontend process died. Check frontend.log:"
+                tail -20 ../frontend.log
+                exit 1
+            fi
+            
+            # Test if server is responding
+            sleep 2
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+                print_success "Frontend server is responding"
+            else
+                print_warning "Frontend server may not be responding yet. Check logs: tail -f frontend.log"
+            fi
         else
-            # Fallback: use vite preview
-            print_info "Using vite preview for frontend..."
-            nohup npm run preview -- --port 3000 --host > ../frontend.log 2>&1 &
-            FRONTEND_PID=$!
-            echo $FRONTEND_PID > ../frontend.pid
-            print_success "Frontend started (PID: $FRONTEND_PID) on port 3000"
+            print_error "npx is not available. Cannot start frontend server."
+            exit 1
         fi
         
         # Wait a bit for frontend to start
