@@ -17,22 +17,27 @@ import {
   TextField,
   Button,
   Grid,
-  Card,
-  CardContent,
   FormControlLabel,
   CircularProgress,
   Alert,
   Divider,
+  Stepper,
+  Step,
+  StepLabel,
+  Card,
+  CardContent,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import api from '../services/api';
 import { Event } from '../types';
 import { formatCurrency } from '../utils/format';
-import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
+type StepType = 'select' | 'edit';
+
 export const CombinedPayment: React.FC = () => {
-  // const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
@@ -41,6 +46,7 @@ export const CombinedPayment: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [currentStep, setCurrentStep] = useState<StepType>('select');
   const [paymentGroupName, setPaymentGroupName] = useState('');
   const [paymentsByMethod, setPaymentsByMethod] = useState({
     cash: '',
@@ -75,12 +81,12 @@ export const CombinedPayment: React.FC = () => {
   }, [selectedEventId]);
 
   useEffect(() => {
-    if (selectedRegistrations.size > 0) {
+    if (currentStep === 'edit' && selectedRegistrations.size > 0) {
       calculateTotalPrice();
     } else {
       setPriceCalculation(null);
     }
-  }, [selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount]);
+  }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount]);
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -98,6 +104,7 @@ export const CombinedPayment: React.FC = () => {
           participantsCount: reg.participantsCount,
           federationParticipantsCount: reg.federationParticipantsCount,
           medalsCount: reg.medalsCount,
+          diplomasCount: reg.diplomasCount,
           diplomasList: reg.diplomasList || '',
         };
       });
@@ -119,17 +126,21 @@ export const CombinedPayment: React.FC = () => {
 
       for (const reg of selectedRegs) {
         const data = registrationData[reg.id] || {};
+        const diplomasCount = data.diplomasList 
+          ? data.diplomasList.split('\n').filter((s: string) => s.trim()).length 
+          : (data.diplomasCount || reg.diplomasCount || 0);
+        
         const response = await api.get(`/api/registrations/${reg.id}/calculate-price`, {
           params: {
             participantsCount: data.participantsCount || reg.participantsCount,
             federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
-            diplomasCount: data.diplomasList ? data.diplomasList.split('\n').filter((s: string) => s.trim()).length : reg.diplomasCount,
+            diplomasCount,
             medalsCount: data.medalsCount || reg.medalsCount,
           },
         });
 
         if (payingPerformance) {
-          totalPerformance += response.data.total - response.data.diplomasAndMedalsPrice;
+          totalPerformance += response.data.performancePrice || (response.data.total - response.data.diplomasAndMedalsPrice);
         }
         if (payingDiplomasAndMedals) {
           totalDiplomas += response.data.diplomasAndMedalsPrice;
@@ -138,7 +149,6 @@ export const CombinedPayment: React.FC = () => {
 
       let discount = 0;
       if (applyDiscount && payingPerformance) {
-        // Получаем discountTiers из события
         const event = events.find((e) => e.id === selectedEventId);
         if (event?.discountTiers) {
           try {
@@ -183,6 +193,18 @@ export const CombinedPayment: React.FC = () => {
     }
   };
 
+  const handleNext = () => {
+    if (selectedRegistrations.size === 0) {
+      showError('Выберите хотя бы одну регистрацию');
+      return;
+    }
+    setCurrentStep('edit');
+  };
+
+  const handleBack = () => {
+    setCurrentStep('select');
+  };
+
   const handleSave = async () => {
     if (selectedRegistrations.size === 0) {
       showError('Выберите хотя бы одну регистрацию');
@@ -203,12 +225,17 @@ export const CombinedPayment: React.FC = () => {
       const registrationsData = Array.from(selectedRegistrations).map((id) => {
         const reg = registrations.find((r) => r.id === id);
         const data = registrationData[id] || {};
+        const diplomasCount = data.diplomasList 
+          ? data.diplomasList.split('\n').filter((s: string) => s.trim()).length 
+          : (data.diplomasCount || reg?.diplomasCount || 0);
+        
         return {
-          id,
-          participantsCount: data.participantsCount || reg?.participantsCount,
-          federationParticipantsCount: data.federationParticipantsCount || reg?.federationParticipantsCount,
-          medalsCount: data.medalsCount || reg?.medalsCount,
-          diplomasList: data.diplomasList || reg?.diplomasList,
+          registrationId: id,
+          participantsCount: parseInt(data.participantsCount || reg?.participantsCount || 0),
+          federationParticipantsCount: parseInt(data.federationParticipantsCount || reg?.federationParticipantsCount || 0),
+          medalsCount: parseInt(data.medalsCount || reg?.medalsCount || 0),
+          diplomasCount,
+          diplomasList: data.diplomasList || reg?.diplomasList || '',
         };
       });
 
@@ -230,6 +257,7 @@ export const CombinedPayment: React.FC = () => {
       setSelectedRegistrations(new Set());
       setPaymentGroupName('');
       setPaymentsByMethod({ cash: '', card: '', transfer: '' });
+      setCurrentStep('select');
       fetchRegistrations();
     } catch (error: any) {
       console.error('Error creating payment:', error);
@@ -251,8 +279,10 @@ export const CombinedPayment: React.FC = () => {
     return true;
   });
 
-  return (
-    <Box>
+  const selectedRegistrationsList = registrations.filter((r) => selectedRegistrations.has(r.id));
+
+  const renderSelectStep = () => (
+    <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel>Событие</InputLabel>
@@ -271,266 +301,370 @@ export const CombinedPayment: React.FC = () => {
             ))}
           </Select>
         </FormControl>
+        <Button
+          variant="contained"
+          onClick={handleNext}
+          disabled={selectedRegistrations.size === 0}
+          endIcon={<ArrowForwardIcon />}
+        >
+          Перейти к оплате ({selectedRegistrations.size})
+        </Button>
       </Box>
 
-      {selectedEventId && (
-        <>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
-              <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">Регистрации</Typography>
-                  <Button size="small" onClick={handleSelectAll}>
-                    {selectedRegistrations.size === registrations.length ? 'Снять все' : 'Выбрать все'}
-                  </Button>
-                </Box>
+      <Paper sx={{ p: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">Выберите заявки для оплаты</Typography>
+          <Button size="small" onClick={handleSelectAll}>
+            {selectedRegistrations.size === registrations.length ? 'Снять все' : 'Выбрать все'}
+          </Button>
+        </Box>
 
-                <TextField
-                  fullWidth
-                  placeholder="Поиск..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  sx={{ mb: 2 }}
+        <TextField
+          fullWidth
+          placeholder="Поиск по коллективу, названию номера..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ mb: 2 }}
+        />
+
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox" />
+                  <TableCell>Коллектив</TableCell>
+                  <TableCell>Название номера</TableCell>
+                  <TableCell>Руководители</TableCell>
+                  <TableCell>Тренеры</TableCell>
+                  <TableCell>Участников</TableCell>
+                  <TableCell>Дипломов</TableCell>
+                  <TableCell>Медалей</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredRegistrations.map((reg) => {
+                  const isSelected = selectedRegistrations.has(reg.id);
+                  const leaders = reg.leaders?.map((l: any) => l.person?.fullName).filter(Boolean).join(', ') || '-';
+                  const trainers = reg.trainers?.map((t: any) => t.person?.fullName).filter(Boolean).join(', ') || '-';
+
+                  return (
+                    <TableRow key={reg.id} selected={isSelected}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={isSelected}
+                          onChange={() => handleToggleRegistration(reg.id)}
+                        />
+                      </TableCell>
+                      <TableCell>{reg.collective?.name}</TableCell>
+                      <TableCell>{reg.danceName || '-'}</TableCell>
+                      <TableCell>{leaders}</TableCell>
+                      <TableCell>{trainers}</TableCell>
+                      <TableCell>{reg.participantsCount}</TableCell>
+                      <TableCell>{reg.diplomasCount || 0}</TableCell>
+                      <TableCell>{reg.medalsCount || 0}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+    </>
+  );
+
+  const renderEditStep = () => (
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={handleBack}
+        >
+          Назад к выбору
+        </Button>
+        <Typography variant="h6">
+          Редактирование и оплата ({selectedRegistrations.size} заявок)
+        </Typography>
+      </Box>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Выбранные заявки
+            </Typography>
+            {selectedRegistrationsList.map((reg) => {
+              const data = registrationData[reg.id] || {};
+              const leaders = reg.leaders?.map((l: any) => l.person?.fullName).filter(Boolean).join(', ') || '-';
+              const trainers = reg.trainers?.map((t: any) => t.person?.fullName).filter(Boolean).join(', ') || '-';
+
+              return (
+                <Card key={reg.id} sx={{ mb: 2 }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {reg.collective?.name} - {reg.danceName || 'Без названия'}
+                    </Typography>
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Руководители: {leaders}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Тренеры: {trainers}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Дисциплина: {reg.discipline?.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Номинация: {reg.nomination?.name}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                    <Divider sx={{ my: 2 }} />
+                    <Grid container spacing={2}>
+                      <Grid item xs={6} sm={3}>
+                        <TextField
+                          fullWidth
+                          label="Участников"
+                          type="number"
+                          size="small"
+                          value={data.participantsCount || reg.participantsCount}
+                          onChange={(e) => {
+                            setRegistrationData({
+                              ...registrationData,
+                              [reg.id]: {
+                                ...data,
+                                participantsCount: e.target.value,
+                              },
+                            });
+                          }}
+                          inputProps={{ min: 0 }}
+                        />
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <TextField
+                          fullWidth
+                          label="Участников федерации"
+                          type="number"
+                          size="small"
+                          value={data.federationParticipantsCount || reg.federationParticipantsCount}
+                          onChange={(e) => {
+                            setRegistrationData({
+                              ...registrationData,
+                              [reg.id]: {
+                                ...data,
+                                federationParticipantsCount: e.target.value,
+                              },
+                            });
+                          }}
+                          inputProps={{ min: 0 }}
+                        />
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <TextField
+                          fullWidth
+                          label="Медалей"
+                          type="number"
+                          size="small"
+                          value={data.medalsCount || reg.medalsCount}
+                          onChange={(e) => {
+                            setRegistrationData({
+                              ...registrationData,
+                              [reg.id]: {
+                                ...data,
+                                medalsCount: e.target.value,
+                              },
+                            });
+                          }}
+                          inputProps={{ min: 0 }}
+                        />
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <TextField
+                          fullWidth
+                          label="Дипломов"
+                          type="number"
+                          size="small"
+                          value={data.diplomasCount || reg.diplomasCount || 0}
+                          onChange={(e) => {
+                            setRegistrationData({
+                              ...registrationData,
+                              [reg.id]: {
+                                ...data,
+                                diplomasCount: e.target.value,
+                              },
+                            });
+                          }}
+                          inputProps={{ min: 0 }}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="ФИО на дипломы (каждое на новой строке)"
+                          multiline
+                          rows={3}
+                          value={data.diplomasList || reg.diplomasList || ''}
+                          onChange={(e) => {
+                            setRegistrationData({
+                              ...registrationData,
+                              [reg.id]: {
+                                ...data,
+                                diplomasList: e.target.value,
+                              },
+                            });
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Оплата
+            </Typography>
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={payingPerformance}
+                  onChange={(e) => setPayingPerformance(e.target.checked)}
                 />
+              }
+              label="Оплатить выступления"
+            />
 
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                    <CircularProgress />
-                  </Box>
-                ) : (
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell padding="checkbox" />
-                          <TableCell>Коллектив</TableCell>
-                          <TableCell>Название</TableCell>
-                          <TableCell>Участников</TableCell>
-                          <TableCell>Федер.</TableCell>
-                          <TableCell>Медали</TableCell>
-                          <TableCell>Дипломы</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {filteredRegistrations.map((reg) => {
-                          const isSelected = selectedRegistrations.has(reg.id);
-                          const data = registrationData[reg.id] || {};
-
-                          return (
-                            <TableRow key={reg.id} selected={isSelected}>
-                              <TableCell padding="checkbox">
-                                <Checkbox
-                                  checked={isSelected}
-                                  onChange={() => handleToggleRegistration(reg.id)}
-                                />
-                              </TableCell>
-                              <TableCell>{reg.collective?.name}</TableCell>
-                              <TableCell>{reg.danceName || '-'}</TableCell>
-                              <TableCell>
-                                <TextField
-                                  size="small"
-                                  type="number"
-                                  value={data.participantsCount || reg.participantsCount}
-                                  onChange={(e) => {
-                                    setRegistrationData({
-                                      ...registrationData,
-                                      [reg.id]: {
-                                        ...data,
-                                        participantsCount: e.target.value,
-                                      },
-                                    });
-                                  }}
-                                  inputProps={{ min: 0, style: { width: 60 } }}
-                                  disabled={!isSelected}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  size="small"
-                                  type="number"
-                                  value={data.federationParticipantsCount || reg.federationParticipantsCount}
-                                  onChange={(e) => {
-                                    setRegistrationData({
-                                      ...registrationData,
-                                      [reg.id]: {
-                                        ...data,
-                                        federationParticipantsCount: e.target.value,
-                                      },
-                                    });
-                                  }}
-                                  inputProps={{ min: 0, style: { width: 60 } }}
-                                  disabled={!isSelected}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  size="small"
-                                  type="number"
-                                  value={data.medalsCount || reg.medalsCount}
-                                  onChange={(e) => {
-                                    setRegistrationData({
-                                      ...registrationData,
-                                      [reg.id]: {
-                                        ...data,
-                                        medalsCount: e.target.value,
-                                      },
-                                    });
-                                  }}
-                                  inputProps={{ min: 0, style: { width: 60 } }}
-                                  disabled={!isSelected}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <TextField
-                                  size="small"
-                                  multiline
-                                  rows={2}
-                                  value={data.diplomasList || reg.diplomasList || ''}
-                                  onChange={(e) => {
-                                    setRegistrationData({
-                                      ...registrationData,
-                                      [reg.id]: {
-                                        ...data,
-                                        diplomasList: e.target.value,
-                                      },
-                                    });
-                                  }}
-                                  inputProps={{ style: { width: 150 } }}
-                                  disabled={!isSelected}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Оплата
-                </Typography>
-
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={payingPerformance}
-                      onChange={(e) => setPayingPerformance(e.target.checked)}
-                    />
-                  }
-                  label="Оплатить выступления"
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={payingDiplomasAndMedals}
+                  onChange={(e) => setPayingDiplomasAndMedals(e.target.checked)}
                 />
+              }
+              label="Оплатить дипломы и медали"
+            />
 
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={payingDiplomasAndMedals}
-                      onChange={(e) => setPayingDiplomasAndMedals(e.target.checked)}
-                    />
-                  }
-                  label="Оплатить дипломы и медали"
-                />
-
-                {payingPerformance && (
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={applyDiscount}
-                        onChange={(e) => setApplyDiscount(e.target.checked)}
-                      />
-                    }
-                    label="Применить откат"
+            {payingPerformance && (
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={applyDiscount}
+                    onChange={(e) => setApplyDiscount(e.target.checked)}
                   />
+                }
+                label="Применить откат"
+              />
+            )}
+
+            <TextField
+              fullWidth
+              label="Название группы платежей"
+              value={paymentGroupName}
+              onChange={(e) => setPaymentGroupName(e.target.value)}
+              sx={{ mt: 2 }}
+            />
+
+            <Divider sx={{ my: 2 }} />
+
+            {priceCalculation && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Выступления: {formatCurrency(priceCalculation.performance)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Дипломы/медали: {formatCurrency(priceCalculation.diplomas)}
+                </Typography>
+                {priceCalculation.discount > 0 && (
+                  <Typography variant="body2" color="error">
+                    Откат: -{formatCurrency(priceCalculation.discount)}
+                  </Typography>
                 )}
+                <Typography variant="h6" sx={{ mt: 1 }}>
+                  Итого: {formatCurrency(priceCalculation.total)}
+                </Typography>
+              </Box>
+            )}
 
-                <TextField
-                  fullWidth
-                  label="Название группы платежей"
-                  value={paymentGroupName}
-                  onChange={(e) => setPaymentGroupName(e.target.value)}
-                  sx={{ mt: 2 }}
-                />
+            <TextField
+              fullWidth
+              label="Наличные"
+              type="number"
+              value={paymentsByMethod.cash}
+              onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, cash: e.target.value })}
+              sx={{ mb: 2 }}
+              inputProps={{ min: 0 }}
+            />
 
-                <Divider sx={{ my: 2 }} />
+            <TextField
+              fullWidth
+              label="Карта"
+              type="number"
+              value={paymentsByMethod.card}
+              onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, card: e.target.value })}
+              sx={{ mb: 2 }}
+              inputProps={{ min: 0 }}
+            />
 
-                {priceCalculation && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Выступления: {formatCurrency(priceCalculation.performance)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Дипломы/медали: {formatCurrency(priceCalculation.diplomas)}
-                    </Typography>
-                    {priceCalculation.discount > 0 && (
-                      <Typography variant="body2" color="error">
-                        Откат: -{formatCurrency(priceCalculation.discount)}
-                      </Typography>
-                    )}
-                    <Typography variant="h6" sx={{ mt: 1 }}>
-                      Итого: {formatCurrency(priceCalculation.total)}
-                    </Typography>
-                  </Box>
+            <TextField
+              fullWidth
+              label="Перевод"
+              type="number"
+              value={paymentsByMethod.transfer}
+              onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, transfer: e.target.value })}
+              sx={{ mb: 2 }}
+              inputProps={{ min: 0 }}
+            />
+
+            {priceCalculation && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Сумма: {formatCurrency(
+                  parseFloat(paymentsByMethod.cash || '0') +
+                  parseFloat(paymentsByMethod.card || '0') +
+                  parseFloat(paymentsByMethod.transfer || '0')
                 )}
+              </Alert>
+            )}
 
-                <TextField
-                  fullWidth
-                  label="Наличные"
-                  type="number"
-                  value={paymentsByMethod.cash}
-                  onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, cash: e.target.value })}
-                  sx={{ mb: 2 }}
-                  inputProps={{ min: 0 }}
-                />
+            <Button
+              fullWidth
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+              onClick={handleSave}
+              disabled={saving || selectedRegistrations.size === 0}
+            >
+              {saving ? 'Сохранение...' : 'Создать оплату'}
+            </Button>
+          </Paper>
+        </Grid>
+      </Grid>
+    </>
+  );
 
-                <TextField
-                  fullWidth
-                  label="Карта"
-                  type="number"
-                  value={paymentsByMethod.card}
-                  onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, card: e.target.value })}
-                  sx={{ mb: 2 }}
-                  inputProps={{ min: 0 }}
-                />
+  return (
+    <Box>
+      <Stepper activeStep={currentStep === 'select' ? 0 : 1} sx={{ mb: 3 }}>
+        <Step>
+          <StepLabel>Выбор заявок</StepLabel>
+        </Step>
+        <Step>
+          <StepLabel>Редактирование и оплата</StepLabel>
+        </Step>
+      </Stepper>
 
-                <TextField
-                  fullWidth
-                  label="Перевод"
-                  type="number"
-                  value={paymentsByMethod.transfer}
-                  onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, transfer: e.target.value })}
-                  sx={{ mb: 2 }}
-                  inputProps={{ min: 0 }}
-                />
-
-                {priceCalculation && (
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    Сумма: {formatCurrency(
-                      parseFloat(paymentsByMethod.cash || '0') +
-                      parseFloat(paymentsByMethod.card || '0') +
-                      parseFloat(paymentsByMethod.transfer || '0')
-                    )}
-                  </Alert>
-                )}
-
-                <Button
-                  fullWidth
-                  variant="contained"
-                  startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
-                  onClick={handleSave}
-                  disabled={saving || selectedRegistrations.size === 0}
-                >
-                  {saving ? 'Сохранение...' : 'Создать оплату'}
-                </Button>
-              </Paper>
-            </Grid>
-          </Grid>
-        </>
-      )}
+      {currentStep === 'select' ? renderSelectStep() : renderEditStep()}
     </Box>
   );
 };
-

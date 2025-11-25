@@ -55,7 +55,7 @@ export const Layout: React.FC<LayoutProps> = ({ darkMode, toggleDarkMode }) => {
     { text: t('navigation.home'), icon: <DashboardIcon />, path: '/', roles: [] },
     { text: t('navigation.registrations'), icon: <PersonAddIcon />, path: '/registrations', roles: ['ADMIN', 'REGISTRATOR'] },
     { text: t('navigation.accounting'), icon: <AccountBalanceIcon />, path: '/accounting', roles: ['ADMIN', 'ACCOUNTANT'] },
-    { text: t('navigation.combinedPayment'), icon: <AccountBalanceIcon />, path: '/combined-payment', roles: ['ADMIN', 'REGISTRATOR'] },
+    { text: t('navigation.payment'), icon: <AccountBalanceIcon />, path: '/combined-payment', roles: ['ADMIN', 'REGISTRATOR'] },
     { text: t('navigation.diplomas'), icon: <SchoolIcon />, path: '/diplomas', roles: ['ADMIN', 'REGISTRATOR'] },
     { text: t('navigation.statistics'), icon: <BarChartIcon />, path: '/statistics', roles: ['ADMIN', 'STATISTICIAN', 'ACCOUNTANT'] },
     { text: t('navigation.admin'), icon: <SettingsIcon />, path: '/admin', roles: ['ADMIN'] },

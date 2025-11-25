@@ -30,7 +30,7 @@
     "diplomas": "Дипломы",
     "statistics": "Статистика",
     "admin": "Админ-панель",
-    "combinedPayment": "Объединенная оплата"
+    "payment": "Оплата"
   },
   "registrations": {
     "title": "Регистрации",

@@ -67,7 +67,13 @@ router.post(
         const regData = registrationsData?.find((r: any) => r.registrationId === reg.id);
         const participantsCount = regData?.participantsCount ?? reg.participantsCount;
         const federationParticipantsCount = regData?.federationParticipantsCount ?? reg.federationParticipantsCount;
-        const diplomasCount = regData?.diplomasCount ?? reg.diplomasCount;
+        // Если есть diplomasList, считаем количество строк, иначе используем diplomasCount
+        let diplomasCount = reg.diplomasCount;
+        if (regData?.diplomasList) {
+          diplomasCount = regData.diplomasList.split('\n').filter((s: string) => s.trim()).length;
+        } else if (regData?.diplomasCount !== undefined) {
+          diplomasCount = regData.diplomasCount;
+        }
         const medalsCount = regData?.medalsCount ?? reg.medalsCount;
 
         // Get event price
@@ -126,7 +132,13 @@ router.post(
         const regData = registrationsData?.find((r: any) => r.registrationId === reg.id);
         const participantsCount = regData?.participantsCount ?? reg.participantsCount;
         const federationParticipantsCount = regData?.federationParticipantsCount ?? reg.federationParticipantsCount;
-        const diplomasCount = regData?.diplomasCount ?? reg.diplomasCount;
+        // Если есть diplomasList, считаем количество строк, иначе используем diplomasCount
+        let diplomasCount = reg.diplomasCount;
+        if (regData?.diplomasList) {
+          diplomasCount = regData.diplomasList.split('\n').filter((s: string) => s.trim()).length;
+        } else if (regData?.diplomasCount !== undefined) {
+          diplomasCount = regData.diplomasCount;
+        }
         const medalsCount = regData?.medalsCount ?? reg.medalsCount;
 
         // Update registration if data provided
