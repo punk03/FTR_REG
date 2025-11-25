@@ -58,7 +58,7 @@ interface ParsedRow {
   };
 }
 
-// Функция парсинга категории из строки вида "1. Jazz Соло Бэби Beginners"
+// Функция парсинга категории из строки вида "1. Jazz Соло Бэби Beginners" или "1. СТК (свободная танцевальная категория) (начинающие) Формейшн Бэби Beginners"
 async function parseCategoryString(
   categoryStr: string,
   disciplines: any[],
@@ -78,46 +78,92 @@ async function parseCategoryString(
     return result;
   }
 
-  // Удаляем точки и лишние пробелы
-  const cleaned = categoryStr.trim().replace(/^[\d.]+/, '').trim();
-
   // Получаем номер блока из начала строки
   const blockMatch = categoryStr.match(/^(\d+)\./);
   if (blockMatch) {
     result.blockNumber = parseInt(blockMatch[1]);
   }
 
-  // Разбиваем на слова
-  const words = cleaned.split(/\s+/);
+  // Удаляем номер блока и точки
+  let cleaned = categoryStr.trim().replace(/^[\d.]+/, '').trim();
+  
+  // Удаляем содержимое в скобках (например, "(свободная танцевальная категория)", "(начинающие)")
+  cleaned = cleaned.replace(/\([^)]*\)/g, '').trim();
+  
+  // Удаляем лишние пробелы
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
-  // Ищем дисциплину (обычно первое слово после номера)
-  for (const word of words) {
-    const discipline = disciplines.find((d) => d.name.toLowerCase() === word.toLowerCase());
+  // Разбиваем на слова
+  const words = cleaned.split(/\s+/).filter(w => w.length > 0);
+
+  // Ищем дисциплину - проверяем каждое слово и комбинации слов
+  for (let i = 0; i < words.length; i++) {
+    // Проверяем одно слово
+    const discipline = disciplines.find((d) => d.name.toLowerCase() === words[i].toLowerCase());
     if (discipline) {
       result.disciplineName = discipline.name;
       break;
     }
+    
+    // Проверяем комбинации из двух слов (для составных названий типа "Street dance show")
+    if (i < words.length - 1) {
+      const twoWords = `${words[i]} ${words[i + 1]}`;
+      const discipline2 = disciplines.find((d) => d.name.toLowerCase() === twoWords.toLowerCase());
+      if (discipline2) {
+        result.disciplineName = discipline2.name;
+        break;
+      }
+    }
   }
 
-  // Ищем номинацию
-  for (const word of words) {
-    const nomination = nominations.find((n) => n.name.toLowerCase() === word.toLowerCase());
+  // Ищем номинацию - проверяем каждое слово
+  for (let i = 0; i < words.length; i++) {
+    const nomination = nominations.find((n) => {
+      const nLower = n.name.toLowerCase();
+      const wordLower = words[i].toLowerCase();
+      // Точное совпадение или начало слова (для "Дуэт/Пара")
+      return nLower === wordLower || nLower.startsWith(wordLower) || wordLower.startsWith(nLower.split('/')[0].toLowerCase());
+    });
     if (nomination) {
       result.nominationName = nomination.name;
       break;
     }
+    
+    // Проверяем комбинации из двух слов
+    if (i < words.length - 1) {
+      const twoWords = `${words[i]} ${words[i + 1]}`;
+      const nomination2 = nominations.find((n) => n.name.toLowerCase() === twoWords.toLowerCase());
+      if (nomination2) {
+        result.nominationName = nomination2.name;
+        break;
+      }
+    }
   }
 
-  // Ищем возраст
-  for (const word of words) {
-    const age = ages.find((a) => a.name.toLowerCase() === word.toLowerCase());
+  // Ищем возраст - проверяем каждое слово
+  for (let i = 0; i < words.length; i++) {
+    const age = ages.find((a) => {
+      const aLower = a.name.toLowerCase();
+      const wordLower = words[i].toLowerCase();
+      return aLower === wordLower || aLower.startsWith(wordLower) || wordLower.startsWith(aLower.split(' ')[0].toLowerCase());
+    });
     if (age) {
       result.ageName = age.name;
       break;
     }
+    
+    // Проверяем комбинации из двух слов (для "Мини 1", "Мини 2", "Ювеналы 1", "Ювеналы 2")
+    if (i < words.length - 1) {
+      const twoWords = `${words[i]} ${words[i + 1]}`;
+      const age2 = ages.find((a) => a.name.toLowerCase() === twoWords.toLowerCase());
+      if (age2) {
+        result.ageName = age2.name;
+        break;
+      }
+    }
   }
 
-  // Ищем категорию (обычно последнее слово)
+  // Ищем категорию (обычно последнее слово, но может быть и в середине)
   for (let i = words.length - 1; i >= 0; i--) {
     const category = categories.find((c) => c.name.toLowerCase() === words[i].toLowerCase());
     if (category) {
@@ -211,10 +257,16 @@ router.post(
           };
 
           try {
-          // Колонка A: номер (категория)
+          // Пропускаем пустые строки
           const categoryCell = row.getCell(1);
+          const collectiveCell = row.getCell(2);
+          if (!categoryCell.value && !collectiveCell.value) {
+            return; // Пустая строка, пропускаем
+          }
+
+          // Колонка A (1): номер (категория)
           if (categoryCell.value) {
-            parsedRow.categoryString = String(categoryCell.value);
+            parsedRow.categoryString = String(categoryCell.value).trim();
             const parsed = await parseCategoryString(
               parsedRow.categoryString,
               disciplines,
