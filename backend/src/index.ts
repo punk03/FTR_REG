@@ -166,6 +166,8 @@ app.use(errorHandler);
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`CORS configured origins:`, corsOrigins);
+  console.log(`CORS_ORIGIN env var:`, process.env.CORS_ORIGIN || 'not set');
 });
 
 // Graceful shutdown
