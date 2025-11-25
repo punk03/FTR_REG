@@ -210,6 +210,30 @@ check_docker_compose() {
     fi
 }
 
+# Check and install Node.js if needed
+check_nodejs() {
+    if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+        print_info "Node.js/npm is not installed. Installing Node.js 20.x..."
+        
+        # Install Node.js 20.x using NodeSource repository
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - || {
+            print_error "Failed to add NodeSource repository"
+            exit 1
+        }
+        
+        sudo apt-get install -y nodejs || {
+            print_error "Failed to install Node.js"
+            exit 1
+        }
+        
+        print_success "Node.js installed: $(node --version)"
+        print_success "npm installed: $(npm --version)"
+    else
+        print_success "Node.js is already installed: $(node --version)"
+        print_success "npm is already installed: $(npm --version)"
+    fi
+}
+
 # Check if project is already deployed
 check_existing_deployment() {
     if [ -f ".deployed" ]; then
@@ -584,6 +608,9 @@ main() {
     # Check/Install Docker
     check_docker
     check_docker_compose
+    
+    # Check/Install Node.js
+    check_nodejs
     
     # If running as root, ensure APP_USER has proper permissions
     if [ "$EUID" -eq 0 ] && [ -n "$APP_USER" ] && [ "$APP_USER" != "root" ]; then
