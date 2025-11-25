@@ -93,6 +93,7 @@ export const RegistrationsList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
   const navigate = useNavigate();
