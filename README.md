@@ -38,12 +38,40 @@ ftr-registration-system/
 - Docker и Docker Compose
 - npm или yarn
 
-### Установка / Installation
+### Установка на Ubuntu 24 (Production) / Installation on Ubuntu 24 (Production)
+
+Для установки на сервер Ubuntu 24 используйте скрипт установки:
+
+```bash
+# Скачать и запустить скрипт установки
+curl -fsSL https://raw.githubusercontent.com/punk03/FTR_REG/main/install.sh -o install.sh
+chmod +x install.sh
+./install.sh
+```
+
+Или клонировать и запустить вручную:
+
+```bash
+git clone https://github.com/punk03/FTR_REG.git ~/FTR_REG
+cd ~/FTR_REG
+chmod +x install.sh
+./install.sh
+```
+
+Скрипт автоматически:
+- Установит необходимые зависимости (Git, Docker и т.д.)
+- Клонирует или обновит репозиторий с GitHub
+- Установит правильные права доступа
+- Запустит скрипт развертывания автоматически
+
+Для обновления проекта в будущем просто запустите `./install.sh` снова.
+
+### Установка для разработки / Development Installation
 
 1. Клонируйте репозиторий / Clone the repository:
 ```bash
-git clone <repository-url>
-cd ftr-registration-system
+git clone https://github.com/punk03/FTR_REG.git
+cd FTR_REG
 ```
 
 2. Установите зависимости / Install dependencies:
