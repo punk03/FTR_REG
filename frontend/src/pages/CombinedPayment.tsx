@@ -376,10 +376,25 @@ export const CombinedPayment: React.FC = () => {
   const filteredRegistrations = registrations.filter((reg) => {
     if (search) {
       const searchLower = search.toLowerCase();
+      const leaders = reg.leaders?.map((l: any) => l.person?.fullName).filter(Boolean).join(', ') || '';
+      const trainers = reg.trainers?.map((t: any) => t.person?.fullName).filter(Boolean).join(', ') || '';
+      const diplomasList = reg.diplomasList || '';
+      const diplomasCount = countRussianLines(diplomasList);
+      
       return (
         reg.collective?.name?.toLowerCase().includes(searchLower) ||
         reg.danceName?.toLowerCase().includes(searchLower) ||
-        reg.discipline?.name?.toLowerCase().includes(searchLower)
+        reg.discipline?.name?.toLowerCase().includes(searchLower) ||
+        reg.nomination?.name?.toLowerCase().includes(searchLower) ||
+        reg.age?.name?.toLowerCase().includes(searchLower) ||
+        reg.category?.name?.toLowerCase().includes(searchLower) ||
+        leaders.toLowerCase().includes(searchLower) ||
+        trainers.toLowerCase().includes(searchLower) ||
+        String(reg.participantsCount || '').includes(searchLower) ||
+        String(reg.federationParticipantsCount || '').includes(searchLower) ||
+        String(diplomasCount || '').includes(searchLower) ||
+        String(reg.medalsCount || '').includes(searchLower) ||
+        diplomasList.toLowerCase().includes(searchLower)
       );
     }
     return true;
