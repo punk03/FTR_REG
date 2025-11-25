@@ -5,6 +5,14 @@
 
 set -e  # Exit on error
 
+# Ensure script is executable
+if [ ! -x "$0" ]; then
+    chmod +x "$0" 2>/dev/null || {
+        echo "Error: Cannot make script executable. Please run: chmod +x $0"
+        exit 1
+    }
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -37,7 +45,9 @@ print_error() {
 # Check if running as root
 check_root() {
     if [ "$EUID" -eq 0 ]; then 
-        print_error "Please do not run this script as root. Run as regular user with sudo privileges."
+        print_error "Please do not run this script as root."
+        print_info "Run as regular user: ./install.sh"
+        print_info "Or if you need sudo: sudo -u <username> bash -c './install.sh'"
         exit 1
     fi
 }
