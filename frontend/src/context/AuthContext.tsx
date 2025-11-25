@@ -23,16 +23,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('accessToken');
+      console.log('Checking auth, token exists:', !!token);
       if (token) {
+        console.log('Making API call to /api/auth/me');
         const response = await api.get('/api/auth/me');
+        console.log('Auth check successful, user:', response.data);
         setUser(response.data);
+      } else {
+        console.log('No token found, user not authenticated');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth check failed:', error);
+      console.error('Error details:', error.response?.data || error.message);
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
     } finally {
       setLoading(false);
+      console.log('Auth check completed, loading set to false');
     }
   };
 

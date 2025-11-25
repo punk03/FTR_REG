@@ -22,6 +22,8 @@ const AppRoutes: React.FC = () => {
   const [darkMode, setDarkMode] = useState(false);
   const theme = createAppTheme(darkMode);
 
+  console.log('AppRoutes rendering');
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -54,6 +56,8 @@ const AppRoutes: React.FC = () => {
 };
 
 function App() {
+  console.log('App component rendering');
+  
   return (
     <ErrorBoundary>
       <NotificationProvider>
