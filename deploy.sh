@@ -215,16 +215,37 @@ check_nodejs() {
     if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
         print_info "Node.js/npm is not installed. Installing Node.js 20.x..."
         
-        # Install Node.js 20.x using NodeSource repository
-        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - || {
-            print_error "Failed to add NodeSource repository"
+        # Check if we can use sudo or if we're root
+        if [ "$EUID" -eq 0 ]; then
+            # Running as root, use commands directly
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || {
+                print_error "Failed to add NodeSource repository"
+                exit 1
+            }
+            apt-get update
+            apt-get install -y nodejs || {
+                print_error "Failed to install Node.js"
+                exit 1
+            }
+        elif sudo -n true 2>/dev/null; then
+            # Can use sudo without password
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - || {
+                print_error "Failed to add NodeSource repository"
+                exit 1
+            }
+            sudo apt-get update
+            sudo apt-get install -y nodejs || {
+                print_error "Failed to install Node.js"
+                exit 1
+            }
+        else
+            print_error "Node.js is not installed and sudo access is required."
+            print_info "Please install Node.js manually as root:"
+            print_info "  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -"
+            print_info "  apt-get update && apt-get install -y nodejs"
+            print_info "Or add the current user to sudoers and run this script again."
             exit 1
-        }
-        
-        sudo apt-get install -y nodejs || {
-            print_error "Failed to install Node.js"
-            exit 1
-        }
+        fi
         
         print_success "Node.js installed: $(node --version)"
         print_success "npm installed: $(npm --version)"

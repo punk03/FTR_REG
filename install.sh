@@ -226,6 +226,33 @@ fix_permissions() {
     print_success "Permissions set correctly"
 }
 
+# Check and install Node.js if needed (before switching to APP_USER)
+check_nodejs_before_deploy() {
+    if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+        print_info "Node.js/npm is not installed. Installing Node.js 20.x..."
+        
+        if [ "$EUID" -eq 0 ]; then
+            # Running as root, install directly
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash - || {
+                print_error "Failed to add NodeSource repository"
+                exit 1
+            }
+            apt-get update
+            apt-get install -y nodejs || {
+                print_error "Failed to install Node.js"
+                exit 1
+            }
+            print_success "Node.js installed: $(node --version)"
+            print_success "npm installed: $(npm --version)"
+        else
+            print_warning "Node.js is not installed. It will be installed during deployment."
+        fi
+    else
+        print_success "Node.js is already installed: $(node --version)"
+        print_success "npm is already installed: $(npm --version)"
+    fi
+}
+
 # Run deployment script
 run_deployment() {
     print_info "Running deployment script..."
@@ -239,8 +266,11 @@ run_deployment() {
     # Make sure deploy.sh is executable
     chmod +x deploy.sh
     
-    # If running as root and APP_USER is set, run deploy.sh as that user
+    # If running as root and APP_USER is set, check Node.js first, then run deploy.sh as that user
     if [ "$EUID" -eq 0 ] && [ -n "$APP_USER" ] && [ "$APP_USER" != "root" ]; then
+        # Check and install Node.js as root before switching to APP_USER
+        check_nodejs_before_deploy
+        
         # Ensure APP_USER has proper ownership
         chown -R "$APP_USER:$APP_USER" . 2>/dev/null || true
         print_info "Running deploy.sh as user $APP_USER..."
