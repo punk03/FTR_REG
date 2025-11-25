@@ -443,6 +443,11 @@ EOF
     else
         # Ensure existing .env file has correct permissions
         chmod 600 frontend/.env 2>/dev/null || true
+        # Update VITE_API_URL if it uses localhost
+        if grep -q "VITE_API_URL=http://localhost:3001" frontend/.env 2>/dev/null; then
+            print_info "Updating VITE_API_URL to use production IP..."
+            sed -i 's|VITE_API_URL=http://localhost:3001|VITE_API_URL=http://185.185.68.105:3001|g' frontend/.env 2>/dev/null || true
+        fi
     fi
     
     print_success "Environment files ready"
@@ -590,7 +595,12 @@ build_frontend() {
     
     # Ensure .env file exists with API URL
     if [ ! -f ".env" ]; then
-        echo "VITE_API_URL=http://localhost:3001" > .env
+        echo "VITE_API_URL=http://185.185.68.105:3001" > .env
+    else
+        # Update existing .env if it has localhost
+        if grep -q "VITE_API_URL=http://localhost:3001" .env 2>/dev/null; then
+            sed -i 's|VITE_API_URL=http://localhost:3001|VITE_API_URL=http://185.185.68.105:3001|g' .env 2>/dev/null || true
+        fi
     fi
     
     # Load environment variables and build
@@ -665,7 +675,7 @@ start_application() {
             
             # Test if server is responding
             sleep 2
-            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+            if curl -s http://185.185.68.105:3000 > /dev/null 2>&1 || curl -s http://localhost:3000 > /dev/null 2>&1; then
                 print_success "Frontend server is responding"
             else
                 print_warning "Frontend server may not be responding yet. Check logs: tail -f frontend.log"
