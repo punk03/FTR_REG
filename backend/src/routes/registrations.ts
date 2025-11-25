@@ -212,7 +212,7 @@ router.post(
       // Create registration
       const registration = await prisma.registration.create({
         data: {
-          userId: req.user.id,
+          userId: (req as any).user.id,
           eventId,
           collectiveId: collective.id,
           disciplineId,
@@ -294,7 +294,7 @@ router.post(
       const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
       await createRegistrationHistory({
         registrationId: registration.id,
-        userId: req.user.id,
+        userId: (req as any).user.id,
         action: 'CREATE',
         newValues: created as unknown as Record<string, unknown>,
         ipAddress: typeof ipAddress === 'string' ? ipAddress : undefined,
@@ -452,7 +452,7 @@ router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: Reque
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     await createRegistrationHistory({
       registrationId: id,
-      userId: req.user.id,
+      userId: (req as any).user.id,
       action: 'DELETE',
       ipAddress: typeof ipAddress === 'string' ? ipAddress : undefined,
     });

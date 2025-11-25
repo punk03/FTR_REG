@@ -99,12 +99,10 @@ router.post(
 
       // Apply discount if requested (only for performance)
       let discountAmount = 0;
-      // let discountPercent = 0;
       if (applyDiscount && payingPerformance && registrations.length > 0) {
         const event = registrations[0].event;
         const discount = calculateDiscount(totalPerformanceRequired, event.discountTiers);
         discountAmount = discount.discountAmount;
-        discountPercent = discount.discountPercent;
         totalRequired = totalPerformanceRequired - discountAmount + totalDiplomasAndMedalsRequired;
       }
 
@@ -171,7 +169,7 @@ router.post(
           regDiplomasAmount = diplomasPrice + medalsPrice;
         }
 
-        const regTotal = regPerformanceAmount + regDiplomasAmount;
+        // const regTotal = regPerformanceAmount + regDiplomasAmount;
         // const regProportion = totalRequired > 0 ? regTotal / totalRequired : 0;
 
         // Apply discount proportionally
