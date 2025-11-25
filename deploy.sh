@@ -92,6 +92,48 @@ check_permissions() {
     print_success "Directory permissions OK"
 }
 
+# Check Docker access
+check_docker_access() {
+    if docker ps &>/dev/null; then
+        DOCKER_CMD="docker"
+        DOCKER_COMPOSE_CMD="docker compose"
+        return 0
+    elif sudo docker ps &>/dev/null; then
+        print_warning "Docker requires sudo. Using sudo for Docker commands."
+        DOCKER_CMD="sudo docker"
+        DOCKER_COMPOSE_CMD="sudo docker compose"
+        return 0
+    else
+        print_error "Cannot access Docker. Checking if user is in docker group..."
+        CURRENT_USER=$(get_current_user)
+        if groups | grep -q docker; then
+            print_warning "User is in docker group but still cannot access Docker."
+            print_info "You may need to log out and log back in, or run: newgrp docker"
+            print_info "Alternatively, we can add you to the docker group now."
+            read -p "Add user to docker group? (requires sudo password) [y/N]: " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                sudo usermod -aG docker "$CURRENT_USER"
+                print_warning "User added to docker group. Please log out and log back in, or run: newgrp docker"
+                print_info "Then run this script again."
+                exit 1
+            fi
+        else
+            print_info "User is not in docker group. Adding to docker group..."
+            sudo usermod -aG docker "$CURRENT_USER" || {
+                print_error "Failed to add user to docker group."
+                print_info "Please run manually: sudo usermod -aG docker $CURRENT_USER"
+                print_info "Then log out and log back in, or run: newgrp docker"
+                exit 1
+            }
+            print_warning "User added to docker group. Please log out and log back in, or run: newgrp docker"
+            print_info "Then run this script again."
+            exit 1
+        fi
+        return 1
+    fi
+}
+
 # Check if Docker is installed
 check_docker() {
     if ! command -v docker &> /dev/null; then
@@ -100,6 +142,9 @@ check_docker() {
     else
         print_success "Docker is already installed: $(docker --version)"
     fi
+    
+    # Check Docker access
+    check_docker_access
 }
 
 # Install Docker
@@ -139,11 +184,11 @@ install_docker() {
 
 # Check if Docker Compose is available
 check_docker_compose() {
-    if ! docker compose version &> /dev/null; then
+    if ! $DOCKER_COMPOSE_CMD version &> /dev/null; then
         print_error "Docker Compose is not available. Please install Docker Compose plugin."
         exit 1
     else
-        print_success "Docker Compose is available: $(docker compose version)"
+        print_success "Docker Compose is available: $($DOCKER_COMPOSE_CMD version)"
     fi
 }
 
@@ -327,9 +372,9 @@ start_docker_services() {
     
     # Use production docker-compose if it exists
     if [ -f "docker-compose.prod.yml" ]; then
-        docker compose -f docker-compose.prod.yml up -d postgres redis
+        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml up -d postgres redis
     else
-        docker compose up -d postgres redis
+        $DOCKER_COMPOSE_CMD up -d postgres redis
     fi
     
     # Wait for services to be healthy
@@ -338,7 +383,7 @@ start_docker_services() {
     
     # Check PostgreSQL
     for i in {1..30}; do
-        if docker exec ftr_postgres pg_isready -U ftr_user -d ftr_db &>/dev/null; then
+        if $DOCKER_CMD exec ftr_postgres pg_isready -U ftr_user -d ftr_db &>/dev/null; then
             print_success "PostgreSQL is ready"
             break
         fi
@@ -351,7 +396,7 @@ start_docker_services() {
     
     # Check Redis
     for i in {1..30}; do
-        if docker exec ftr_redis redis-cli ping &>/dev/null; then
+        if $DOCKER_CMD exec ftr_redis redis-cli ping &>/dev/null; then
             print_success "Redis is ready"
             break
         fi
@@ -458,11 +503,11 @@ start_application() {
     
     # Use production docker-compose if it exists, otherwise use regular one
     if [ -f "docker-compose.prod.yml" ]; then
-        docker compose -f docker-compose.prod.yml build --no-cache
-        docker compose -f docker-compose.prod.yml up -d
+        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
+        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml up -d
     else
-        docker compose build --no-cache
-        docker compose up -d
+        $DOCKER_COMPOSE_CMD build --no-cache
+        $DOCKER_COMPOSE_CMD up -d
     fi
     
     print_success "Application containers started"
