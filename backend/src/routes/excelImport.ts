@@ -184,15 +184,17 @@ router.post(
 
       // Парсинг строк (начиная со 2-й строки, первая - заголовки)
       let rowNumber = 2;
+      const parsePromises: Promise<void>[] = [];
       worksheet.eachRow((row, rowIndex) => {
         if (rowIndex === 1) return; // Пропускаем заголовки
 
-        const parsedRow: ParsedRow = {
-          rowNumber,
-          errors: [],
-        };
+        const parsePromise = (async () => {
+          const parsedRow: ParsedRow = {
+            rowNumber,
+            errors: [],
+          };
 
-        try {
+          try {
           // Колонка A: номер (категория)
           const categoryCell = row.getCell(1);
           if (categoryCell.value) {
@@ -338,9 +340,9 @@ router.post(
           if (!parsedRow.parsed?.ageId) {
             parsedRow.errors.push('Не удалось определить возраст');
           }
-        } catch (error: any) {
-          parsedRow.errors.push(`Ошибка парсинга строки: ${error.message}`);
-        }
+          } catch (error: any) {
+            parsedRow.errors.push(`Ошибка парсинга строки: ${error.message}`);
+          }
 
           parsedRows.push(parsedRow);
           rowNumber++;
