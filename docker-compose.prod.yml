@@ -43,6 +43,7 @@ services:
       dockerfile: Dockerfile
     container_name: ftr_backend
     environment:
+      # Override DATABASE_URL and REDIS_HOST for Docker container (use service names)
       DATABASE_URL: postgresql://ftr_user:ftr_password@postgres:5432/ftr_db?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -61,8 +62,9 @@ services:
     networks:
       - ftr_network
     restart: unless-stopped
-    volumes:
-      - ./backend/.env:/app/.env:ro
+    # Don't mount .env file, use environment variables from docker-compose instead
+    # volumes:
+    #   - ./backend/.env:/app/.env:ro
 
   frontend:
     build:

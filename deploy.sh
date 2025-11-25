@@ -384,9 +384,12 @@ create_env_files() {
             JWT_REFRESH_SECRET=$(openssl rand -hex 32)
             
             # Use tee instead of cat to avoid permission issues
+            # Use localhost for migrations from host, postgres for Docker containers
             tee backend/.env > /dev/null << EOF
 # Database
-DATABASE_URL="postgresql://ftr_user:ftr_password@postgres:5432/ftr_db?schema=public"
+# Use localhost when running migrations from host, postgres when running in Docker
+DATABASE_URL="postgresql://ftr_user:ftr_password@localhost:5432/ftr_db?schema=public"
+# For Docker containers, use: postgresql://ftr_user:ftr_password@postgres:5432/ftr_db?schema=public
 
 # JWT
 JWT_SECRET=${JWT_SECRET}
@@ -397,7 +400,8 @@ PORT=3001
 NODE_ENV=production
 
 # Redis
-REDIS_HOST=redis
+# Use localhost when running from host, redis when running in Docker
+REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
