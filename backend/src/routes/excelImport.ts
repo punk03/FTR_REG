@@ -74,6 +74,15 @@ const DISCIPLINE_ABBREVIATIONS: Record<string, string> = {
   'Театр': 'Театр танца',
 };
 
+// Маппинг опечаток и вариантов написания
+const DISCIPLINE_VARIANTS: Record<string, string> = {
+  'contemprorary': 'Contemporary',
+  'contemporary': 'Contemporary',
+  'contemp': 'Contemporary',
+  'dance show': 'Dance Show',
+  'danceshow': 'Dance Show',
+};
+
 // Функция парсинга категории из строки вида "1. Jazz Соло Бэби Beginners" или "1. СТК (свободная танцевальная категория) (начинающие) Формейшн Бэби Beginners"
 async function parseCategoryString(
   categoryStr: string,
