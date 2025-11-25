@@ -434,7 +434,7 @@ EOF
             print_info "Created frontend/.env from .env.example"
         else
             tee frontend/.env > /dev/null << EOF
-VITE_API_URL=http://localhost:3001
+VITE_API_URL=http://185.185.68.105:3001
 VITE_MODE=production
 EOF
             chmod 600 frontend/.env 2>/dev/null || true
