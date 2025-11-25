@@ -213,12 +213,12 @@ create_backup_dir() {
 
 # Backup database
 backup_database() {
-    if docker ps | grep -q "ftr_postgres"; then
+    if $DOCKER_CMD ps | grep -q "ftr_postgres"; then
         print_info "Creating database backup..."
         
         create_backup_dir
         
-        docker exec ftr_postgres pg_dump -U ftr_user -d ftr_db > "$BACKUP_FILE" 2>/dev/null || {
+        $DOCKER_CMD exec ftr_postgres pg_dump -U ftr_user -d ftr_db > "$BACKUP_FILE" 2>/dev/null || {
             print_warning "Could not create database backup. Database might be empty or not accessible."
             return 1
         }
@@ -520,9 +520,9 @@ show_status() {
     echo ""
     echo "=== Container Status ==="
     if [ -f "docker-compose.prod.yml" ]; then
-        docker compose -f docker-compose.prod.yml ps
+        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml ps
     else
-        docker compose ps
+        $DOCKER_COMPOSE_CMD ps
     fi
     
     echo ""
@@ -542,13 +542,13 @@ show_status() {
     echo ""
     echo "=== Logs ==="
     if [ -f "docker-compose.prod.yml" ]; then
-        echo "View logs with: docker compose -f docker-compose.prod.yml logs -f"
-        echo "View backend logs: docker compose -f docker-compose.prod.yml logs -f backend"
-        echo "View frontend logs: docker compose -f docker-compose.prod.yml logs -f frontend"
+        echo "View logs with: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f"
+        echo "View backend logs: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f backend"
+        echo "View frontend logs: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f frontend"
     else
-        echo "View logs with: docker compose logs -f"
-        echo "View backend logs: docker compose logs -f backend"
-        echo "View frontend logs: docker compose logs -f frontend"
+        echo "View logs with: $DOCKER_COMPOSE_CMD logs -f"
+        echo "View backend logs: $DOCKER_COMPOSE_CMD logs -f backend"
+        echo "View frontend logs: $DOCKER_COMPOSE_CMD logs -f frontend"
     fi
 }
 
