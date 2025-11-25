@@ -359,7 +359,7 @@ router.post(
 
             // Используем текущую категорию, если она есть
             if (currentCategory && Object.keys(currentCategory).length > 0) {
-              parsedRow.parsed = { ...currentCategory };
+              parsedRow.parsed = Object.assign({}, currentCategory);
             } else {
               // Если категории нет, пытаемся парсить из колонки A
               if (categoryValue && /^\d+\./.test(categoryValue)) {
