@@ -5,7 +5,6 @@ import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { auditLog } from '../middleware/auditLog';
 import { errorHandler } from '../middleware/errorHandler';
-import { DiscountTier } from '../types';
 
 const router = express.Router();
 const prisma = new PrismaClient();

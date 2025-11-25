@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { body, query, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';

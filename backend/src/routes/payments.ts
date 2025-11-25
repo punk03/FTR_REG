@@ -5,7 +5,6 @@ import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { errorHandler } from '../middleware/errorHandler';
 import { paymentRateLimiter } from '../middleware/rateLimit';
-import { cacheService } from '../services/cacheService';
 import {
   recalculateRegistrationPaymentStatus,
   calculateDiscount,
