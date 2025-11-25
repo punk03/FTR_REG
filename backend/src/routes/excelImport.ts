@@ -58,6 +58,22 @@ interface ParsedRow {
   };
 }
 
+// Маппинг аббревиатур на полные названия дисциплин
+const DISCIPLINE_ABBREVIATIONS: Record<string, string> = {
+  'СТК': 'Современный танец',
+  'СЭТ': 'Эстрадный танец',
+  'СТ': 'Современный танец',
+  'ЭТ': 'Эстрадный танец',
+  'Классика': 'Классический танец',
+  'Народный': 'Народный танец',
+  'Бальный': 'Бальный танец',
+  'Детский': 'Детский танец',
+  'Спортивный': 'Спортивный танец',
+  'Акробатический': 'Акробатический танец',
+  'Цирковой': 'Цирковой танец',
+  'Театр': 'Театр танца',
+};
+
 // Функция парсинга категории из строки вида "1. Jazz Соло Бэби Beginners" или "1. СТК (свободная танцевальная категория) (начинающие) Формейшн Бэби Beginners"
 async function parseCategoryString(
   categoryStr: string,
@@ -87,6 +103,9 @@ async function parseCategoryString(
   // Удаляем номер блока и точки
   let cleaned = categoryStr.trim().replace(/^[\d.]+/, '').trim();
   
+  // Сохраняем оригинальную строку для поиска аббревиатур
+  const originalCleaned = cleaned;
+  
   // Удаляем содержимое в скобках (например, "(свободная танцевальная категория)", "(начинающие)")
   cleaned = cleaned.replace(/\([^)]*\)/g, '').trim();
   
@@ -96,21 +115,54 @@ async function parseCategoryString(
   // Разбиваем на слова
   const words = cleaned.split(/\s+/).filter(w => w.length > 0);
 
-  // Ищем дисциплину - проверяем каждое слово и комбинации слов
-  for (let i = 0; i < words.length; i++) {
-    // Проверяем одно слово
-    const discipline = disciplines.find((d) => d.name.toLowerCase() === words[i].toLowerCase());
-    if (discipline) {
-      result.disciplineName = discipline.name;
-      break;
+  // Ищем дисциплину - сначала проверяем аббревиатуры
+  let disciplineFound = false;
+  
+  // Проверяем аббревиатуры в оригинальной строке (до удаления скобок)
+  for (const [abbr, fullName] of Object.entries(DISCIPLINE_ABBREVIATIONS)) {
+    if (originalCleaned.includes(abbr) || cleaned.includes(abbr)) {
+      const discipline = disciplines.find((d) => d.name === fullName);
+      if (discipline) {
+        result.disciplineName = discipline.name;
+        disciplineFound = true;
+        break;
+      }
     }
-    
-    // Проверяем комбинации из двух слов (для составных названий типа "Street dance show")
-    if (i < words.length - 1) {
-      const twoWords = `${words[i]} ${words[i + 1]}`;
-      const discipline2 = disciplines.find((d) => d.name.toLowerCase() === twoWords.toLowerCase());
-      if (discipline2) {
-        result.disciplineName = discipline2.name;
+  }
+  
+  // Если не нашли по аббревиатуре, ищем по словам
+  if (!disciplineFound) {
+    for (let i = 0; i < words.length; i++) {
+      // Проверяем одно слово
+      const discipline = disciplines.find((d) => d.name.toLowerCase() === words[i].toLowerCase());
+      if (discipline) {
+        result.disciplineName = discipline.name;
+        disciplineFound = true;
+        break;
+      }
+      
+      // Проверяем комбинации из двух слов (для составных названий типа "Street dance show")
+      if (i < words.length - 1) {
+        const twoWords = `${words[i]} ${words[i + 1]}`;
+        const discipline2 = disciplines.find((d) => d.name.toLowerCase() === twoWords.toLowerCase());
+        if (discipline2) {
+          result.disciplineName = discipline2.name;
+          disciplineFound = true;
+          break;
+        }
+      }
+      
+      // Проверяем частичное совпадение (для случаев типа "Contemporary" в "Contemprorary")
+      const disciplinePartial = disciplines.find((d) => {
+        const dLower = d.name.toLowerCase();
+        const wLower = words[i].toLowerCase();
+        return dLower.includes(wLower) || wLower.includes(dLower) || 
+               (dLower.length > 3 && wLower.length > 3 && 
+                dLower.substring(0, 4) === wLower.substring(0, 4));
+      });
+      if (disciplinePartial) {
+        result.disciplineName = disciplinePartial.name;
+        disciplineFound = true;
         break;
       }
     }
@@ -138,6 +190,19 @@ async function parseCategoryString(
         break;
       }
     }
+    
+    // Проверяем частичное совпадение (для опечаток типа "Формейшн" вместо "Формейшн")
+    const nominationPartial = nominations.find((n) => {
+      const nLower = n.name.toLowerCase();
+      const wLower = words[i].toLowerCase();
+      return nLower.includes(wLower) || wLower.includes(nLower) ||
+             (nLower.length > 3 && wLower.length > 3 && 
+              nLower.substring(0, Math.min(4, nLower.length)) === wLower.substring(0, Math.min(4, wLower.length)));
+    });
+    if (nominationPartial) {
+      result.nominationName = nominationPartial.name;
+      break;
+    }
   }
 
   // Ищем возраст - проверяем каждое слово
@@ -160,6 +225,19 @@ async function parseCategoryString(
         result.ageName = age2.name;
         break;
       }
+    }
+    
+    // Проверяем частичное совпадение
+    const agePartial = ages.find((a) => {
+      const aLower = a.name.toLowerCase();
+      const wLower = words[i].toLowerCase();
+      return aLower.includes(wLower) || wLower.includes(aLower) ||
+             (aLower.length > 2 && wLower.length > 2 && 
+              aLower.substring(0, Math.min(3, aLower.length)) === wLower.substring(0, Math.min(3, wLower.length)));
+    });
+    if (agePartial) {
+      result.ageName = agePartial.name;
+      break;
     }
   }
 
