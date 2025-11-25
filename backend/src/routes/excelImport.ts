@@ -245,181 +245,269 @@ router.post(
       }
 
       // Парсинг строк (начиная после строки с заголовками)
-      let rowNumber = headerRowIndex + 1;
+      let currentCategory: ParsedRow['parsed'] | null = null;
       const parsePromises: Promise<void>[] = [];
-      worksheet.eachRow((row, rowIndex) => {
-        if (rowIndex <= headerRowIndex) return; // Пропускаем заголовки и пустые строки до них
-
+      
+      // Проходим по всем строкам после заголовков
+      for (let rowIndex = headerRowIndex + 1; rowIndex <= worksheet.rowCount; rowIndex++) {
+        const row = worksheet.getRow(rowIndex);
         const parsePromise = (async () => {
           const parsedRow: ParsedRow = {
-            rowNumber,
+            rowNumber: rowIndex,
             errors: [],
           };
 
           try {
-          // Пропускаем пустые строки
-          const categoryCell = row.getCell(1);
-          const collectiveCell = row.getCell(2);
-          if (!categoryCell.value && !collectiveCell.value) {
-            return; // Пустая строка, пропускаем
-          }
+            // Получаем значения ячеек
+            const categoryCell = row.getCell(1);
+            const collectiveCell = row.getCell(2);
+            const danceNameCell = row.getCell(3);
+            const participantsCell = row.getCell(4);
+            
+            // Пропускаем полностью пустые строки
+            if (!categoryCell.value && !collectiveCell.value && !danceNameCell.value) {
+              return;
+            }
 
-          // Колонка A (1): номер (категория)
-          if (categoryCell.value) {
-            parsedRow.categoryString = String(categoryCell.value).trim();
-            const parsed = await parseCategoryString(
-              parsedRow.categoryString,
-              disciplines,
-              nominations,
-              ages,
-              categories
-            );
-            parsedRow.parsed = parsed;
+            const categoryValue = categoryCell.value ? String(categoryCell.value).trim() : '';
+            const collectiveValue = collectiveCell.value ? String(collectiveCell.value).trim() : '';
+            const danceNameValue = danceNameCell.value ? String(danceNameCell.value).trim() : '';
 
-            // Поиск ID в справочниках
-            if (parsed.disciplineName) {
-              const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
-              if (discipline) {
-                parsedRow.parsed.disciplineId = discipline.id;
-              } else {
-                parsedRow.errors.push(`Дисциплина "${parsed.disciplineName}" не найдена`);
+            // Определяем, является ли строка строкой категории
+            // Строка категории: колонка A содержит категорию, и она повторяется в B и C
+            // ИЛИ колонка A начинается с цифры и точки, а B и C содержат ту же категорию
+            const isCategoryRow = 
+              categoryValue && 
+              collectiveValue && 
+              danceNameValue &&
+              categoryValue === collectiveValue && 
+              collectiveValue === danceNameValue &&
+              /^\d+\./.test(categoryValue); // Начинается с цифры и точки
+
+            if (isCategoryRow) {
+              // Это строка категории - парсим категорию и сохраняем для следующих строк
+              parsedRow.categoryString = categoryValue;
+              const parsed = await parseCategoryString(
+                parsedRow.categoryString,
+                disciplines,
+                nominations,
+                ages,
+                categories
+              );
+              
+              // Поиск ID в справочниках
+              const parsedData: ParsedRow['parsed'] = {};
+              
+              if (parsed.blockNumber) {
+                parsedData.blockNumber = parsed.blockNumber;
+              }
+              
+              if (parsed.disciplineName) {
+                const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
+                if (discipline) {
+                  parsedData.disciplineId = discipline.id;
+                  parsedData.disciplineName = discipline.name;
+                } else {
+                  parsedRow.errors.push(`Дисциплина "${parsed.disciplineName}" не найдена`);
+                }
+              }
+
+              if (parsed.nominationName) {
+                const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
+                if (nomination) {
+                  parsedData.nominationId = nomination.id;
+                  parsedData.nominationName = nomination.name;
+                } else {
+                  parsedRow.errors.push(`Номинация "${parsed.nominationName}" не найдена`);
+                }
+              }
+
+              if (parsed.ageName) {
+                const age = ages.find((a: any) => a.name === parsed.ageName);
+                if (age) {
+                  parsedData.ageId = age.id;
+                  parsedData.ageName = age.name;
+                } else {
+                  parsedRow.errors.push(`Возраст "${parsed.ageName}" не найден`);
+                }
+              }
+
+              if (parsed.categoryName) {
+                const category = categories.find((c: any) => c.name === parsed.categoryName);
+                if (category) {
+                  parsedData.categoryId = category.id;
+                  parsedData.categoryName = category.name;
+                } else {
+                  parsedRow.errors.push(`Категория "${parsed.categoryName}" не найдена`);
+                }
+              }
+
+              // Сохраняем категорию для следующих строк
+              if (Object.keys(parsedData).length > 0) {
+                currentCategory = parsedData;
+              }
+              
+              // Не добавляем строки категорий в результат
+              return;
+            }
+
+            // Это строка с данными регистрации
+            // Должна быть колонка B (коллектив) и C (название танца)
+            if (!collectiveValue || !danceNameValue) {
+              return; // Пропускаем строки без коллектива или названия танца
+            }
+
+            // Используем текущую категорию, если она есть
+            if (currentCategory && Object.keys(currentCategory).length > 0) {
+              parsedRow.parsed = { ...currentCategory };
+            } else {
+              // Если категории нет, пытаемся парсить из колонки A
+              if (categoryValue && /^\d+\./.test(categoryValue)) {
+                parsedRow.categoryString = categoryValue;
+                const parsed = await parseCategoryString(
+                  parsedRow.categoryString,
+                  disciplines,
+                  nominations,
+                  ages,
+                  categories
+                );
+                
+                const parsedData: ParsedRow['parsed'] = {};
+                if (parsed.blockNumber) parsedData.blockNumber = parsed.blockNumber;
+                
+                if (parsed.disciplineName) {
+                  const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
+                  if (discipline) {
+                    parsedData.disciplineId = discipline.id;
+                    parsedData.disciplineName = discipline.name;
+                  }
+                }
+                if (parsed.nominationName) {
+                  const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
+                  if (nomination) {
+                    parsedData.nominationId = nomination.id;
+                    parsedData.nominationName = nomination.name;
+                  }
+                }
+                if (parsed.ageName) {
+                  const age = ages.find((a: any) => a.name === parsed.ageName);
+                  if (age) {
+                    parsedData.ageId = age.id;
+                    parsedData.ageName = age.name;
+                  }
+                }
+                if (parsed.categoryName) {
+                  const category = categories.find((c: any) => c.name === parsed.categoryName);
+                  if (category) {
+                    parsedData.categoryId = category.id;
+                    parsedData.categoryName = category.name;
+                  }
+                }
+                
+                parsedRow.parsed = parsedData;
+                currentCategory = parsedData;
               }
             }
 
-            if (parsed.nominationName) {
-              const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
-              if (nomination) {
-                parsedRow.parsed.nominationId = nomination.id;
-              } else {
-                parsedRow.errors.push(`Номинация "${parsed.nominationName}" не найдена`);
+            // Колонка B (2): коллектив
+            parsedRow.collective = collectiveValue;
+
+            // Колонка C (3): название танца
+            parsedRow.danceName = danceNameValue;
+
+            // Колонка D (4): количество участников
+            if (participantsCell.value !== null && participantsCell.value !== undefined && participantsCell.value !== '') {
+              const participantsValue = Number(participantsCell.value);
+              if (!isNaN(participantsValue)) {
+                parsedRow.participantsCount = Math.floor(participantsValue);
               }
             }
 
-            if (parsed.ageName) {
-              const age = ages.find((a: any) => a.name === parsed.ageName);
-              if (age) {
-                parsedRow.parsed.ageId = age.id;
-              } else {
-                parsedRow.errors.push(`Возраст "${parsed.ageName}" не найден`);
+            // Колонка F (6): руководители (пропускаем пустую колонку E)
+            const leadersCell = row.getCell(6);
+            if (leadersCell.value && String(leadersCell.value).trim()) {
+              parsedRow.leaders = String(leadersCell.value).trim();
+            }
+
+            // Колонка H (8): тренеры (пропускаем пустую колонку G)
+            const trainersCell = row.getCell(8);
+            if (trainersCell.value && String(trainersCell.value).trim()) {
+              parsedRow.trainers = String(trainersCell.value).trim();
+            }
+
+            // Колонка J (10): школа (пропускаем пустую колонку I)
+            const schoolCell = row.getCell(10);
+            if (schoolCell.value && String(schoolCell.value).trim()) {
+              parsedRow.school = String(schoolCell.value).trim();
+            }
+
+            // Колонка K (11): контакты
+            const contactsCell = row.getCell(11);
+            if (contactsCell.value && String(contactsCell.value).trim()) {
+              parsedRow.contacts = String(contactsCell.value).trim();
+            }
+
+            // Колонка L (12): город
+            const cityCell = row.getCell(12);
+            if (cityCell.value && String(cityCell.value).trim()) {
+              parsedRow.city = String(cityCell.value).trim();
+            }
+
+            // Колонка M (13): длительность
+            const durationCell = row.getCell(13);
+            if (durationCell.value && String(durationCell.value).trim()) {
+              parsedRow.duration = String(durationCell.value).trim();
+            }
+
+            // Колонка O (15): ссылка (видео URL) (пропускаем колонку N - длительность с перерывами)
+            const videoUrlCell = row.getCell(15);
+            if (videoUrlCell.value && String(videoUrlCell.value).trim()) {
+              parsedRow.videoUrl = String(videoUrlCell.value).trim();
+            }
+
+            // Колонка Q (17): ФИО на дипломы (пропускаем колонку P - примечание)
+            const diplomasCell = row.getCell(17);
+            if (diplomasCell.value && String(diplomasCell.value).trim()) {
+              parsedRow.diplomasList = String(diplomasCell.value).trim();
+            }
+
+            // Колонка R (18): количество медалей
+            const medalsCell = row.getCell(18);
+            if (medalsCell.value !== null && medalsCell.value !== undefined && medalsCell.value !== '') {
+              const medalsValue = Number(medalsCell.value);
+              if (!isNaN(medalsValue)) {
+                parsedRow.medalsCount = Math.floor(medalsValue);
               }
             }
 
-            if (parsed.categoryName) {
-              const category = categories.find((c: any) => c.name === parsed.categoryName);
-              if (category) {
-                parsedRow.parsed.categoryId = category.id;
-              } else {
-                parsedRow.errors.push(`Категория "${parsed.categoryName}" не найдена`);
-              }
+            // Валидация обязательных полей
+            if (!parsedRow.collective) {
+              parsedRow.errors.push('Не указан коллектив');
             }
-          }
-
-          // Колонка B (2): коллектив
-          if (collectiveCell.value) {
-            parsedRow.collective = String(collectiveCell.value).trim();
-          }
-
-          // Колонка C: название танца
-          const danceNameCell = row.getCell(3);
-          if (danceNameCell.value) {
-            parsedRow.danceName = String(danceNameCell.value).trim();
-          }
-
-          // Колонка D (4): количество участников
-          const participantsCell = row.getCell(4);
-          if (participantsCell.value !== null && participantsCell.value !== undefined && participantsCell.value !== '') {
-            const participantsValue = Number(participantsCell.value);
-            if (!isNaN(participantsValue)) {
-              parsedRow.participantsCount = Math.floor(participantsValue);
+            if (!parsedRow.danceName) {
+              parsedRow.errors.push('Не указано название танца');
             }
-          }
-
-          // Колонка F (6): руководители (пропускаем пустую колонку E)
-          const leadersCell = row.getCell(6);
-          if (leadersCell.value && String(leadersCell.value).trim()) {
-            parsedRow.leaders = String(leadersCell.value).trim();
-          }
-
-          // Колонка H (8): тренеры (пропускаем пустую колонку G)
-          const trainersCell = row.getCell(8);
-          if (trainersCell.value && String(trainersCell.value).trim()) {
-            parsedRow.trainers = String(trainersCell.value).trim();
-          }
-
-          // Колонка J (10): школа (пропускаем пустую колонку I)
-          const schoolCell = row.getCell(10);
-          if (schoolCell.value && String(schoolCell.value).trim()) {
-            parsedRow.school = String(schoolCell.value).trim();
-          }
-
-          // Колонка K (11): контакты
-          const contactsCell = row.getCell(11);
-          if (contactsCell.value && String(contactsCell.value).trim()) {
-            parsedRow.contacts = String(contactsCell.value).trim();
-          }
-
-          // Колонка L (12): город
-          const cityCell = row.getCell(12);
-          if (cityCell.value && String(cityCell.value).trim()) {
-            parsedRow.city = String(cityCell.value).trim();
-          }
-
-          // Колонка M (13): длительность
-          const durationCell = row.getCell(13);
-          if (durationCell.value && String(durationCell.value).trim()) {
-            parsedRow.duration = String(durationCell.value).trim();
-          }
-
-          // Колонка O (15): ссылка (видео URL) (пропускаем колонку N - длительность с перерывами)
-          const videoUrlCell = row.getCell(15);
-          if (videoUrlCell.value && String(videoUrlCell.value).trim()) {
-            parsedRow.videoUrl = String(videoUrlCell.value).trim();
-          }
-
-          // Колонка Q (17): ФИО на дипломы (пропускаем колонку P - примечание)
-          const diplomasCell = row.getCell(17);
-          if (diplomasCell.value && String(diplomasCell.value).trim()) {
-            parsedRow.diplomasList = String(diplomasCell.value).trim();
-          }
-
-          // Колонка R (18): количество медалей
-          const medalsCell = row.getCell(18);
-          if (medalsCell.value !== null && medalsCell.value !== undefined && medalsCell.value !== '') {
-            const medalsValue = Number(medalsCell.value);
-            if (!isNaN(medalsValue)) {
-              parsedRow.medalsCount = Math.floor(medalsValue);
+            if (!parsedRow.parsed?.disciplineId) {
+              parsedRow.errors.push('Не удалось определить дисциплину');
             }
-          }
-
-          // Валидация обязательных полей
-          if (!parsedRow.collective) {
-            parsedRow.errors.push('Не указан коллектив');
-          }
-          if (!parsedRow.danceName) {
-            parsedRow.errors.push('Не указано название танца');
-          }
-          if (!parsedRow.parsed?.disciplineId) {
-            parsedRow.errors.push('Не удалось определить дисциплину');
-          }
-          if (!parsedRow.parsed?.nominationId) {
-            parsedRow.errors.push('Не удалось определить номинацию');
-          }
-          if (!parsedRow.parsed?.ageId) {
-            parsedRow.errors.push('Не удалось определить возраст');
-          }
+            if (!parsedRow.parsed?.nominationId) {
+              parsedRow.errors.push('Не удалось определить номинацию');
+            }
+            if (!parsedRow.parsed?.ageId) {
+              parsedRow.errors.push('Не удалось определить возраст');
+            }
           } catch (error: any) {
             parsedRow.errors.push(`Ошибка парсинга строки: ${error.message}`);
           }
 
-          // Добавляем только непустые строки
-          if (parsedRow.collective || parsedRow.categoryString) {
+          // Добавляем только строки с данными регистрации (не категории)
+          if (parsedRow.collective && parsedRow.danceName) {
             parsedRows.push(parsedRow);
           }
-          rowNumber++;
         })();
 
         parsePromises.push(parsePromise);
-      });
+      }
 
       await Promise.all(parsePromises);
 
