@@ -229,9 +229,6 @@ main() {
     # Check git
     check_git
     
-    # Check Docker access (non-blocking, will use sudo if needed)
-    check_docker_access
-    
     # Setup repository
     setup_repository
     
