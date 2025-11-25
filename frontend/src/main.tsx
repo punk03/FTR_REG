@@ -12,6 +12,7 @@ if (!rootElement) {
 
 // Debug: Log API URL
 console.log('Starting app...');
+// @ts-ignore - Vite environment variable
 console.log('API URL:', import.meta.env?.VITE_API_URL || 'http://localhost:3001');
 
 ReactDOM.createRoot(rootElement).render(
