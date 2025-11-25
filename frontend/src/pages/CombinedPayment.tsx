@@ -458,6 +458,7 @@ export const CombinedPayment: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell padding="checkbox" />
+                  <TableCell>Коллектив</TableCell>
                   <TableCell>Название номера</TableCell>
                   <TableCell>Руководители</TableCell>
                   <TableCell>Тренеры</TableCell>
@@ -482,6 +483,7 @@ export const CombinedPayment: React.FC = () => {
                           onChange={() => handleToggleRegistration(reg.id)}
                         />
                       </TableCell>
+                      <TableCell>{reg.collective?.name || '-'}</TableCell>
                       <TableCell>{reg.danceName || '-'}</TableCell>
                       <TableCell>{leaders}</TableCell>
                       <TableCell>{trainers}</TableCell>
