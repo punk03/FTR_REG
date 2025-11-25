@@ -1,0 +1,32 @@
+{
+  "name": "ftr-registration-system",
+  "version": "1.0.0",
+  "description": "Система регистрации и бухгалтерского учета участников мероприятий Федерации танцев России",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "start": "docker-compose up -d"
+  },
+  "keywords": [
+    "ftr",
+    "registration",
+    "dance",
+    "events"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+
+

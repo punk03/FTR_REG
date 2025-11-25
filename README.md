@@ -1,0 +1,97 @@
+# FTR Registration System
+
+Система регистрации и бухгалтерского учета участников мероприятий Федерации танцев России
+
+## Описание / Description
+
+**Русский:**
+
+Веб-приложение для автоматизации регистрации участников танцевальных мероприятий, управления оплатами, учета дипломов/медалей, бухгалтерского учета и статистики.
+
+**English:**
+
+Web application for automating registration of dance event participants, payment management, diploma/medal tracking, accounting, and statistics.
+
+## Технологии / Technologies
+
+- **Backend**: Node.js + Express + TypeScript + Prisma + PostgreSQL + Redis
+- **Frontend**: React 18 + TypeScript + Vite + Material-UI
+- **Database**: PostgreSQL 14+
+- **Cache**: Redis
+- **Deployment**: Docker + Docker Compose
+
+## Структура проекта / Project Structure
+
+```
+ftr-registration-system/
+├── backend/          # Backend API (Node.js + Express + TypeScript)
+├── frontend/         # Frontend (React + TypeScript + Vite)
+├── docker/           # Docker configuration files
+└── docker-compose.yml
+```
+
+## Быстрый старт / Quick Start
+
+### Требования / Requirements
+
+- Node.js 18+
+- Docker и Docker Compose
+- npm или yarn
+
+### Установка / Installation
+
+1. Клонируйте репозиторий / Clone the repository:
+```bash
+git clone <repository-url>
+cd ftr-registration-system
+```
+
+2. Установите зависимости / Install dependencies:
+```bash
+npm install
+```
+
+3. Запустите базу данных и Redis / Start database and Redis:
+```bash
+docker-compose up -d
+```
+
+4. Настройте переменные окружения / Configure environment variables:
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+5. Запустите миграции / Run migrations:
+```bash
+cd backend
+npx prisma migrate dev
+npx prisma db seed
+```
+
+6. Запустите приложение / Start the application:
+```bash
+npm run dev
+```
+
+Backend будет доступен на http://localhost:3001
+Frontend будет доступен на http://localhost:5173
+
+## Демо-аккаунты / Demo Accounts
+
+- **ADMIN**: admin@ftr.ru / admin123
+- **REGISTRATOR**: registrar@ftr.ru / registrar123
+- **ACCOUNTANT**: accountant@ftr.ru / accountant123
+- **STATISTICIAN**: statistician@ftr.ru / statistician123
+
+## Документация / Documentation
+
+Подробная документация доступна в файле `TECHNICAL_SPECIFICATION.md`
+
+Detailed documentation is available in `TECHNICAL_SPECIFICATION.md`
+
+## Лицензия / License
+
+ISC
+
+

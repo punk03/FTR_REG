@@ -1,0 +1,52 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "yes": "Yes",
+    "no": "No",
+    "lightTheme": "Light Theme",
+    "darkTheme": "Dark Theme"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "loginButton": "Sign In"
+  },
+  "navigation": {
+    "home": "Home",
+    "registrations": "Registrations",
+    "accounting": "Accounting",
+    "diplomas": "Diplomas",
+    "statistics": "Statistics",
+    "admin": "Admin Panel",
+    "combinedPayment": "Combined Payment"
+  },
+  "registrations": {
+    "title": "Registrations",
+    "createNew": "Create Registration",
+    "number": "Number",
+    "collective": "Collective",
+    "event": "Event",
+    "status": "Status",
+    "paymentStatus": "Payment Status"
+  },
+  "dashboard": {
+    "title": "Home",
+    "totalRegistrations": "Total Registrations",
+    "totalCollectives": "Total Collectives",
+    "totalParticipants": "Total Participants",
+    "totalPaid": "Total Paid"
+  }
+}
+

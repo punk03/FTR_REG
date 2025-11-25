@@ -1,0 +1,437 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  REGISTRATOR
+  ACCOUNTANT
+  STATISTICIAN
+}
+
+enum EventStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PERFORMANCE_PAID
+  DIPLOMAS_PAID
+  PAID
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum PaidFor {
+  PERFORMANCE
+  DIPLOMAS_MEDALS
+}
+
+enum PersonRole {
+  LEADER
+  TRAINER
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(REGISTRATOR)
+  city      String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations       Registration[]
+  auditLogs           AuditLog[]
+  registrationHistory RegistrationHistory[] @relation("RegistrationHistoryUser")
+  draftRegistrations  DraftRegistration[]
+  registrationTemplates RegistrationTemplate[]
+  systemSettings      SystemSetting[]       @relation("SystemSettingUpdatedBy")
+
+  @@index([email])
+}
+
+model Event {
+  id                           Int         @id @default(autoincrement())
+  name                         String
+  startDate                    DateTime
+  endDate                      DateTime
+  description                  String?
+  image                        String?
+  status                       EventStatus @default(DRAFT)
+  isOnline                     Boolean     @default(false)
+  paymentEnable                Boolean     @default(true)
+  categoryEnable               Boolean     @default(true)
+  songEnable                   Boolean     @default(false)
+  durationMax                  Int         @default(43200)
+  durationGroupsInterval       Int         @default(0)
+  durationParticipantsInterval Int         @default(0)
+  pricePerDiploma              Decimal?    @db.Decimal(10, 2)
+  pricePerMedal                Decimal?    @db.Decimal(10, 2)
+  discountTiers                String? // JSON string
+  createdAt                    DateTime    @default(now())
+  updatedAt                    DateTime    @updatedAt
+
+  registrations Registration[]
+  eventPrices   EventPrice[]
+
+  @@index([status])
+}
+
+model EventPrice {
+  id                            Int      @id @default(autoincrement())
+  eventId                       Int
+  nominationId                  Int
+  pricePerParticipant           Decimal  @db.Decimal(10, 2)
+  pricePerFederationParticipant Decimal? @db.Decimal(10, 2)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  nomination Nomination @relation(fields: [nominationId], references: [id])
+
+  @@unique([eventId, nominationId])
+  @@index([eventId])
+  @@index([nominationId])
+}
+
+model Collective {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  accessory String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations     Registration[]
+  accountingEntries AccountingEntry[]
+
+  @@index([name])
+}
+
+model Person {
+  id        Int        @id @default(autoincrement())
+  fullName  String
+  role      PersonRole
+  phone     String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  registrationLeaders  RegistrationLeader[]
+  registrationTrainers RegistrationTrainer[]
+
+  @@unique([fullName, role])
+  @@index([fullName, role])
+}
+
+model Discipline {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+
+  @@index([name])
+}
+
+model Nomination {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+  eventPrices   EventPrice[]
+
+  @@index([name])
+}
+
+model Age {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+
+  @@index([name])
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+
+  @@index([name])
+}
+
+model Registration {
+  id                          Int                @id @default(autoincrement())
+  userId                      Int
+  eventId                     Int
+  collectiveId                Int
+  disciplineId                Int
+  nominationId                Int
+  ageId                       Int
+  categoryId                  Int?
+  danceName                   String?
+  duration                    String?
+  participantsCount           Int                @default(0)
+  federationParticipantsCount Int                @default(0)
+  diplomasCount               Int                @default(0)
+  medalsCount                 Int                @default(0)
+  diplomasList                String? // Multi-line text with \n separator
+  paymentStatus               PaymentStatus      @default(UNPAID)
+  paidAmount                  Decimal?           @db.Decimal(10, 2)
+  performancePaid             Boolean            @default(false)
+  diplomasAndMedalsPaid       Boolean            @default(false)
+  diplomasPaid                Boolean            @default(false)
+  medalsPaid                  Boolean            @default(false)
+  diplomasPrinted             Boolean            @default(false)
+  diplomasDataDeletedAt       DateTime?
+  status                      RegistrationStatus @default(PENDING)
+  resume                      String?
+  number                      Int?
+  blockNumber                 Int?
+  performedAt                 DateTime?
+  placeId                     Int?
+  videoUrl                    String?
+  songUrl                     String?
+  agreement                   Boolean            @default(false)
+  agreement2                  Boolean            @default(false)
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+
+  user              User                      @relation(fields: [userId], references: [id])
+  event             Event                     @relation(fields: [eventId], references: [id])
+  collective        Collective                @relation(fields: [collectiveId], references: [id])
+  discipline        Discipline                @relation(fields: [disciplineId], references: [id])
+  nomination        Nomination                @relation(fields: [nominationId], references: [id])
+  age               Age                       @relation(fields: [ageId], references: [id])
+  category          Category?                 @relation(fields: [categoryId], references: [id])
+  leaders           RegistrationLeader[]
+  trainers          RegistrationTrainer[]
+  participants      RegistrationParticipant[]
+  accountingEntries AccountingEntry[]
+  payments          Payment[]
+  history           RegistrationHistory[]
+
+  @@unique([eventId, number])
+  @@index([eventId])
+  @@index([collectiveId])
+  @@index([userId])
+  @@index([paymentStatus])
+  @@index([diplomasDataDeletedAt])
+}
+
+model DraftRegistration {
+  id                          Int      @id @default(autoincrement())
+  userId                      Int
+  eventId                     Int?
+  collectiveName              String?
+  collectiveId                Int?
+  disciplineId                Int?
+  nominationId                Int?
+  ageId                       Int?
+  categoryId                  Int?
+  danceName                   String?
+  duration                    String?
+  participantsCount           Int      @default(0)
+  federationParticipantsCount Int      @default(0)
+  diplomasCount               Int      @default(0)
+  medalsCount                 Int      @default(0)
+  diplomasList                String?
+  leaders                     String? // JSON array of names
+  trainers                    String? // JSON array of names
+  participantIds              String? // JSON array of IDs
+  videoUrl                    String?
+  songUrl                     String?
+  agreement                   Boolean  @default(false)
+  agreement2                  Boolean  @default(false)
+  formData                    String? // JSON string with full form data
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+model RegistrationLeader {
+  id             Int      @id @default(autoincrement())
+  registrationId Int
+  personId       Int
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  person       Person       @relation(fields: [personId], references: [id])
+
+  @@unique([registrationId, personId])
+}
+
+model RegistrationTrainer {
+  id             Int      @id @default(autoincrement())
+  registrationId Int
+  personId       Int
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  person       Person       @relation(fields: [personId], references: [id])
+
+  @@unique([registrationId, personId])
+}
+
+model Participant {
+  id        Int      @id @default(autoincrement())
+  fullName  String
+  birthDate DateTime
+  userId    Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations RegistrationParticipant[]
+
+  @@index([fullName])
+}
+
+model RegistrationParticipant {
+  id             Int      @id @default(autoincrement())
+  registrationId Int
+  participantId  Int
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  participant  Participant  @relation(fields: [participantId], references: [id])
+
+  @@unique([registrationId, participantId])
+}
+
+model AccountingEntry {
+  id               Int           @id @default(autoincrement())
+  registrationId   Int
+  collectiveId     Int
+  amount           Decimal       @db.Decimal(10, 2) // Amount AFTER discount
+  discountAmount   Decimal       @default(0) @db.Decimal(10, 2) // Discount amount, only for PERFORMANCE
+  discountPercent  Decimal       @default(0) @db.Decimal(5, 2) // Discount percentage, only for PERFORMANCE
+  method           PaymentMethod
+  paidFor          PaidFor
+  paymentGroupId   String? // UUID for grouping
+  paymentGroupName String?
+  deletedAt        DateTime? // Soft delete
+  createdAt        DateTime      @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  collective   Collective   @relation(fields: [collectiveId], references: [id])
+
+  @@index([registrationId])
+  @@index([collectiveId])
+  @@index([paymentGroupId])
+  @@index([deletedAt])
+  @@index([paidFor])
+  @@index([createdAt])
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  registrationId Int
+  amount         Decimal       @db.Decimal(10, 2)
+  method         PaymentMethod
+  paidFor        PaidFor
+  createdAt      DateTime      @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  @@index([registrationId])
+}
+
+model SystemSetting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  description String?
+  updatedBy   Int?
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  updatedByUser User? @relation("SystemSettingUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@index([key])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  action     String
+  entityType String?
+  entityId   Int?
+  oldValue   String? // JSON string
+  newValue   String? // JSON string
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model RegistrationHistory {
+  id             Int      @id @default(autoincrement())
+  registrationId Int
+  userId         Int
+  action         String // CREATE, UPDATE, DELETE, STATUS_CHANGE, etc.
+  changedFields  String? // JSON array of changed field names
+  oldValues      String? // JSON object with old values
+  newValues      String? // JSON object with new values
+  ipAddress      String?
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  user         User         @relation("RegistrationHistoryUser", fields: [userId], references: [id])
+
+  @@index([registrationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model RegistrationTemplate {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  formData  String   // JSON string with full form data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+}

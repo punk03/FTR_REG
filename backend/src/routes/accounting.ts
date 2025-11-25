@@ -1,0 +1,399 @@
+import express, { Request, Response } from 'express';
+import { body, query, validationResult } from 'express-validator';
+import { PrismaClient } from '@prisma/client';
+import ExcelJS from 'exceljs';
+import { authenticateToken } from '../middleware/auth';
+import { requireRole } from '../middleware/auth';
+import { errorHandler } from '../middleware/errorHandler';
+import { cacheService } from '../services/cacheService';
+import { recalculateRegistrationPaymentStatus, calculateDiscount } from '../services/paymentService';
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// GET /api/accounting
+router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = parseInt(req.query.eventId as string);
+    const includeDeleted = req.query.includeDeleted === 'true';
+    const deletedOnly = req.query.deletedOnly === 'true';
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const skip = (page - 1) * limit;
+
+    if (!eventId) {
+      res.status(400).json({ error: 'eventId is required' });
+      return;
+    }
+
+    const where: any = {
+      registration: { eventId },
+    };
+
+    if (deletedOnly) {
+      where.deletedAt = { not: null };
+    } else if (!includeDeleted) {
+      where.deletedAt = null;
+    }
+
+    const [entries, total] = await Promise.all([
+      prisma.accountingEntry.findMany({
+        where,
+        include: {
+          registration: {
+            include: {
+              collective: true,
+              discipline: true,
+              nomination: true,
+              age: true,
+            },
+          },
+          collective: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.accountingEntry.count({ where }),
+    ]);
+
+    // Group by paymentGroupId
+    const grouped: Record<string, typeof entries> = {};
+    const ungrouped: typeof entries = [];
+
+    for (const entry of entries) {
+      if (entry.paymentGroupId) {
+        if (!grouped[entry.paymentGroupId]) {
+          grouped[entry.paymentGroupId] = [];
+        }
+        grouped[entry.paymentGroupId].push(entry);
+      } else {
+        ungrouped.push(entry);
+      }
+    }
+
+    // Calculate summary
+    const performanceEntries = entries.filter((e) => e.paidFor === 'PERFORMANCE' && !e.deletedAt);
+    const diplomasEntries = entries.filter((e) => e.paidFor === 'DIPLOMAS_MEDALS' && !e.deletedAt);
+
+    const summary = {
+      performance: {
+        cash: performanceEntries.filter((e) => e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
+        card: performanceEntries.filter((e) => e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
+        transfer: performanceEntries.filter((e) => e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
+        total: performanceEntries.reduce((sum, e) => sum + Number(e.amount), 0),
+      },
+      diplomasAndMedals: {
+        cash: diplomasEntries.filter((e) => e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
+        card: diplomasEntries.filter((e) => e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
+        transfer: diplomasEntries.filter((e) => e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
+        total: diplomasEntries.reduce((sum, e) => sum + Number(e.amount), 0),
+      },
+      totalByMethod: {
+        cash: entries.filter((e) => !e.deletedAt && e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
+        card: entries.filter((e) => !e.deletedAt && e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
+        transfer: entries.filter((e) => !e.deletedAt && e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
+      },
+      grandTotal: entries.filter((e) => !e.deletedAt).reduce((sum, e) => sum + Number(e.amount), 0),
+      totalDiscount: performanceEntries.reduce((sum, e) => sum + Number(e.discountAmount), 0),
+    };
+
+    res.json({
+      entries: Object.values(grouped).concat(ungrouped.length > 0 ? [ungrouped] : []),
+      grouped,
+      ungrouped,
+      summary,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// PUT /api/accounting/:id
+router.put(
+  '/:id',
+  authenticateToken,
+  requireRole('ADMIN', 'ACCOUNTANT'),
+  [
+    body('amount').optional().isFloat({ min: 0 }),
+    body('method').optional().isIn(['CASH', 'CARD', 'TRANSFER']),
+    body('paidFor').optional().isIn(['PERFORMANCE', 'DIPLOMAS_MEDALS']),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const id = parseInt(req.params.id);
+      const entry = await prisma.accountingEntry.findUnique({
+        where: { id },
+        include: { registration: { include: { event: true } } },
+      });
+
+      if (!entry) {
+        res.status(404).json({ error: 'Accounting entry not found' });
+        return;
+      }
+
+      const updateData: any = {};
+      if (req.body.amount !== undefined) updateData.amount = parseFloat(req.body.amount);
+      if (req.body.method !== undefined) updateData.method = req.body.method;
+      if (req.body.paidFor !== undefined) {
+        updateData.paidFor = req.body.paidFor;
+        // Clear discount if changing to DIPLOMAS_MEDALS
+        if (req.body.paidFor === 'DIPLOMAS_MEDALS') {
+          updateData.discountAmount = 0;
+          updateData.discountPercent = 0;
+        }
+      }
+      if (req.body.diplomasList !== undefined) {
+        await prisma.registration.update({
+          where: { id: entry.registrationId },
+          data: { diplomasList: req.body.diplomasList },
+        });
+      }
+      if (req.body.medalsCount !== undefined) {
+        await prisma.registration.update({
+          where: { id: entry.registrationId },
+          data: { medalsCount: req.body.medalsCount },
+        });
+      }
+      if (req.body.diplomasCount !== undefined) {
+        await prisma.registration.update({
+          where: { id: entry.registrationId },
+          data: { diplomasCount: req.body.diplomasCount },
+        });
+      }
+
+      // Handle discount (only for PERFORMANCE)
+      if (req.body.discountPercent !== undefined && entry.paidFor === 'PERFORMANCE') {
+        const originalAmount = Number(entry.amount) + Number(entry.discountAmount);
+        const discountPercent = parseFloat(req.body.discountPercent);
+        const discountAmount = (originalAmount * discountPercent) / 100;
+        updateData.discountAmount = discountAmount;
+        updateData.discountPercent = discountPercent;
+        updateData.amount = originalAmount - discountAmount;
+      }
+
+      const updated = await prisma.accountingEntry.update({
+        where: { id },
+        data: updateData,
+        include: {
+          registration: {
+            include: {
+              collective: true,
+              discipline: true,
+              nomination: true,
+              age: true,
+            },
+          },
+          collective: true,
+        },
+      });
+
+      await recalculateRegistrationPaymentStatus(entry.registrationId);
+
+      res.json(updated);
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
+// DELETE /api/accounting/:id
+router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const entry = await prisma.accountingEntry.findUnique({
+      where: { id },
+    });
+
+    if (!entry) {
+      res.status(404).json({ error: 'Accounting entry not found' });
+      return;
+    }
+
+    await prisma.accountingEntry.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    await recalculateRegistrationPaymentStatus(entry.registrationId);
+
+    // Invalidate statistics cache for this event
+    const registration = await prisma.registration.findUnique({
+      where: { id: entry.registrationId },
+      select: { eventId: true },
+    });
+    if (registration) {
+      await cacheService.del(`statistics:${registration.eventId}`);
+    }
+
+    res.json({ message: 'Accounting entry deleted successfully' });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// POST /api/accounting/:id/restore
+router.post('/:id/restore', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const entry = await prisma.accountingEntry.findUnique({
+      where: { id },
+    });
+
+    if (!entry) {
+      res.status(404).json({ error: 'Accounting entry not found' });
+      return;
+    }
+
+    const restored = await prisma.accountingEntry.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+
+    // Restore diplomas data if needed
+    if (entry.paidFor === 'DIPLOMAS_MEDALS') {
+      // Data restoration logic if needed
+    }
+
+    await recalculateRegistrationPaymentStatus(entry.registrationId);
+
+    // Invalidate statistics cache for this event
+    const registration = await prisma.registration.findUnique({
+      where: { id: entry.registrationId },
+      select: { eventId: true },
+    });
+    if (registration) {
+      await cacheService.del(`statistics:${registration.eventId}`);
+    }
+
+    res.json({ message: 'Accounting entry restored successfully', entry: restored });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// PUT /api/accounting/payment-group/:paymentGroupId/name
+router.put(
+  '/payment-group/:paymentGroupId/name',
+  authenticateToken,
+  requireRole('ADMIN', 'ACCOUNTANT'),
+  [body('name').notEmpty().withMessage('Name is required')],
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { paymentGroupId } = req.params;
+      const { name } = req.body;
+
+      const result = await prisma.accountingEntry.updateMany({
+        where: { paymentGroupId },
+        data: { paymentGroupName: name },
+      });
+
+      res.json({ message: 'Payment group name updated', updatedCount: result.count });
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
+// PUT /api/accounting/payment-group/:paymentGroupId/discount
+router.put(
+  '/payment-group/:paymentGroupId/discount',
+  authenticateToken,
+  requireRole('ADMIN', 'ACCOUNTANT'),
+  [body('discountPercent').isFloat({ min: 0, max: 100 }).withMessage('Valid discountPercent (0-100) is required')],
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { paymentGroupId } = req.params;
+      const { discountPercent } = req.body;
+
+      // Get all PERFORMANCE entries in the group
+      const entries = await prisma.accountingEntry.findMany({
+        where: {
+          paymentGroupId,
+          paidFor: 'PERFORMANCE',
+          deletedAt: null,
+        },
+        include: { registration: { include: { event: true } } },
+      });
+
+      if (entries.length === 0) {
+        res.status(404).json({ error: 'No PERFORMANCE entries found in this group' });
+        return;
+      }
+
+      // Calculate original amounts and apply discount
+      let totalOriginalAmount = 0;
+      for (const entry of entries) {
+        const original = Number(entry.amount) + Number(entry.discountAmount);
+        totalOriginalAmount += original;
+      }
+
+      const totalDiscountAmount = (totalOriginalAmount * discountPercent) / 100;
+
+      // Update entries proportionally
+      const updatedEntries = [];
+      for (const entry of entries) {
+        const original = Number(entry.amount) + Number(entry.discountAmount);
+        const proportion = original / totalOriginalAmount;
+        const entryDiscountAmount = totalDiscountAmount * proportion;
+        const finalAmount = original - entryDiscountAmount;
+
+        const updated = await prisma.accountingEntry.update({
+          where: { id: entry.id },
+          data: {
+            amount: finalAmount,
+            discountAmount: entryDiscountAmount,
+            discountPercent,
+          },
+        });
+
+        await recalculateRegistrationPaymentStatus(entry.registrationId);
+        updatedEntries.push(updated);
+      }
+
+      // Invalidate statistics cache for all affected events
+      const eventIds = [...new Set(entries.map((e) => e.registration.eventId))];
+      for (const eventId of eventIds) {
+        await cacheService.del(`statistics:${eventId}`);
+      }
+
+      res.json({
+        message: 'Discount applied',
+        discountPercent,
+        discountAmount: totalDiscountAmount,
+        originalAmount: totalOriginalAmount,
+        finalAmount: totalOriginalAmount - totalDiscountAmount,
+        affectedEntries: updatedEntries.length,
+      });
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
+export default router;
+

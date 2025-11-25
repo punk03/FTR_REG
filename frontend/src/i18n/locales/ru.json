@@ -1,0 +1,52 @@
+{
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "clear": "Очистить",
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успешно",
+    "yes": "Да",
+    "no": "Нет",
+    "lightTheme": "Светлая тема",
+    "darkTheme": "Темная тема"
+  },
+  "auth": {
+    "login": "Вход",
+    "logout": "Выход",
+    "email": "Email",
+    "password": "Пароль",
+    "loginButton": "Войти"
+  },
+  "navigation": {
+    "home": "Главная",
+    "registrations": "Регистрации",
+    "accounting": "Бухгалтерия",
+    "diplomas": "Дипломы",
+    "statistics": "Статистика",
+    "admin": "Админ-панель",
+    "combinedPayment": "Объединенная оплата"
+  },
+  "registrations": {
+    "title": "Регистрации",
+    "createNew": "Создать регистрацию",
+    "number": "Номер",
+    "collective": "Коллектив",
+    "event": "Мероприятие",
+    "status": "Статус",
+    "paymentStatus": "Статус оплаты"
+  },
+  "dashboard": {
+    "title": "Главная",
+    "totalRegistrations": "Всего регистраций",
+    "totalCollectives": "Всего коллективов",
+    "totalParticipants": "Всего участников",
+    "totalPaid": "Оплачено"
+  }
+}
+

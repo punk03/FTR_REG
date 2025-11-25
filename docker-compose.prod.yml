@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: ftr_postgres
+    environment:
+      POSTGRES_USER: ftr_user
+      POSTGRES_PASSWORD: ftr_password
+      POSTGRES_DB: ftr_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ftr_user -d ftr_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ftr_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ftr_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ftr_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ftr_backend
+    environment:
+      DATABASE_URL: postgresql://ftr_user:ftr_password@postgres:5432/ftr_db?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 3001
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-in-production}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ftr_network
+    restart: unless-stopped
+    volumes:
+      - ./backend/.env:/app/.env:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ftr_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - ftr_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  ftr_network:
+    driver: bridge
+
+
