@@ -786,7 +786,7 @@ export const Admin: React.FC = () => {
                       <TableCell>{user.role}</TableCell>
                       <TableCell>{user.city || '-'}</TableCell>
                       <TableCell>{user.phone || '-'}</TableCell>
-                      <TableCell>{formatDate(user.createdAt)}</TableCell>
+                      <TableCell>{user.createdAt ? formatDate(user.createdAt) : '-'}</TableCell>
                       <TableCell>
                         <IconButton size="small" onClick={() => handleEditUser(user)}>
                           <EditIcon fontSize="small" />
