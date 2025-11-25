@@ -131,6 +131,8 @@ setup_repository() {
             print_info "Updating repository as user $APP_USER..."
             sudo -u "$APP_USER" bash -c "
                 cd '$PROJECT_DIR'
+                # Fix Git safe.directory issue
+                git config --global --add safe.directory '$PROJECT_DIR' 2>/dev/null || true
                 if [ -n \"\$(git status --porcelain)\" ]; then
                     git stash save \"Auto-stash before update \$(date +%Y%m%d_%H%M%S)\"
                 fi
