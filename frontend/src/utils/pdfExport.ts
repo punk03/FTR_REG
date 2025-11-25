@@ -1,9 +1,21 @@
+// @ts-ignore - pdfmake types
 import pdfMake from 'pdfmake/build/pdfmake';
+// @ts-ignore - pdfmake types
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
 // Инициализация шрифтов
-if (typeof pdfFonts !== 'undefined') {
-  pdfMake.vfs = pdfFonts.pdfMake.vfs;
+try {
+  if (pdfFonts && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
+    pdfMake.vfs = pdfFonts.pdfMake.vfs;
+  } else if (pdfFonts && (pdfFonts as any).vfs) {
+    pdfMake.vfs = (pdfFonts as any).vfs;
+  }
+} catch (error) {
+  console.warn('Failed to initialize pdfmake fonts:', error);
+  // Create empty vfs if fonts fail to load
+  if (!pdfMake.vfs) {
+    pdfMake.vfs = {};
+  }
 }
 
 interface AccountingEntry {
