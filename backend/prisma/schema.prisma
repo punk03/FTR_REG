@@ -63,12 +63,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  registrations       Registration[]
-  auditLogs           AuditLog[]
-  registrationHistory RegistrationHistory[] @relation("RegistrationHistoryUser")
-  draftRegistrations  DraftRegistration[]
+  registrations         Registration[]
+  auditLogs             AuditLog[]
+  registrationHistory   RegistrationHistory[]  @relation("RegistrationHistoryUser")
+  draftRegistrations    DraftRegistration[]
   registrationTemplates RegistrationTemplate[]
-  systemSettings      SystemSetting[]       @relation("SystemSettingUpdatedBy")
+  systemSettings        SystemSetting[]        @relation("SystemSettingUpdatedBy")
 
   @@index([email])
 }
@@ -121,6 +121,9 @@ model Collective {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   accessory String?
+  school    String?
+  contacts  String?
+  city      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -426,7 +429,7 @@ model RegistrationTemplate {
   id        Int      @id @default(autoincrement())
   userId    Int
   name      String
-  formData  String   // JSON string with full form data
+  formData  String // JSON string with full form data
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
