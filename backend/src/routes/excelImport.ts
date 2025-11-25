@@ -183,11 +183,26 @@ router.post(
         prisma.category.findMany(),
       ]);
 
-      // Парсинг строк (начиная со 2-й строки, первая - заголовки)
-      let rowNumber = 2;
+      // Определяем строку с заголовками (ищем строку с "Наименование коллектива" или "№")
+      let headerRowIndex = 1;
+      for (let i = 1; i <= Math.min(10, worksheet.rowCount); i++) {
+        const row = worksheet.getRow(i);
+        const cellB = row.getCell(2);
+        const cellA = row.getCell(1);
+        if (
+          (cellB.value && String(cellB.value).includes('коллектив')) ||
+          (cellA.value && String(cellA.value).trim() === '№')
+        ) {
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      // Парсинг строк (начиная после строки с заголовками)
+      let rowNumber = headerRowIndex + 1;
       const parsePromises: Promise<void>[] = [];
       worksheet.eachRow((row, rowIndex) => {
-        if (rowIndex === 1) return; // Пропускаем заголовки
+        if (rowIndex <= headerRowIndex) return; // Пропускаем заголовки и пустые строки до них
 
         const parsePromise = (async () => {
           const parsedRow: ParsedRow = {
@@ -259,66 +274,66 @@ router.post(
             parsedRow.danceName = String(danceNameCell.value).trim();
           }
 
-          // Колонка D: количество участников
+          // Колонка D (4): количество участников
           const participantsCell = row.getCell(4);
-          if (participantsCell.value !== null && participantsCell.value !== undefined) {
+          if (participantsCell.value !== null && participantsCell.value !== undefined && participantsCell.value !== '') {
             const participantsValue = Number(participantsCell.value);
             if (!isNaN(participantsValue)) {
               parsedRow.participantsCount = Math.floor(participantsValue);
             }
           }
 
-          // Колонка E: руководители
-          const leadersCell = row.getCell(5);
-          if (leadersCell.value) {
+          // Колонка F (6): руководители (пропускаем пустую колонку E)
+          const leadersCell = row.getCell(6);
+          if (leadersCell.value && String(leadersCell.value).trim()) {
             parsedRow.leaders = String(leadersCell.value).trim();
           }
 
-          // Колонка F: тренеры
-          const trainersCell = row.getCell(6);
-          if (trainersCell.value) {
+          // Колонка H (8): тренеры (пропускаем пустую колонку G)
+          const trainersCell = row.getCell(8);
+          if (trainersCell.value && String(trainersCell.value).trim()) {
             parsedRow.trainers = String(trainersCell.value).trim();
           }
 
-          // Колонка G: школа
-          const schoolCell = row.getCell(7);
-          if (schoolCell.value) {
+          // Колонка J (10): школа (пропускаем пустую колонку I)
+          const schoolCell = row.getCell(10);
+          if (schoolCell.value && String(schoolCell.value).trim()) {
             parsedRow.school = String(schoolCell.value).trim();
           }
 
-          // Колонка H: контакты
-          const contactsCell = row.getCell(8);
-          if (contactsCell.value) {
+          // Колонка K (11): контакты
+          const contactsCell = row.getCell(11);
+          if (contactsCell.value && String(contactsCell.value).trim()) {
             parsedRow.contacts = String(contactsCell.value).trim();
           }
 
-          // Колонка I: город
-          const cityCell = row.getCell(9);
-          if (cityCell.value) {
+          // Колонка L (12): город
+          const cityCell = row.getCell(12);
+          if (cityCell.value && String(cityCell.value).trim()) {
             parsedRow.city = String(cityCell.value).trim();
           }
 
-          // Колонка J: длительность
-          const durationCell = row.getCell(10);
-          if (durationCell.value) {
+          // Колонка M (13): длительность
+          const durationCell = row.getCell(13);
+          if (durationCell.value && String(durationCell.value).trim()) {
             parsedRow.duration = String(durationCell.value).trim();
           }
 
-          // Колонка K: видео URL
-          const videoUrlCell = row.getCell(11);
-          if (videoUrlCell.value) {
+          // Колонка O (15): ссылка (видео URL) (пропускаем колонку N - длительность с перерывами)
+          const videoUrlCell = row.getCell(15);
+          if (videoUrlCell.value && String(videoUrlCell.value).trim()) {
             parsedRow.videoUrl = String(videoUrlCell.value).trim();
           }
 
-          // Колонка L: ФИО на дипломы
-          const diplomasCell = row.getCell(12);
-          if (diplomasCell.value) {
+          // Колонка Q (17): ФИО на дипломы (пропускаем колонку P - примечание)
+          const diplomasCell = row.getCell(17);
+          if (diplomasCell.value && String(diplomasCell.value).trim()) {
             parsedRow.diplomasList = String(diplomasCell.value).trim();
           }
 
-          // Колонка M: количество медалей
-          const medalsCell = row.getCell(13);
-          if (medalsCell.value !== null && medalsCell.value !== undefined) {
+          // Колонка R (18): количество медалей
+          const medalsCell = row.getCell(18);
+          if (medalsCell.value !== null && medalsCell.value !== undefined && medalsCell.value !== '') {
             const medalsValue = Number(medalsCell.value);
             if (!isNaN(medalsValue)) {
               parsedRow.medalsCount = Math.floor(medalsValue);
