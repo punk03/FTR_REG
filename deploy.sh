@@ -592,20 +592,72 @@ build_frontend() {
     print_success "Frontend built successfully"
 }
 
-# Build and start application containers
+# Start application (without Docker for backend/frontend - run directly on host)
 start_application() {
-    print_info "Building and starting application containers..."
+    print_info "Starting application services..."
     
-    # Use production docker-compose if it exists, otherwise use regular one
-    if [ -f "docker-compose.prod.yml" ]; then
-        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
-        $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml up -d
+    # Start backend as a background process
+    print_info "Starting backend server..."
+    cd backend
+    
+    # Check if backend is already running
+    if pgrep -f "node.*dist/index.js" > /dev/null; then
+        print_warning "Backend is already running"
     else
-        $DOCKER_COMPOSE_CMD build --no-cache
-        $DOCKER_COMPOSE_CMD up -d
+        # Start backend in background
+        nohup npm start > ../backend.log 2>&1 &
+        BACKEND_PID=$!
+        echo $BACKEND_PID > ../backend.pid
+        print_success "Backend started (PID: $BACKEND_PID)"
+        
+        # Wait a bit for backend to start
+        sleep 3
+        
+        # Check if backend is running
+        if ! kill -0 $BACKEND_PID 2>/dev/null; then
+            print_error "Backend failed to start. Check backend.log for details."
+            exit 1
+        fi
     fi
     
-    print_success "Application containers started"
+    cd ..
+    
+    # For frontend, we'll use a simple HTTP server since it's already built
+    print_info "Starting frontend server..."
+    cd frontend
+    
+    # Check if frontend server is already running
+    if pgrep -f "serve.*dist" > /dev/null || pgrep -f "http-server.*dist" > /dev/null; then
+        print_warning "Frontend server is already running"
+    else
+        # Check if serve is installed, if not install it
+        if ! command -v serve &> /dev/null; then
+            print_info "Installing serve for frontend..."
+            npm install -g serve
+        fi
+        
+        # Start frontend server in background
+        nohup serve -s dist -l 80 > ../frontend.log 2>&1 &
+        FRONTEND_PID=$!
+        echo $FRONTEND_PID > ../frontend.pid
+        print_success "Frontend started (PID: $FRONTEND_PID)"
+        
+        # Wait a bit for frontend to start
+        sleep 2
+        
+        # Check if frontend is running
+        if ! kill -0 $FRONTEND_PID 2>/dev/null; then
+            print_error "Frontend failed to start. Check frontend.log for details."
+            exit 1
+        fi
+    fi
+    
+    cd ..
+    
+    print_success "Application services started"
+    print_info "Backend: http://localhost:3001"
+    print_info "Frontend: http://localhost"
+    print_info "Logs: backend.log, frontend.log"
 }
 
 # Show deployment status
@@ -637,9 +689,11 @@ show_status() {
     echo ""
     echo "=== Logs ==="
     if [ -f "docker-compose.prod.yml" ]; then
-        echo "View logs with: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f"
-        echo "View backend logs: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f backend"
-        echo "View frontend logs: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f frontend"
+        echo "View database/redis logs with: $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml logs -f"
+        echo "View backend logs: tail -f backend.log"
+        echo "View frontend logs: tail -f frontend.log"
+        echo "Backend PID file: backend.pid"
+        echo "Frontend PID file: frontend.pid"
     else
         echo "View logs with: $DOCKER_COMPOSE_CMD logs -f"
         echo "View backend logs: $DOCKER_COMPOSE_CMD logs -f backend"
