@@ -470,8 +470,23 @@ router.post(
             collective = await prisma.collective.create({
               data: {
                 name: row.collective!,
+                school: row.school,
+                contacts: row.contacts,
+                city: row.city,
               },
             });
+          } else {
+            // Обновляем данные коллектива, если они изменились
+            if (row.school || row.contacts || row.city) {
+              collective = await prisma.collective.update({
+                where: { id: collective.id },
+                data: {
+                  school: row.school || collective.school,
+                  contacts: row.contacts || collective.contacts,
+                  city: row.city || collective.city,
+                },
+              });
+            }
           }
 
           // Парсинг участников из diplomasList
