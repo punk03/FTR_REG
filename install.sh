@@ -42,13 +42,35 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if running as root
+# Check if running as root and handle accordingly
 check_root() {
     if [ "$EUID" -eq 0 ]; then 
-        print_error "Please do not run this script as root."
-        print_info "Run as regular user: ./install.sh"
-        print_info "Or if you need sudo: sudo -u <username> bash -c './install.sh'"
-        exit 1
+        print_warning "Running as root. This is allowed."
+        print_info "The script will create/use a dedicated user for the application if needed."
+        
+        # Try to find an existing user for FTR, or use a default
+        if id "ftr" &>/dev/null; then
+            APP_USER="ftr"
+            print_info "Found existing 'ftr' user, will use it for application files"
+        elif id "fil" &>/dev/null; then
+            APP_USER="fil"
+            print_info "Found existing 'fil' user, will use it for application files"
+        else
+            # Create dedicated user for FTR application
+            print_info "Creating dedicated user 'ftr' for the application..."
+            useradd -r -s /bin/bash -d "$HOME/FTR_REG" -m ftr 2>/dev/null || {
+                print_warning "Could not create 'ftr' user. Will use current directory owner."
+                APP_USER=$(stat -c '%U' . 2>/dev/null || echo "root")
+            }
+            APP_USER="ftr"
+            print_success "Created user 'ftr' for application"
+        fi
+        
+        # Ensure APP_USER is set
+        export APP_USER
+    else
+        APP_USER=$(whoami)
+        export APP_USER
     fi
 }
 
