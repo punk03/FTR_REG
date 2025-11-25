@@ -314,8 +314,7 @@ router.post(
             }
           }
 
-          // Колонка B: коллектив
-          const collectiveCell = row.getCell(2);
+          // Колонка B (2): коллектив
           if (collectiveCell.value) {
             parsedRow.collective = String(collectiveCell.value).trim();
           }
