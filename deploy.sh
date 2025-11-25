@@ -424,6 +424,11 @@ EOF
             print_info "Updating REDIS_HOST to use localhost for host connections..."
             sed -i 's/^REDIS_HOST=redis/REDIS_HOST=localhost/g' backend/.env 2>/dev/null || true
         fi
+        # Update CORS_ORIGIN to use production IP if it uses localhost only
+        if grep -q "^CORS_ORIGIN=http://localhost" backend/.env 2>/dev/null && ! grep -q "185.185.68.105" backend/.env 2>/dev/null; then
+            print_info "Updating CORS_ORIGIN to include production IP..."
+            sed -i 's|^CORS_ORIGIN=.*|CORS_ORIGIN=http://185.185.68.105:3000,http://185.185.68.105,http://localhost:3000,http://localhost:5173,http://localhost|g' backend/.env 2>/dev/null || true
+        fi
     fi
     
     # Frontend .env
