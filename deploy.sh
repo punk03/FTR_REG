@@ -326,6 +326,10 @@ update_code() {
     if [ -d ".git" ]; then
         print_info "Updating code from git repository..."
         
+        # Fix Git safe.directory issue if running as different user
+        CURRENT_DIR=$(pwd)
+        git config --global --add safe.directory "$CURRENT_DIR" 2>/dev/null || true
+        
         # Check if there are uncommitted changes
         if ! git diff-index --quiet HEAD --; then
             print_warning "You have uncommitted changes. Stashing them..."
