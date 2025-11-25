@@ -50,11 +50,18 @@ interface AccountingData {
   ungrouped: AccountingEntry[];
 }
 
-export const exportAccountingToPDF = (
+export const exportAccountingToPDF = async (
   data: AccountingData,
   eventName: string,
   eventId: number
-): void => {
+): Promise<void> => {
+  // Инициализируем pdfmake при первом вызове
+  const pdfMake = await initializePdfMake();
+  
+  if (!pdfMake.vfs || Object.keys(pdfMake.vfs).length === 0) {
+    console.error('PDF fonts not loaded. Cannot generate PDF.');
+    throw new Error('Шрифты для PDF не загружены. Пожалуйста, обновите страницу.');
+  }
   const formatCurrency = (amount: number): string => {
     return `${amount.toFixed(2)} ₽`;
   };
