@@ -152,13 +152,29 @@ async function parseCategoryString(
         }
       }
       
+      // Проверяем варианты написания и опечатки
+      const wordLower = words[i].toLowerCase();
+      if (DISCIPLINE_VARIANTS[wordLower]) {
+        const variantName = DISCIPLINE_VARIANTS[wordLower];
+        const discipline = disciplines.find((d) => d.name.toLowerCase() === variantName.toLowerCase());
+        if (discipline) {
+          result.disciplineName = discipline.name;
+          disciplineFound = true;
+          break;
+        }
+      }
+      
       // Проверяем частичное совпадение (для случаев типа "Contemporary" в "Contemprorary")
       const disciplinePartial = disciplines.find((d) => {
         const dLower = d.name.toLowerCase();
         const wLower = words[i].toLowerCase();
-        return dLower.includes(wLower) || wLower.includes(dLower) || 
-               (dLower.length > 3 && wLower.length > 3 && 
-                dLower.substring(0, 4) === wLower.substring(0, 4));
+        // Более гибкое сравнение: первые 4-5 символов должны совпадать
+        const minLen = Math.min(4, Math.min(dLower.length, wLower.length));
+        if (minLen > 0) {
+          return dLower.substring(0, minLen) === wLower.substring(0, minLen) ||
+                 dLower.includes(wLower) || wLower.includes(dLower);
+        }
+        return false;
       });
       if (disciplinePartial) {
         result.disciplineName = disciplinePartial.name;
@@ -323,47 +339,154 @@ router.post(
       }
 
       // Парсинг строк (начиная после строки с заголовками)
+      // ВАЖНО: Парсим последовательно, чтобы currentCategory был синхронизирован
       let currentCategory: ParsedRow['parsed'] | null = null;
-      const parsePromises: Promise<void>[] = [];
+      const parsedRows: ParsedRow[] = [];
       
-      // Проходим по всем строкам после заголовков
+      // Проходим по всем строкам после заголовков ПОСЛЕДОВАТЕЛЬНО
       for (let rowIndex = headerRowIndex + 1; rowIndex <= worksheet.rowCount; rowIndex++) {
         const row = worksheet.getRow(rowIndex);
-        const parsePromise = (async () => {
-          const parsedRow: ParsedRow = {
-            rowNumber: rowIndex,
-            errors: [],
-          };
+        const parsedRow: ParsedRow = {
+          rowNumber: rowIndex,
+          errors: [],
+        };
 
-          try {
-            // Получаем значения ячеек
-            const categoryCell = row.getCell(1);
-            const collectiveCell = row.getCell(2);
-            const danceNameCell = row.getCell(3);
-            const participantsCell = row.getCell(4);
+        try {
+          // Получаем значения ячеек - используем richText для правильного чтения длинных значений
+          const categoryCell = row.getCell(1);
+          const collectiveCell = row.getCell(2);
+          const danceNameCell = row.getCell(3);
+          const participantsCell = row.getCell(4);
+          
+          // Пропускаем полностью пустые строки
+          if (!categoryCell.value && !collectiveCell.value && !danceNameCell.value) {
+            continue;
+          }
+
+          // Правильно читаем значения ячеек (учитываем richText и обрезанные значения)
+          let categoryValue = '';
+          if (categoryCell.value) {
+            if (categoryCell.value.richText) {
+              categoryValue = categoryCell.value.richText.map((rt: any) => rt.text || '').join('').trim();
+            } else {
+              categoryValue = String(categoryCell.value).trim();
+            }
+          }
+
+          let collectiveValue = '';
+          if (collectiveCell.value) {
+            if (collectiveCell.value.richText) {
+              collectiveValue = collectiveCell.value.richText.map((rt: any) => rt.text || '').join('').trim();
+            } else {
+              collectiveValue = String(collectiveCell.value).trim();
+            }
+          }
+
+          let danceNameValue = '';
+          if (danceNameCell.value) {
+            if (danceNameCell.value.richText) {
+              danceNameValue = danceNameCell.value.richText.map((rt: any) => rt.text || '').join('').trim();
+            } else {
+              danceNameValue = String(danceNameCell.value).trim();
+            }
+          }
+
+          // Определяем, является ли строка строкой категории
+          // Проверяем начало строк (первые 50 символов) вместо полного совпадения
+          // Это нужно, так как Excel может обрезать длинные значения
+          const categoryStart = categoryValue.substring(0, 50);
+          const collectiveStart = collectiveValue.substring(0, 50);
+          const danceNameStart = danceNameValue.substring(0, 50);
+          
+          const isCategoryRow = 
+            categoryValue && 
+            collectiveValue && 
+            danceNameValue &&
+            categoryStart === collectiveStart && 
+            collectiveStart === danceNameStart &&
+            /^\d+\./.test(categoryValue); // Начинается с цифры и точки
+
+          if (isCategoryRow) {
+            // Это строка категории - парсим категорию и сохраняем для следующих строк
+            parsedRow.categoryString = categoryValue;
+            const parsed = await parseCategoryString(
+              parsedRow.categoryString,
+              disciplines,
+              nominations,
+              ages,
+              categories
+            );
             
-            // Пропускаем полностью пустые строки
-            if (!categoryCell.value && !collectiveCell.value && !danceNameCell.value) {
-              return;
+            // Поиск ID в справочниках
+            const parsedData: ParsedRow['parsed'] = {};
+            
+            if (parsed.blockNumber) {
+              parsedData.blockNumber = parsed.blockNumber;
+            }
+            
+            if (parsed.disciplineName) {
+              const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
+              if (discipline) {
+                parsedData.disciplineId = discipline.id;
+                parsedData.disciplineName = discipline.name;
+              } else {
+                console.warn(`[Excel Import] Дисциплина "${parsed.disciplineName}" не найдена в строке ${rowIndex}`);
+              }
             }
 
-            const categoryValue = categoryCell.value ? String(categoryCell.value).trim() : '';
-            const collectiveValue = collectiveCell.value ? String(collectiveCell.value).trim() : '';
-            const danceNameValue = danceNameCell.value ? String(danceNameCell.value).trim() : '';
+            if (parsed.nominationName) {
+              const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
+              if (nomination) {
+                parsedData.nominationId = nomination.id;
+                parsedData.nominationName = nomination.name;
+              } else {
+                console.warn(`[Excel Import] Номинация "${parsed.nominationName}" не найдена в строке ${rowIndex}`);
+              }
+            }
 
-            // Определяем, является ли строка строкой категории
-            // Строка категории: колонка A содержит категорию, и она повторяется в B и C
-            // ИЛИ колонка A начинается с цифры и точки, а B и C содержат ту же категорию
-            const isCategoryRow = 
-              categoryValue && 
-              collectiveValue && 
-              danceNameValue &&
-              categoryValue === collectiveValue && 
-              collectiveValue === danceNameValue &&
-              /^\d+\./.test(categoryValue); // Начинается с цифры и точки
+            if (parsed.ageName) {
+              const age = ages.find((a: any) => a.name === parsed.ageName);
+              if (age) {
+                parsedData.ageId = age.id;
+                parsedData.ageName = age.name;
+              } else {
+                console.warn(`[Excel Import] Возраст "${parsed.ageName}" не найден в строке ${rowIndex}`);
+              }
+            }
 
-            if (isCategoryRow) {
-              // Это строка категории - парсим категорию и сохраняем для следующих строк
+            if (parsed.categoryName) {
+              const category = categories.find((c: any) => c.name === parsed.categoryName);
+              if (category) {
+                parsedData.categoryId = category.id;
+                parsedData.categoryName = category.name;
+              } else {
+                console.warn(`[Excel Import] Категория "${parsed.categoryName}" не найдена в строке ${rowIndex}`);
+              }
+            }
+
+            // Сохраняем категорию для следующих строк
+            if (Object.keys(parsedData).length > 0) {
+              currentCategory = parsedData;
+              console.log(`[Excel Import] Строка ${rowIndex}: Найдена категория - Дисциплина: ${parsedData.disciplineName || 'не найдена'}, Номинация: ${parsedData.nominationName || 'не найдена'}, Возраст: ${parsedData.ageName || 'не найдена'}`);
+            }
+            
+            // Не добавляем строки категорий в результат
+            continue;
+          }
+
+            // Это строка с данными регистрации
+          // Должна быть колонка B (коллектив)
+          // Название танца может быть пустым для соло
+          if (!collectiveValue) {
+            continue; // Пропускаем строки без коллектива
+          }
+
+          // Используем текущую категорию, если она есть
+          if (currentCategory && Object.keys(currentCategory).length > 0) {
+            parsedRow.parsed = Object.assign({}, currentCategory);
+          } else {
+            // Если категории нет, пытаемся парсить из колонки A
+            if (categoryValue && /^\d+\./.test(categoryValue)) {
               parsedRow.categoryString = categoryValue;
               const parsed = await parseCategoryString(
                 parsedRow.categoryString,
@@ -373,221 +496,154 @@ router.post(
                 categories
               );
               
-              // Поиск ID в справочниках
               const parsedData: ParsedRow['parsed'] = {};
-              
-              if (parsed.blockNumber) {
-                parsedData.blockNumber = parsed.blockNumber;
-              }
+              if (parsed.blockNumber) parsedData.blockNumber = parsed.blockNumber;
               
               if (parsed.disciplineName) {
                 const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
                 if (discipline) {
                   parsedData.disciplineId = discipline.id;
                   parsedData.disciplineName = discipline.name;
-                } else {
-                  parsedRow.errors.push(`Дисциплина "${parsed.disciplineName}" не найдена`);
                 }
               }
-
               if (parsed.nominationName) {
                 const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
                 if (nomination) {
                   parsedData.nominationId = nomination.id;
                   parsedData.nominationName = nomination.name;
-                } else {
-                  parsedRow.errors.push(`Номинация "${parsed.nominationName}" не найдена`);
                 }
               }
-
               if (parsed.ageName) {
                 const age = ages.find((a: any) => a.name === parsed.ageName);
                 if (age) {
                   parsedData.ageId = age.id;
                   parsedData.ageName = age.name;
-                } else {
-                  parsedRow.errors.push(`Возраст "${parsed.ageName}" не найден`);
                 }
               }
-
               if (parsed.categoryName) {
                 const category = categories.find((c: any) => c.name === parsed.categoryName);
                 if (category) {
                   parsedData.categoryId = category.id;
                   parsedData.categoryName = category.name;
-                } else {
-                  parsedRow.errors.push(`Категория "${parsed.categoryName}" не найдена`);
                 }
-              }
-
-              // Сохраняем категорию для следующих строк
-              if (Object.keys(parsedData).length > 0) {
-                currentCategory = parsedData;
               }
               
-              // Не добавляем строки категорий в результат
-              return;
+              parsedRow.parsed = parsedData;
+              currentCategory = parsedData;
             }
-
-            // Это строка с данными регистрации
-            // Должна быть колонка B (коллектив) и C (название танца)
-            if (!collectiveValue || !danceNameValue) {
-              return; // Пропускаем строки без коллектива или названия танца
-            }
-
-            // Используем текущую категорию, если она есть
-            if (currentCategory && Object.keys(currentCategory).length > 0) {
-              parsedRow.parsed = Object.assign({}, currentCategory);
-            } else {
-              // Если категории нет, пытаемся парсить из колонки A
-              if (categoryValue && /^\d+\./.test(categoryValue)) {
-                parsedRow.categoryString = categoryValue;
-                const parsed = await parseCategoryString(
-                  parsedRow.categoryString,
-                  disciplines,
-                  nominations,
-                  ages,
-                  categories
-                );
-                
-                const parsedData: ParsedRow['parsed'] = {};
-                if (parsed.blockNumber) parsedData.blockNumber = parsed.blockNumber;
-                
-                if (parsed.disciplineName) {
-                  const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
-                  if (discipline) {
-                    parsedData.disciplineId = discipline.id;
-                    parsedData.disciplineName = discipline.name;
-                  }
-                }
-                if (parsed.nominationName) {
-                  const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
-                  if (nomination) {
-                    parsedData.nominationId = nomination.id;
-                    parsedData.nominationName = nomination.name;
-                  }
-                }
-                if (parsed.ageName) {
-                  const age = ages.find((a: any) => a.name === parsed.ageName);
-                  if (age) {
-                    parsedData.ageId = age.id;
-                    parsedData.ageName = age.name;
-                  }
-                }
-                if (parsed.categoryName) {
-                  const category = categories.find((c: any) => c.name === parsed.categoryName);
-                  if (category) {
-                    parsedData.categoryId = category.id;
-                    parsedData.categoryName = category.name;
-                  }
-                }
-                
-                parsedRow.parsed = parsedData;
-                currentCategory = parsedData;
-              }
-            }
-
-            // Колонка B (2): коллектив
-            parsedRow.collective = collectiveValue;
-
-            // Колонка C (3): название танца
-            parsedRow.danceName = danceNameValue;
-
-            // Колонка D (4): количество участников
-            if (participantsCell.value !== null && participantsCell.value !== undefined && participantsCell.value !== '') {
-              const participantsValue = Number(participantsCell.value);
-              if (!isNaN(participantsValue)) {
-                parsedRow.participantsCount = Math.floor(participantsValue);
-              }
-            }
-
-            // Колонка F (6): руководители (пропускаем пустую колонку E)
-            const leadersCell = row.getCell(6);
-            if (leadersCell.value && String(leadersCell.value).trim()) {
-              parsedRow.leaders = String(leadersCell.value).trim();
-            }
-
-            // Колонка H (8): тренеры (пропускаем пустую колонку G)
-            const trainersCell = row.getCell(8);
-            if (trainersCell.value && String(trainersCell.value).trim()) {
-              parsedRow.trainers = String(trainersCell.value).trim();
-            }
-
-            // Колонка J (10): школа (пропускаем пустую колонку I)
-            const schoolCell = row.getCell(10);
-            if (schoolCell.value && String(schoolCell.value).trim()) {
-              parsedRow.school = String(schoolCell.value).trim();
-            }
-
-            // Колонка K (11): контакты
-            const contactsCell = row.getCell(11);
-            if (contactsCell.value && String(contactsCell.value).trim()) {
-              parsedRow.contacts = String(contactsCell.value).trim();
-            }
-
-            // Колонка L (12): город
-            const cityCell = row.getCell(12);
-            if (cityCell.value && String(cityCell.value).trim()) {
-              parsedRow.city = String(cityCell.value).trim();
-            }
-
-            // Колонка M (13): длительность
-            const durationCell = row.getCell(13);
-            if (durationCell.value && String(durationCell.value).trim()) {
-              parsedRow.duration = String(durationCell.value).trim();
-            }
-
-            // Колонка O (15): ссылка (видео URL) (пропускаем колонку N - длительность с перерывами)
-            const videoUrlCell = row.getCell(15);
-            if (videoUrlCell.value && String(videoUrlCell.value).trim()) {
-              parsedRow.videoUrl = String(videoUrlCell.value).trim();
-            }
-
-            // Колонка Q (17): ФИО на дипломы (пропускаем колонку P - примечание)
-            const diplomasCell = row.getCell(17);
-            if (diplomasCell.value && String(diplomasCell.value).trim()) {
-              parsedRow.diplomasList = String(diplomasCell.value).trim();
-            }
-
-            // Колонка R (18): количество медалей
-            const medalsCell = row.getCell(18);
-            if (medalsCell.value !== null && medalsCell.value !== undefined && medalsCell.value !== '') {
-              const medalsValue = Number(medalsCell.value);
-              if (!isNaN(medalsValue)) {
-                parsedRow.medalsCount = Math.floor(medalsValue);
-              }
-            }
-
-            // Валидация обязательных полей
-            if (!parsedRow.collective) {
-              parsedRow.errors.push('Не указан коллектив');
-            }
-            if (!parsedRow.danceName) {
-              parsedRow.errors.push('Не указано название танца');
-            }
-            if (!parsedRow.parsed?.disciplineId) {
-              parsedRow.errors.push('Не удалось определить дисциплину');
-            }
-            if (!parsedRow.parsed?.nominationId) {
-              parsedRow.errors.push('Не удалось определить номинацию');
-            }
-            if (!parsedRow.parsed?.ageId) {
-              parsedRow.errors.push('Не удалось определить возраст');
-            }
-          } catch (error: any) {
-            parsedRow.errors.push(`Ошибка парсинга строки: ${error.message}`);
           }
 
-          // Добавляем только строки с данными регистрации (не категории)
-          if (parsedRow.collective && parsedRow.danceName) {
-            parsedRows.push(parsedRow);
-          }
-        })();
+          // Колонка B (2): коллектив
+          parsedRow.collective = collectiveValue;
 
-        parsePromises.push(parsePromise);
+          // Колонка C (3): название танца (может быть пустым для соло)
+          parsedRow.danceName = danceNameValue || collectiveValue; // Используем коллектив как fallback для соло
+
+          // Вспомогательная функция для чтения значения ячейки
+          const readCellValue = (cell: any): string => {
+            if (!cell || !cell.value) return '';
+            if (cell.value.richText) {
+              return cell.value.richText.map((rt: any) => rt.text || '').join('').trim();
+            }
+            return String(cell.value).trim();
+          };
+
+          // Колонка D (4): количество участников
+          if (participantsCell.value !== null && participantsCell.value !== undefined && participantsCell.value !== '') {
+            const participantsValue = Number(participantsCell.value);
+            if (!isNaN(participantsValue)) {
+              parsedRow.participantsCount = Math.floor(participantsValue);
+            }
+          }
+
+          // Колонка F (6): руководители (пропускаем пустую колонку E)
+          const leadersCell = row.getCell(6);
+          const leadersValue = readCellValue(leadersCell);
+          if (leadersValue) {
+            parsedRow.leaders = leadersValue;
+          }
+
+          // Колонка H (8): тренеры (пропускаем пустую колонку G)
+          const trainersCell = row.getCell(8);
+          const trainersValue = readCellValue(trainersCell);
+          if (trainersValue) {
+            parsedRow.trainers = trainersValue;
+          }
+
+          // Колонка J (10): школа (пропускаем пустую колонку I)
+          const schoolCell = row.getCell(10);
+          const schoolValue = readCellValue(schoolCell);
+          if (schoolValue) {
+            parsedRow.school = schoolValue;
+          }
+
+          // Колонка K (11): контакты
+          const contactsCell = row.getCell(11);
+          const contactsValue = readCellValue(contactsCell);
+          if (contactsValue) {
+            parsedRow.contacts = contactsValue;
+          }
+
+          // Колонка L (12): город
+          const cityCell = row.getCell(12);
+          const cityValue = readCellValue(cityCell);
+          if (cityValue) {
+            parsedRow.city = cityValue;
+          }
+
+          // Колонка M (13): длительность
+          const durationCell = row.getCell(13);
+          const durationValue = readCellValue(durationCell);
+          if (durationValue) {
+            parsedRow.duration = durationValue;
+          }
+
+          // Колонка O (15): ссылка (видео URL) (пропускаем колонку N - длительность с перерывами)
+          const videoUrlCell = row.getCell(15);
+          const videoUrlValue = readCellValue(videoUrlCell);
+          if (videoUrlValue) {
+            parsedRow.videoUrl = videoUrlValue;
+          }
+
+          // Колонка Q (17): ФИО на дипломы (пропускаем колонку P - примечание)
+          const diplomasCell = row.getCell(17);
+          const diplomasValue = readCellValue(diplomasCell);
+          if (diplomasValue) {
+            parsedRow.diplomasList = diplomasValue;
+          }
+
+          // Колонка R (18): количество медалей
+          const medalsCell = row.getCell(18);
+          if (medalsCell.value !== null && medalsCell.value !== undefined && medalsCell.value !== '') {
+            const medalsValue = Number(medalsCell.value);
+            if (!isNaN(medalsValue)) {
+              parsedRow.medalsCount = Math.floor(medalsValue);
+            }
+          }
+
+          // Валидация обязательных полей
+          if (!parsedRow.collective) {
+            parsedRow.errors.push('Не указан коллектив');
+          }
+          // Название танца может быть пустым для соло - не добавляем ошибку
+          if (!parsedRow.parsed?.disciplineId) {
+            parsedRow.errors.push('Не удалось определить дисциплину');
+          }
+          if (!parsedRow.parsed?.nominationId) {
+            parsedRow.errors.push('Не удалось определить номинацию');
+          }
+          if (!parsedRow.parsed?.ageId) {
+            parsedRow.errors.push('Не удалось определить возраст');
+          }
+        } catch (error: any) {
+          parsedRow.errors.push(`Ошибка парсинга строки: ${error.message}`);
+        }
+
+        // Добавляем только строки с данными регистрации (не категории)
+        if (parsedRow.collective) {
+          parsedRows.push(parsedRow);
+        }
       }
-
-      await Promise.all(parsePromises);
 
       // В dryRun режиме возвращаем предпросмотр
       if (dryRun) {
