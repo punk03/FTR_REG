@@ -22,8 +22,30 @@ NC='\033[0m' # No Color
 
 # Configuration
 GITHUB_REPO="https://github.com/punk03/FTR_REG.git"
-PROJECT_DIR="${HOME}/FTR_REG"
 BRANCH="main"
+
+# Determine project directory based on user
+if [ "$EUID" -eq 0 ]; then
+    # Running as root, determine APP_USER first
+    if id "ftr" &>/dev/null; then
+        APP_USER="ftr"
+    elif id "fil" &>/dev/null; then
+        APP_USER="fil"
+    else
+        APP_USER="ftr"
+    fi
+    # Use APP_USER's home directory
+    if [ "$APP_USER" = "root" ]; then
+        PROJECT_DIR="/root/FTR_REG"
+    else
+        APP_USER_HOME=$(eval echo ~$APP_USER)
+        PROJECT_DIR="${APP_USER_HOME}/FTR_REG"
+    fi
+else
+    PROJECT_DIR="${HOME}/FTR_REG"
+fi
+
+export PROJECT_DIR
 
 # Functions
 print_info() {
@@ -58,12 +80,25 @@ check_root() {
         else
             # Create dedicated user for FTR application
             print_info "Creating dedicated user 'ftr' for the application..."
-            useradd -r -s /bin/bash -d "$HOME/FTR_REG" -m ftr 2>/dev/null || {
+            APP_USER_HOME="/home/ftr"
+            useradd -r -s /bin/bash -d "$APP_USER_HOME" -m ftr 2>/dev/null || {
                 print_warning "Could not create 'ftr' user. Will use current directory owner."
                 APP_USER=$(stat -c '%U' . 2>/dev/null || echo "root")
             }
-            APP_USER="ftr"
+            if [ -z "$APP_USER" ] || [ "$APP_USER" = "root" ]; then
+                APP_USER="ftr"
+            fi
             print_success "Created user 'ftr' for application"
+        fi
+        
+        # Update PROJECT_DIR to use APP_USER's home directory
+        if [ "$APP_USER" != "root" ]; then
+            APP_USER_HOME=$(eval echo ~$APP_USER 2>/dev/null || getent passwd "$APP_USER" | cut -d: -f6)
+            if [ -n "$APP_USER_HOME" ] && [ "$APP_USER_HOME" != "/" ]; then
+                PROJECT_DIR="${APP_USER_HOME}/FTR_REG"
+                export PROJECT_DIR
+                print_info "Project will be installed to: $PROJECT_DIR"
+            fi
         fi
         
         # Ensure APP_USER is set
@@ -90,33 +125,54 @@ check_git() {
 setup_repository() {
     if [ -d "$PROJECT_DIR/.git" ]; then
         print_info "Repository already exists. Updating from GitHub..."
-        cd "$PROJECT_DIR"
         
-        # Check if there are uncommitted changes
-        if [ -n "$(git status --porcelain)" ]; then
-            print_warning "There are uncommitted changes in the repository."
-            print_info "Stashing changes..."
-            git stash save "Auto-stash before update $(date +%Y%m%d_%H%M%S)"
+        # If running as root and APP_USER is not root, update as APP_USER
+        if [ "$EUID" -eq 0 ] && [ -n "$APP_USER" ] && [ "$APP_USER" != "root" ]; then
+            print_info "Updating repository as user $APP_USER..."
+            sudo -u "$APP_USER" bash -c "
+                cd '$PROJECT_DIR'
+                if [ -n \"\$(git status --porcelain)\" ]; then
+                    git stash save \"Auto-stash before update \$(date +%Y%m%d_%H%M%S)\"
+                fi
+                git fetch origin
+                CURRENT_BRANCH=\$(git rev-parse --abbrev-ref HEAD)
+                if [ \"\$CURRENT_BRANCH\" != \"$BRANCH\" ]; then
+                    git checkout \"$BRANCH\" 2>/dev/null || git checkout -b \"$BRANCH\" \"origin/$BRANCH\"
+                fi
+                git pull origin \"$BRANCH\"
+            " || {
+                print_error "Failed to pull changes. Please resolve conflicts manually."
+                exit 1
+            }
+        else
+            cd "$PROJECT_DIR"
+            
+            # Check if there are uncommitted changes
+            if [ -n "$(git status --porcelain)" ]; then
+                print_warning "There are uncommitted changes in the repository."
+                print_info "Stashing changes..."
+                git stash save "Auto-stash before update $(date +%Y%m%d_%H%M%S)"
+            fi
+            
+            # Fetch latest changes
+            print_info "Fetching latest changes from GitHub..."
+            git fetch origin
+            
+            # Check current branch
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            
+            if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+                print_info "Switching to branch: $BRANCH"
+                git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
+            fi
+            
+            # Pull latest changes
+            print_info "Pulling latest changes..."
+            git pull origin "$BRANCH" || {
+                print_error "Failed to pull changes. Please resolve conflicts manually."
+                exit 1
+            }
         fi
-        
-        # Fetch latest changes
-        print_info "Fetching latest changes from GitHub..."
-        git fetch origin
-        
-        # Check current branch
-        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        
-        if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
-            print_info "Switching to branch: $BRANCH"
-            git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
-        fi
-        
-        # Pull latest changes
-        print_info "Pulling latest changes..."
-        git pull origin "$BRANCH" || {
-            print_error "Failed to pull changes. Please resolve conflicts manually."
-            exit 1
-        }
         
         print_success "Repository updated successfully"
     else
