@@ -435,6 +435,7 @@ EOF
         else
             tee frontend/.env > /dev/null << EOF
 VITE_API_URL=http://localhost:3001
+VITE_MODE=production
 EOF
             chmod 600 frontend/.env 2>/dev/null || true
             print_info "Created frontend/.env with default values"
@@ -586,6 +587,17 @@ build_frontend() {
     print_info "Building frontend..."
     
     cd frontend
+    
+    # Ensure .env file exists with API URL
+    if [ ! -f ".env" ]; then
+        echo "VITE_API_URL=http://localhost:3001" > .env
+    fi
+    
+    # Load environment variables and build
+    if [ -f ".env" ]; then
+        export $(cat .env | grep -v '^#' | xargs)
+    fi
+    
     npm run build
     cd ..
     

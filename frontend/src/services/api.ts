@@ -1,7 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
+// Use relative URL in production, absolute in development
 // @ts-ignore - Vite environment variable
-const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env?.VITE_API_URL || (import.meta.env?.MODE === 'production' ? 'http://localhost:3001' : 'http://localhost:3001');
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
