@@ -532,17 +532,31 @@ run_migrations() {
     # Generate Prisma Client
     npx prisma generate
     
+    # Check if migrations directory exists and has migrations
+    if [ ! -d "prisma/migrations" ] || [ -z "$(ls -A prisma/migrations 2>/dev/null)" ]; then
+        print_info "No migrations found. Creating initial migration..."
+        npx prisma migrate dev --name init --create-only || {
+            print_error "Failed to create initial migration"
+            exit 1
+        }
+        print_success "Initial migration created"
+    fi
+    
     # Run migrations
     npx prisma migrate deploy || {
-        print_warning "Migration failed. Trying to reset..."
-        read -p "Do you want to reset the database? This will DELETE ALL DATA! (yes/no): " -r
-        if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
-            npx prisma migrate reset --force
-            npx prisma migrate deploy
-        else
-            print_error "Migration aborted"
-            exit 1
-        fi
+        print_warning "Migration deploy failed. Trying to apply migrations manually..."
+        # Try to apply migrations using migrate dev (for development)
+        npx prisma migrate dev --name apply_migrations || {
+            print_warning "Migration failed. Trying to reset..."
+            read -p "Do you want to reset the database? This will DELETE ALL DATA! (yes/no): " -r
+            if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
+                npx prisma migrate reset --force
+                npx prisma migrate deploy
+            else
+                print_error "Migration aborted"
+                exit 1
+            fi
+        }
     }
     
     # Seed database only on first deployment
