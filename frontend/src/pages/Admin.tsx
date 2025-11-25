@@ -90,8 +90,8 @@ export const Admin: React.FC = () => {
     discountTiers: '',
   });
   const [systemSettings, setSystemSettings] = useState<Record<string, any>>({});
-  const [deleteUserConfirmOpen, setDeleteUserConfirmOpen] = useState(false);
-  const [deleteEventConfirmOpen, setDeleteEventConfirmOpen] = useState(false);
+  // const [deleteUserConfirmOpen, setDeleteUserConfirmOpen] = useState(false);
+  // const [deleteEventConfirmOpen, setDeleteEventConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [eventToDelete, setEventToDelete] = useState<number | null>(null);
   const [excelImportOpen, setExcelImportOpen] = useState(false);
@@ -178,19 +178,19 @@ export const Admin: React.FC = () => {
     setDeleteUserConfirmOpen(true);
   };
 
-  const handleDeleteUserConfirm = async () => {
-    if (!userToDelete) return;
+  // const handleDeleteUserConfirm = async () => {
+  //   if (!userToDelete) return;
 
-    try {
-      await api.delete(`/api/admin/users/${userToDelete}`);
-      fetchUsers();
-      showSuccess('Пользователь успешно удален');
-      setDeleteUserConfirmOpen(false);
-      setUserToDelete(null);
-    } catch (error: any) {
-      showError(error.response?.data?.error || 'Ошибка удаления');
-    }
-  };
+  //   try {
+  //     await api.delete(`/api/admin/users/${userToDelete}`);
+  //     fetchUsers();
+  //     showSuccess('Пользователь успешно удален');
+  //     setDeleteUserConfirmOpen(false);
+  //     setUserToDelete(null);
+  //   } catch (error: any) {
+  //     showError(error.response?.data?.error || 'Ошибка удаления');
+  //   }
+  // };
 
   const handleCreateEvent = () => {
     setSelectedEvent(null);
@@ -284,19 +284,19 @@ export const Admin: React.FC = () => {
     setDeleteEventConfirmOpen(true);
   };
 
-  const handleDeleteEventConfirm = async () => {
-    if (!eventToDelete) return;
+  // const handleDeleteEventConfirm = async () => {
+  //   if (!eventToDelete) return;
 
-    try {
-      await api.delete(`/api/events/${eventToDelete}`);
-      fetchEvents();
-      showSuccess('Мероприятие успешно удалено');
-      setDeleteEventConfirmOpen(false);
-      setEventToDelete(null);
-    } catch (error: any) {
-      showError(error.response?.data?.error || 'Ошибка удаления');
-    }
-  };
+  //   try {
+  //     await api.delete(`/api/events/${eventToDelete}`);
+  //     fetchEvents();
+  //     showSuccess('Мероприятие успешно удалено');
+  //     setDeleteEventConfirmOpen(false);
+  //     setEventToDelete(null);
+  //   } catch (error: any) {
+  //     showError(error.response?.data?.error || 'Ошибка удаления');
+  //   }
+  // };
 
   const fetchSystemSettings = async () => {
     try {

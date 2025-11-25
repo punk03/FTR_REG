@@ -25,7 +25,6 @@ import {
   DialogActions,
   Typography,
   Chip,
-  CircularProgress,
   Grid,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -35,14 +34,14 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import api from '../services/api';
 import { Event } from '../types';
-import { formatDate } from '../utils/format';
+// import { formatDate } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
 const ITEMS_PER_PAGE = 25;
 
 export const Diplomas: React.FC = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
@@ -50,7 +49,7 @@ export const Diplomas: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(ITEMS_PER_PAGE);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [showPaid, setShowPaid] = useState(true);
   const [showUnpaid, setShowUnpaid] = useState(true);

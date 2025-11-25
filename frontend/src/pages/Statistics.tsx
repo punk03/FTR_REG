@@ -13,7 +13,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
-  Tooltip,
+  Tooltip as MuiTooltip,
 } from '@mui/material';
 import {
   PieChart,
@@ -25,14 +25,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import api from '../services/api';
 import { Event } from '../types';
-import { formatCurrency } from '../utils/format';
+// import { formatCurrency } from '../utils/format';
 import { useNotification } from '../context/NotificationContext';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
@@ -281,7 +280,7 @@ export const Statistics: React.FC = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <MuiTooltip title="" />
                   </PieChart>
                 </ResponsiveContainer>
               </Paper>
@@ -312,7 +311,7 @@ export const Statistics: React.FC = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <MuiTooltip title="" />
                   </PieChart>
                 </ResponsiveContainer>
               </Paper>
@@ -328,7 +327,7 @@ export const Statistics: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                     <YAxis />
-                    <Tooltip />
+                    <MuiTooltip title="" />
                     <Bar dataKey="count" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -345,7 +344,7 @@ export const Statistics: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip />
+                    <MuiTooltip title="" />
                     <Bar dataKey="count" fill="#82ca9d" />
                   </BarChart>
                 </ResponsiveContainer>

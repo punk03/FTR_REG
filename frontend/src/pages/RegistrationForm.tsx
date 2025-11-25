@@ -27,13 +27,14 @@ import {
   ListItemText,
   ListItemButton,
   IconButton,
-  Chip,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RestoreIcon from '@mui/icons-material/Restore';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import api from '../services/api';
 import { AutoCompleteTextField } from '../components/AutoCompleteTextField';
 import { Event } from '../types';
@@ -52,7 +53,7 @@ const steps = [
 export const RegistrationForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);

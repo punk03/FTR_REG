@@ -9,8 +9,6 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
   Checkbox,
   Box,
   Typography,

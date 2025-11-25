@@ -17,7 +17,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  CircularProgress,
   Skeleton,
   IconButton,
   Tooltip,
@@ -26,6 +25,11 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -52,7 +56,6 @@ interface FiltersState {
 const STORAGE_KEY = 'ftr_registrations_filters';
 
 export const RegistrationsList: React.FC = () => {
-  const { showError } = useNotification();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   
@@ -76,7 +79,7 @@ export const RegistrationsList: React.FC = () => {
     };
   };
 
-  const [filters, setFilters] = useState<FiltersState>(loadFilters);
+  const [filters] = useState<FiltersState>(loadFilters);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>(filters.eventId || '');
   const [search, setSearch] = useState(filters.search || '');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState(filters.paymentStatus || '');
@@ -90,7 +93,6 @@ export const RegistrationsList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
   const navigate = useNavigate();
@@ -303,21 +305,22 @@ export const RegistrationsList: React.FC = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    if (!window.confirm(`Вы уверены, что хотите удалить ${selectedIds.size} регистраций?`)) return;
+  // Bulk delete handler (kept for future use)
+  // const handleBulkDelete = async () => {
+  //   if (selectedIds.size === 0) return;
+  //   if (!window.confirm(`Вы уверены, что хотите удалить ${selectedIds.size} регистраций?`)) return;
 
-    try {
-      const deletions = Array.from(selectedIds).map((id) => api.delete(`/api/registrations/${id}`));
-      await Promise.all(deletions);
-      showSuccess(`Успешно удалено ${selectedIds.size} регистраций`);
-      setSelectedIds(new Set());
-      fetchRegistrations();
-    } catch (error: any) {
-      console.error('Error deleting registrations:', error);
-      showError(error.response?.data?.error || 'Ошибка удаления регистраций');
-    }
-  };
+  //   try {
+  //     const deletions = Array.from(selectedIds).map((id) => api.delete(`/api/registrations/${id}`));
+  //     await Promise.all(deletions);
+  //     showSuccess(`Успешно удалено ${selectedIds.size} регистраций`);
+  //     setSelectedIds(new Set());
+  //     fetchRegistrations();
+  //   } catch (error: any) {
+  //     console.error('Error deleting registrations:', error);
+  //     showError(error.response?.data?.error || 'Ошибка удаления регистраций');
+  //   }
+  // };
 
   return (
     <Box>

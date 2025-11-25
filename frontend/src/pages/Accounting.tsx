@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Chip,
   CircularProgress,
   TablePagination,
 } from '@mui/material';
@@ -34,7 +33,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import DiscountIcon from '@mui/icons-material/Discount';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import api from '../services/api';
 import { Event } from '../types';

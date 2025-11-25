@@ -32,7 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
 export const CombinedPayment: React.FC = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
