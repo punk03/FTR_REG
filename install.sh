@@ -241,6 +241,8 @@ run_deployment() {
     
     # If running as root and APP_USER is set, run deploy.sh as that user
     if [ "$EUID" -eq 0 ] && [ -n "$APP_USER" ] && [ "$APP_USER" != "root" ]; then
+        # Ensure APP_USER has proper ownership
+        chown -R "$APP_USER:$APP_USER" . 2>/dev/null || true
         print_info "Running deploy.sh as user $APP_USER..."
         sudo -u "$APP_USER" ./deploy.sh || {
             print_error "Deployment failed. Please check the error messages above."
