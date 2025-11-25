@@ -42,7 +42,7 @@ export const Dashboard: React.FC = () => {
   const { showError } = useNotification();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  // const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [activeEvents, setActiveEvents] = useState<Event[]>([]);
   const [recentRegistrations, setRecentRegistrations] = useState<Registration[]>([]);
   const [unpaidRegistrations, setUnpaidRegistrations] = useState<Registration[]>([]);

@@ -49,7 +49,7 @@ export const Diplomas: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(ITEMS_PER_PAGE);
   const [total, setTotal] = useState(0);
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [showPaid, setShowPaid] = useState(true);
   const [showUnpaid, setShowUnpaid] = useState(true);

@@ -158,11 +158,11 @@ export const Statistics: React.FC = () => {
         </FormControl>
 
         <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' }, flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center' }}>
-          <Tooltip title="Обновить статистику">
+          <MuiTooltip title="Обновить статистику">
             <IconButton onClick={handleManualRefresh} disabled={refreshing || loading}>
               <RefreshIcon className={refreshing ? 'rotating' : ''} />
             </IconButton>
-          </Tooltip>
+          </MuiTooltip>
           <Button
             variant="outlined"
             startIcon={<FileDownloadIcon />}
@@ -280,7 +280,7 @@ export const Statistics: React.FC = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <MuiTooltip title="" />
+                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               </Paper>
@@ -311,7 +311,7 @@ export const Statistics: React.FC = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <MuiTooltip title="" />
+                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               </Paper>
@@ -327,7 +327,7 @@ export const Statistics: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                     <YAxis />
-                    <MuiTooltip title="" />
+                    <Tooltip />
                     <Bar dataKey="count" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -344,7 +344,7 @@ export const Statistics: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <MuiTooltip title="" />
+                    <Tooltip />
                     <Bar dataKey="count" fill="#82ca9d" />
                   </BarChart>
                 </ResponsiveContainer>

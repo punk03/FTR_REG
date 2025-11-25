@@ -90,8 +90,8 @@ export const Admin: React.FC = () => {
     discountTiers: '',
   });
   const [systemSettings, setSystemSettings] = useState<Record<string, any>>({});
-  // const [deleteUserConfirmOpen, setDeleteUserConfirmOpen] = useState(false);
-  // const [deleteEventConfirmOpen, setDeleteEventConfirmOpen] = useState(false);
+  const [deleteUserConfirmOpen, setDeleteUserConfirmOpen] = useState(false);
+  const [deleteEventConfirmOpen, setDeleteEventConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [eventToDelete, setEventToDelete] = useState<number | null>(null);
   const [excelImportOpen, setExcelImportOpen] = useState(false);
