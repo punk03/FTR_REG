@@ -1,22 +1,42 @@
-// @ts-ignore - pdfmake types
-import pdfMake from 'pdfmake/build/pdfmake';
-// @ts-ignore - pdfmake types
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+// Ленивая загрузка pdfmake - импортируем только при вызове функции
+let pdfMakeInstance: any = null;
+let fontsInitialized = false;
 
-// Инициализация шрифтов
-try {
-  if (pdfFonts && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
-    pdfMake.vfs = pdfFonts.pdfMake.vfs;
-  } else if (pdfFonts && (pdfFonts as any).vfs) {
-    pdfMake.vfs = (pdfFonts as any).vfs;
+const initializePdfMake = async () => {
+  if (fontsInitialized && pdfMakeInstance) {
+    return pdfMakeInstance;
   }
-} catch (error) {
-  console.warn('Failed to initialize pdfmake fonts:', error);
-  // Create empty vfs if fonts fail to load
-  if (!pdfMake.vfs) {
-    pdfMake.vfs = {};
+
+  try {
+    // Динамический импорт для избежания ошибок при загрузке модуля
+    const pdfMakeModule = await import('pdfmake/build/pdfmake');
+    const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
+    
+    pdfMakeInstance = pdfMakeModule.default;
+    const pdfFonts = pdfFontsModule.default;
+
+    // Инициализация шрифтов
+    if (pdfFonts) {
+      if (pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
+        pdfMakeInstance.vfs = pdfFonts.pdfMake.vfs;
+      } else if ((pdfFonts as any).vfs) {
+        pdfMakeInstance.vfs = (pdfFonts as any).vfs;
+      } else if ((pdfFonts as any).pdfMake) {
+        pdfMakeInstance.vfs = (pdfFonts as any).pdfMake.vfs || {};
+      } else {
+        pdfMakeInstance.vfs = {};
+      }
+    } else {
+      pdfMakeInstance.vfs = {};
+    }
+
+    fontsInitialized = true;
+    return pdfMakeInstance;
+  } catch (error) {
+    console.error('Failed to initialize pdfmake:', error);
+    throw new Error('Не удалось загрузить библиотеку для создания PDF. Пожалуйста, обновите страницу.');
   }
-}
+};
 
 interface AccountingEntry {
   id: number;
@@ -62,6 +82,7 @@ export const exportAccountingToPDF = async (
     console.error('PDF fonts not loaded. Cannot generate PDF.');
     throw new Error('Шрифты для PDF не загружены. Пожалуйста, обновите страницу.');
   }
+
   const formatCurrency = (amount: number): string => {
     return `${amount.toFixed(2)} ₽`;
   };
@@ -362,7 +383,10 @@ export const exportAccountingToPDF = async (
   }
 
   // Генерация PDF
-  pdfMake.createPdf(docDefinition).download(`accounting_${eventId}_${Date.now()}.pdf`);
+  try {
+    pdfMake.createPdf(docDefinition).download(`accounting_${eventId}_${Date.now()}.pdf`);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error('Ошибка при создании PDF файла. Проверьте консоль для деталей.');
+  }
 };
-
-
