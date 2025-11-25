@@ -28,11 +28,22 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 // Parse CORS_ORIGIN - can be comma-separated string or array
-let corsOrigins: string[] = ['http://185.185.68.105:3000', 'http://185.185.68.105', 'http://localhost:3000', 'http://localhost:5173', 'http://localhost'];
+// Default origins include production IP and localhost for development
+const defaultOrigins = [
+  'http://185.185.68.105:3000',
+  'http://185.185.68.105',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost'
+];
+
+let corsOrigins: string[] = [...defaultOrigins];
 
 if (process.env.CORS_ORIGIN) {
-  corsOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(origin => origin.length > 0);
-  console.log('CORS origins configured:', corsOrigins);
+  const envOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(origin => origin.length > 0);
+  // Merge with defaults to ensure production IP is always included
+  corsOrigins = [...new Set([...envOrigins, ...defaultOrigins])];
+  console.log('CORS origins configured from env:', corsOrigins);
 } else {
   console.log('CORS_ORIGIN not set, using defaults:', corsOrigins);
 }
@@ -45,13 +56,16 @@ app.use(cors({
     }
     
     if (corsOrigins.includes(origin)) {
+      console.log('CORS allowed origin:', origin);
       callback(null, true);
     } else {
-      console.warn('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      console.warn('CORS blocked origin:', origin, 'Allowed origins:', corsOrigins);
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
