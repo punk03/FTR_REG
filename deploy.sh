@@ -414,6 +414,16 @@ EOF
     else
         # Ensure existing .env file has correct permissions
         chmod 600 backend/.env 2>/dev/null || true
+        # Update DATABASE_URL to use localhost if it uses postgres (for migrations from host)
+        if grep -q "@postgres:5432" backend/.env 2>/dev/null; then
+            print_info "Updating DATABASE_URL to use localhost for host migrations..."
+            sed -i 's/@postgres:5432/@localhost:5432/g' backend/.env 2>/dev/null || true
+        fi
+        # Update REDIS_HOST to use localhost if it uses redis (for connections from host)
+        if grep -q "^REDIS_HOST=redis" backend/.env 2>/dev/null; then
+            print_info "Updating REDIS_HOST to use localhost for host connections..."
+            sed -i 's/^REDIS_HOST=redis/REDIS_HOST=localhost/g' backend/.env 2>/dev/null || true
+        fi
     fi
     
     # Frontend .env
