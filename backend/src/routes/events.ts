@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { body, query, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
@@ -18,9 +18,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
     const limit = parseInt(req.query.limit as string) || 50;
     const skip = (page - 1) * limit;
 
-    const where: { status?: string } = {};
+    const where: { status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' } = {};
     if (status && ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(status)) {
-      where.status = status;
+      where.status = status as 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
     }
 
     const [events, total] = await Promise.all([

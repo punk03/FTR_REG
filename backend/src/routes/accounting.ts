@@ -1,12 +1,11 @@
 import express, { Request, Response } from 'express';
-import { body, query, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
-import ExcelJS from 'exceljs';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { errorHandler } from '../middleware/errorHandler';
 import { cacheService } from '../services/cacheService';
-import { recalculateRegistrationPaymentStatus, calculateDiscount } from '../services/paymentService';
+import { recalculateRegistrationPaymentStatus } from '../services/paymentService';
 
 const router = express.Router();
 const prisma = new PrismaClient();

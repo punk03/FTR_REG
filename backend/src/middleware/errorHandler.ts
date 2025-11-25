@@ -9,7 +9,7 @@ export const errorHandler = (
   err: AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal server error';
@@ -30,7 +30,7 @@ export const errorHandler = (
 
 export const notFoundHandler = (
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
   const error: AppError = new Error(`Not found - ${req.originalUrl}`);

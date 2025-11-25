@@ -100,7 +100,7 @@ router.post(
 
       // Apply discount if requested (only for performance)
       let discountAmount = 0;
-      let discountPercent = 0;
+      // let discountPercent = 0;
       if (applyDiscount && payingPerformance && registrations.length > 0) {
         const event = registrations[0].event;
         const discount = calculateDiscount(totalPerformanceRequired, event.discountTiers);
@@ -173,7 +173,7 @@ router.post(
         }
 
         const regTotal = regPerformanceAmount + regDiplomasAmount;
-        const regProportion = totalRequired > 0 ? regTotal / totalRequired : 0;
+        // const regProportion = totalRequired > 0 ? regTotal / totalRequired : 0;
 
         // Apply discount proportionally
         let regDiscountAmount = 0;
@@ -293,7 +293,7 @@ router.post(
 
       // Send email notification (non-blocking)
       if (emailService.isEnabled()) {
-        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        const user = await prisma.user.findUnique({ where: { id: (req as any).user.id } });
         if (user) {
           emailService.sendPaymentCreatedNotification(user.email, {
             registrationIds: registrationIds,

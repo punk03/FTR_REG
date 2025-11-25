@@ -1,10 +1,10 @@
 import express, { Request, Response } from 'express';
-import { body, query, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
+import PDFDocument from 'pdfkit';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { errorHandler } from '../middleware/errorHandler';
-import { parseParticipants } from '../services/registrationService';
 import { recalculateRegistrationPaymentStatus } from '../services/paymentService';
 
 const router = express.Router();

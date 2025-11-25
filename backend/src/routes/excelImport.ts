@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     const allowedMimes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel',
@@ -172,7 +172,6 @@ router.post(
       }
 
       const parsedRows: ParsedRow[] = [];
-      const errors: string[] = [];
 
       // Загружаем справочники один раз
       const [disciplines, nominations, ages, categories] = await Promise.all([
@@ -399,15 +398,12 @@ router.post(
             collective = await prisma.collective.create({
               data: {
                 name: row.collective!,
-                city: row.city,
-                school: row.school,
-                contacts: row.contacts,
               },
             });
           }
 
           // Парсинг участников из diplomasList
-          const participants = row.diplomasList ? parseParticipants(row.diplomasList) : [];
+          const participantsResult = row.diplomasList ? parseParticipants(row.diplomasList) : { participants: [], count: 0 };
 
           // Создание регистрации
           const registration = await prisma.registration.create({
@@ -420,9 +416,9 @@ router.post(
               ageId: row.parsed!.ageId!,
               categoryId: row.parsed?.categoryId,
               danceName: row.danceName,
-              participantsCount: row.participantsCount || participants.length || 0,
+              participantsCount: row.participantsCount || participantsResult.count || 0,
               federationParticipantsCount: 0,
-              diplomasCount: participants.length,
+              diplomasCount: participantsResult.count,
               medalsCount: row.medalsCount || 0,
               diplomasList: row.diplomasList,
               duration: row.duration,
@@ -440,12 +436,15 @@ router.post(
             for (const name of leaderNames) {
               if (name) {
                 let person = await prisma.person.findFirst({
-                  where: { fullName: { equals: name, mode: 'insensitive' } },
+                  where: { 
+                    fullName: { equals: name, mode: 'insensitive' },
+                    role: 'LEADER'
+                  },
                 });
 
                 if (!person) {
                   person = await prisma.person.create({
-                    data: { fullName: name },
+                    data: { fullName: name, role: 'LEADER' },
                   });
                 }
 
@@ -471,12 +470,15 @@ router.post(
             for (const name of trainerNames) {
               if (name) {
                 let person = await prisma.person.findFirst({
-                  where: { fullName: { equals: name, mode: 'insensitive' } },
+                  where: { 
+                    fullName: { equals: name, mode: 'insensitive' },
+                    role: 'TRAINER'
+                  },
                 });
 
                 if (!person) {
                   person = await prisma.person.create({
-                    data: { fullName: name },
+                    data: { fullName: name, role: 'TRAINER' },
                   });
                 }
 

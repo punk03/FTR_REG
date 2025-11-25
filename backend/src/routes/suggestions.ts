@@ -37,8 +37,11 @@ router.get(
           LIMIT 10
         `;
         
-        // Remove similarity score from results
-        collectives = collectives.map(({ sim, ...rest }) => rest);
+        // Remove similarity score from results (if present)
+        collectives = collectives.map((item: any) => {
+          const { sim, ...rest } = item;
+          return rest;
+        });
       } catch (error) {
         // Fallback to ILIKE if trigram is not available
         console.warn('pg_trgm extension not available, using ILIKE fallback');

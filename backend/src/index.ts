@@ -1,7 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import swaggerUi from 'swagger-ui-express';
 import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth';
 import referenceRoutes from './routes/reference';
@@ -20,7 +19,6 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRateLimiter } from './middleware/rateLimit';
 import { cacheService } from './services/cacheService';
 import { emailService } from './services/emailService';
-import { swaggerSpec } from './config/swagger';
 
 dotenv.config();
 
@@ -37,12 +35,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health checks
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Detailed health checks
-app.get('/api/health', async (req, res) => {
+app.get('/api/health', async (_req, res) => {
   const health = {
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -77,7 +75,7 @@ app.get('/api/health', async (req, res) => {
   res.status(statusCode).json(health);
 });
 
-app.get('/api/health/db', async (req, res) => {
+app.get('/api/health/db', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', service: 'database', timestamp: new Date().toISOString() });
@@ -86,7 +84,7 @@ app.get('/api/health/db', async (req, res) => {
   }
 });
 
-app.get('/api/health/redis', async (req, res) => {
+app.get('/api/health/redis', async (_req, res) => {
   try {
     const connected = cacheService.isConnected();
     if (connected) {
@@ -125,7 +123,7 @@ app.use(errorHandler);
 
 // Initialize services
 (async () => {
-  await cacheService.initialize();
+  // CacheService connects automatically in constructor
   await emailService.initialize();
 })();
 

@@ -346,9 +346,10 @@ router.patch(
 
       // Check if registration has payments - limit editable fields
       const hasPayments = registration.performancePaid || registration.diplomasAndMedalsPaid;
-      const allowedFields = hasPayments
-        ? ['participantsCount', 'federationParticipantsCount', 'medalsCount', 'diplomasCount', 'diplomasList', 'nominationId']
-        : undefined;
+      // Check if registration has payments - limit editable fields
+      // const allowedFields = hasPayments
+      //   ? ['participantsCount', 'federationParticipantsCount', 'medalsCount', 'diplomasCount', 'diplomasList', 'nominationId']
+      //   : undefined;
 
       const updateData: any = {};
       if (req.body.participantsCount !== undefined) updateData.participantsCount = req.body.participantsCount;
@@ -399,7 +400,7 @@ router.patch(
           const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
           await createRegistrationHistory({
             registrationId: id,
-            userId: req.user.id,
+            userId: (req as any).user.id,
             action: 'UPDATE',
             changedFields,
             oldValues,

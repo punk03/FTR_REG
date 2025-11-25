@@ -164,7 +164,7 @@ router.get('/me', authenticateToken, async (req: Request, res: Response): Promis
 });
 
 // POST /api/auth/logout
-router.post('/logout', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+router.post('/logout', authenticateToken, async (_req: Request, res: Response): Promise<void> => {
   // Since tokens are stored in localStorage and don't expire automatically,
   // logout is mainly a client-side operation
   // In a more secure implementation, we could maintain a blacklist of tokens

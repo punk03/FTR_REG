@@ -100,9 +100,9 @@ router.get('/events', authenticateToken, async (req: Request, res: Response): Pr
   try {
     const status = req.query.status as string | undefined;
 
-    const where: { status?: string } = {};
+    const where: { status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' } = {};
     if (status && ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(status)) {
-      where.status = status;
+      where.status = status as 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
     }
 
     const events = await prisma.event.findMany({
