@@ -12,7 +12,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles 
   const { isAuthenticated, user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div>Загрузка...</div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
