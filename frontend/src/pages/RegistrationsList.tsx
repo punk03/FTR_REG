@@ -467,24 +467,6 @@ export const RegistrationsList: React.FC = () => {
         </AccordionDetails>
       </Accordion>
 
-        <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'stretch', sm: 'flex-end' } }}>
-          <Tooltip title="Экспорт в Excel">
-            <IconButton onClick={handleExport} disabled={!selectedEventId} sx={{ width: { xs: '100%', sm: 'auto' } }}>
-              <FileDownloadIcon />
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/registrations/new')}
-            fullWidth={window.innerWidth < 600}
-            sx={{ minWidth: { xs: 'auto', sm: 120 } }}
-          >
-            Создать регистрацию
-          </Button>
-        </Box>
-      </Box>
-
       {/* Desktop table view */}
       <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' } }}>
         <Table>
