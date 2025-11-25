@@ -345,6 +345,16 @@ router.post(
         }
       }
 
+      // Вспомогательная функция для чтения значения ячейки (объявляем один раз)
+      const readCellValue = (cell: any): string => {
+        if (!cell || !cell.value) return '';
+        // Проверяем тип значения
+        if (typeof cell.value === 'object' && 'richText' in cell.value) {
+          return (cell.value.richText as any[]).map((rt: any) => rt.text || '').join('').trim();
+        }
+        return String(cell.value).trim();
+      };
+
       // Парсинг строк (начиная после строки с заголовками)
       // ВАЖНО: Парсим последовательно, чтобы currentCategory был синхронизирован
       let currentCategory: ParsedRow['parsed'] | null = null;
@@ -359,7 +369,7 @@ router.post(
         };
 
         try {
-          // Получаем значения ячеек - используем richText для правильного чтения длинных значений
+          // Получаем значения ячеек
           const categoryCell = row.getCell(1);
           const collectiveCell = row.getCell(2);
           const danceNameCell = row.getCell(3);
@@ -369,16 +379,6 @@ router.post(
           if (!categoryCell.value && !collectiveCell.value && !danceNameCell.value) {
             continue;
           }
-
-          // Вспомогательная функция для чтения значения ячейки
-          const readCellValue = (cell: any): string => {
-            if (!cell || !cell.value) return '';
-            // Проверяем тип значения
-            if (typeof cell.value === 'object' && 'richText' in cell.value) {
-              return (cell.value.richText as any[]).map((rt: any) => rt.text || '').join('').trim();
-            }
-            return String(cell.value).trim();
-          };
 
           // Правильно читаем значения ячеек
           const categoryValue = readCellValue(categoryCell);
@@ -532,15 +532,6 @@ router.post(
 
           // Колонка C (3): название танца (может быть пустым для соло)
           parsedRow.danceName = danceNameValue || collectiveValue; // Используем коллектив как fallback для соло
-
-          // Вспомогательная функция для чтения значения ячейки
-          const readCellValue = (cell: any): string => {
-            if (!cell || !cell.value) return '';
-            if (cell.value.richText) {
-              return cell.value.richText.map((rt: any) => rt.text || '').join('').trim();
-            }
-            return String(cell.value).trim();
-          };
 
           // Колонка D (4): количество участников
           if (participantsCell.value !== null && participantsCell.value !== undefined && participantsCell.value !== '') {
