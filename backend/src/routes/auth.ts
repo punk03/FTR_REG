@@ -22,27 +22,34 @@ router.post(
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        res.status(400).json({ errors: errors.array() });
+        console.error('Login validation errors:', errors.array());
+        res.status(400).json({ error: 'Неверный формат данных', errors: errors.array() });
         return;
       }
 
       const { email, password } = req.body;
+      console.log('Login attempt for email:', email);
 
       const user = await prisma.user.findUnique({
         where: { email },
       });
 
       if (!user) {
-        res.status(401).json({ error: 'Invalid email or password' });
+        console.error('User not found:', email);
+        res.status(401).json({ error: 'Неверный email или пароль' });
         return;
       }
 
+      console.log('User found, comparing password...');
       const isValidPassword = await bcrypt.compare(password, user.password);
 
       if (!isValidPassword) {
-        res.status(401).json({ error: 'Invalid email or password' });
+        console.error('Invalid password for user:', email);
+        res.status(401).json({ error: 'Неверный email или пароль' });
         return;
       }
+
+      console.log('Password valid, generating tokens...');
 
       const payload: TokenPayload = {
         userId: user.id,
@@ -65,7 +72,9 @@ router.post(
           phone: user.phone,
         },
       });
+      console.log('Login successful for user:', email);
     } catch (error) {
+      console.error('Login error:', error);
       errorHandler(error as Error, req, res, () => {});
     }
   }
