@@ -698,8 +698,8 @@ start_application() {
     cd ..
     
     print_success "Application services started"
-    print_info "Backend: http://localhost:3001"
-    print_info "Frontend: http://localhost:3000"
+    print_info "Backend: http://185.185.68.105:3001"
+    print_info "Frontend: http://185.185.68.105:3000"
     print_info "Logs: backend.log, frontend.log"
 }
 
