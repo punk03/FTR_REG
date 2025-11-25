@@ -191,11 +191,8 @@ main() {
     # Check git
     check_git
     
-    # Check Docker access
-    if ! check_docker_access; then
-        print_error "Docker access check failed. Please fix Docker permissions and run the script again."
-        exit 1
-    fi
+    # Check Docker access (non-blocking, will use sudo if needed)
+    check_docker_access
     
     # Setup repository
     setup_repository
