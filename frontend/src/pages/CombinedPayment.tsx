@@ -26,16 +26,28 @@ import {
   StepLabel,
   Card,
   CardContent,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '../services/api';
 import { Event } from '../types';
 import { formatCurrency } from '../utils/format';
 import { useNotification } from '../context/NotificationContext';
 
 type StepType = 'select' | 'edit';
+
+// Функция для подсчета количества строк с русскими символами
+const countRussianLines = (text: string): number => {
+  if (!text) return 0;
+  const lines = text.split('\n').filter((line) => line.trim());
+  // Проверяем, содержит ли строка хотя бы один русский символ
+  const russianRegex = /[А-Яа-яЁё]/;
+  return lines.filter((line) => russianRegex.test(line)).length;
+};
 
 export const CombinedPayment: React.FC = () => {
   const { showSuccess, showError } = useNotification();
@@ -58,6 +70,7 @@ export const CombinedPayment: React.FC = () => {
   const [applyDiscount, setApplyDiscount] = useState(false);
   const [registrationData, setRegistrationData] = useState<Record<number, any>>({});
   const [priceCalculation, setPriceCalculation] = useState<any>(null);
+  const [registrationPrices, setRegistrationPrices] = useState<Record<number, any>>({});
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -83,8 +96,10 @@ export const CombinedPayment: React.FC = () => {
   useEffect(() => {
     if (currentStep === 'edit' && selectedRegistrations.size > 0) {
       calculateTotalPrice();
+      calculateIndividualPrices();
     } else {
       setPriceCalculation(null);
+      setRegistrationPrices({});
     }
   }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount]);
 
@@ -104,7 +119,6 @@ export const CombinedPayment: React.FC = () => {
           participantsCount: reg.participantsCount,
           federationParticipantsCount: reg.federationParticipantsCount,
           medalsCount: reg.medalsCount,
-          diplomasCount: reg.diplomasCount,
           diplomasList: reg.diplomasList || '',
         };
       });
@@ -114,6 +128,50 @@ export const CombinedPayment: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Расчет стоимости для каждого номера отдельно
+  const calculateIndividualPrices = async () => {
+    if (selectedRegistrations.size === 0) return;
+
+    const prices: Record<number, any> = {};
+
+    for (const regId of selectedRegistrations) {
+      const reg = registrations.find((r) => r.id === regId);
+      if (!reg) continue;
+
+      const data = registrationData[regId] || {};
+      const diplomasList = data.diplomasList || reg.diplomasList || '';
+      const diplomasCount = countRussianLines(diplomasList);
+
+      try {
+        const response = await api.get(`/api/registrations/${regId}/calculate-price`, {
+          params: {
+            participantsCount: data.participantsCount || reg.participantsCount,
+            federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
+            diplomasCount,
+            medalsCount: data.medalsCount || reg.medalsCount,
+          },
+        });
+
+        prices[regId] = {
+          performancePrice: response.data.performancePrice || 0,
+          diplomasPrice: response.data.details?.diplomasPrice || 0,
+          medalsPrice: response.data.details?.medalsPrice || 0,
+          total: response.data.total || 0,
+        };
+      } catch (error) {
+        console.error(`Error calculating price for registration ${regId}:`, error);
+        prices[regId] = {
+          performancePrice: 0,
+          diplomasPrice: 0,
+          medalsPrice: 0,
+          total: 0,
+        };
+      }
+    }
+
+    setRegistrationPrices(prices);
   };
 
   const calculateTotalPrice = async () => {
@@ -126,9 +184,8 @@ export const CombinedPayment: React.FC = () => {
 
       for (const reg of selectedRegs) {
         const data = registrationData[reg.id] || {};
-        const diplomasCount = data.diplomasList 
-          ? data.diplomasList.split('\n').filter((s: string) => s.trim()).length 
-          : (data.diplomasCount || reg.diplomasCount || 0);
+        const diplomasList = data.diplomasList || reg.diplomasList || '';
+        const diplomasCount = countRussianLines(diplomasList);
         
         const response = await api.get(`/api/registrations/${reg.id}/calculate-price`, {
           params: {
@@ -205,6 +262,56 @@ export const CombinedPayment: React.FC = () => {
     setCurrentStep('select');
   };
 
+  // Обработка изменения количества участников с автоматической корректировкой
+  const handleParticipantsChange = (regId: number, value: string, isFederation: boolean) => {
+    const reg = registrations.find((r) => r.id === regId);
+    if (!reg) return;
+
+    const data = registrationData[regId] || {};
+    const currentTotal = parseInt(data.participantsCount || reg.participantsCount) || 0;
+    const currentFederation = parseInt(data.federationParticipantsCount || reg.federationParticipantsCount) || 0;
+    const newValue = parseInt(value) || 0;
+
+    if (isFederation) {
+      // При изменении федеральных участников
+      const newFederation = Math.max(0, Math.min(newValue, currentTotal));
+      const newRegular = Math.max(0, currentTotal - newFederation);
+      
+      setRegistrationData({
+        ...registrationData,
+        [regId]: {
+          ...data,
+          participantsCount: newRegular + newFederation,
+          federationParticipantsCount: newFederation,
+        },
+      });
+    } else {
+      // При изменении общего количества участников
+      const newTotal = Math.max(newValue, currentFederation);
+      const newRegular = newTotal - currentFederation;
+      
+      setRegistrationData({
+        ...registrationData,
+        [regId]: {
+          ...data,
+          participantsCount: newTotal,
+          federationParticipantsCount: currentFederation,
+        },
+      });
+    }
+  };
+
+  // Заполнение поля способа оплаты всей суммой
+  const fillPaymentMethod = (method: 'cash' | 'card' | 'transfer') => {
+    if (!priceCalculation) return;
+    
+    setPaymentsByMethod({
+      cash: method === 'cash' ? priceCalculation.total.toFixed(2) : '',
+      card: method === 'card' ? priceCalculation.total.toFixed(2) : '',
+      transfer: method === 'transfer' ? priceCalculation.total.toFixed(2) : '',
+    });
+  };
+
   const handleSave = async () => {
     if (selectedRegistrations.size === 0) {
       showError('Выберите хотя бы одну регистрацию');
@@ -225,9 +332,8 @@ export const CombinedPayment: React.FC = () => {
       const registrationsData = Array.from(selectedRegistrations).map((id) => {
         const reg = registrations.find((r) => r.id === id);
         const data = registrationData[id] || {};
-        const diplomasCount = data.diplomasList 
-          ? data.diplomasList.split('\n').filter((s: string) => s.trim()).length 
-          : (data.diplomasCount || reg?.diplomasCount || 0);
+        const diplomasList = data.diplomasList || reg?.diplomasList || '';
+        const diplomasCount = countRussianLines(diplomasList);
         
         return {
           registrationId: id,
@@ -235,7 +341,7 @@ export const CombinedPayment: React.FC = () => {
           federationParticipantsCount: parseInt(data.federationParticipantsCount || reg?.federationParticipantsCount || 0),
           medalsCount: parseInt(data.medalsCount || reg?.medalsCount || 0),
           diplomasCount,
-          diplomasList: data.diplomasList || reg?.diplomasList || '',
+          diplomasList,
         };
       });
 
@@ -337,7 +443,6 @@ export const CombinedPayment: React.FC = () => {
               <TableHead>
                 <TableRow>
                   <TableCell padding="checkbox" />
-                  <TableCell>Коллектив</TableCell>
                   <TableCell>Название номера</TableCell>
                   <TableCell>Руководители</TableCell>
                   <TableCell>Тренеры</TableCell>
@@ -351,6 +456,8 @@ export const CombinedPayment: React.FC = () => {
                   const isSelected = selectedRegistrations.has(reg.id);
                   const leaders = reg.leaders?.map((l: any) => l.person?.fullName).filter(Boolean).join(', ') || '-';
                   const trainers = reg.trainers?.map((t: any) => t.person?.fullName).filter(Boolean).join(', ') || '-';
+                  const diplomasList = reg.diplomasList || '';
+                  const diplomasCount = countRussianLines(diplomasList);
 
                   return (
                     <TableRow key={reg.id} selected={isSelected}>
@@ -360,12 +467,11 @@ export const CombinedPayment: React.FC = () => {
                           onChange={() => handleToggleRegistration(reg.id)}
                         />
                       </TableCell>
-                      <TableCell>{reg.collective?.name}</TableCell>
                       <TableCell>{reg.danceName || '-'}</TableCell>
                       <TableCell>{leaders}</TableCell>
                       <TableCell>{trainers}</TableCell>
                       <TableCell>{reg.participantsCount}</TableCell>
-                      <TableCell>{reg.diplomasCount || 0}</TableCell>
+                      <TableCell>{diplomasCount}</TableCell>
                       <TableCell>{reg.medalsCount || 0}</TableCell>
                     </TableRow>
                   );
@@ -402,12 +508,18 @@ export const CombinedPayment: React.FC = () => {
               const data = registrationData[reg.id] || {};
               const leaders = reg.leaders?.map((l: any) => l.person?.fullName).filter(Boolean).join(', ') || '-';
               const trainers = reg.trainers?.map((t: any) => t.person?.fullName).filter(Boolean).join(', ') || '-';
+              const diplomasList = data.diplomasList || reg.diplomasList || '';
+              const diplomasCount = countRussianLines(diplomasList);
+              const prices = registrationPrices[reg.id] || { performancePrice: 0, diplomasPrice: 0, medalsPrice: 0, total: 0 };
+              const currentTotal = parseInt(data.participantsCount || reg.participantsCount) || 0;
+              const currentFederation = parseInt(data.federationParticipantsCount || reg.federationParticipantsCount) || 0;
+              const currentRegular = currentTotal - currentFederation;
 
               return (
                 <Card key={reg.id} sx={{ mb: 2 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      {reg.collective?.name} - {reg.danceName || 'Без названия'}
+                      {reg.danceName || 'Без названия'}
                     </Typography>
                     <Grid container spacing={2} sx={{ mb: 2 }}>
                       <Grid item xs={12} sm={6}>
@@ -435,17 +547,10 @@ export const CombinedPayment: React.FC = () => {
                           label="Участников"
                           type="number"
                           size="small"
-                          value={data.participantsCount || reg.participantsCount}
-                          onChange={(e) => {
-                            setRegistrationData({
-                              ...registrationData,
-                              [reg.id]: {
-                                ...data,
-                                participantsCount: e.target.value,
-                              },
-                            });
-                          }}
-                          inputProps={{ min: 0 }}
+                          value={currentTotal}
+                          onChange={(e) => handleParticipantsChange(reg.id, e.target.value, false)}
+                          inputProps={{ min: currentFederation }}
+                          helperText={`Обычных: ${currentRegular}`}
                         />
                       </Grid>
                       <Grid item xs={6} sm={3}>
@@ -454,17 +559,9 @@ export const CombinedPayment: React.FC = () => {
                           label="Участников федерации"
                           type="number"
                           size="small"
-                          value={data.federationParticipantsCount || reg.federationParticipantsCount}
-                          onChange={(e) => {
-                            setRegistrationData({
-                              ...registrationData,
-                              [reg.id]: {
-                                ...data,
-                                federationParticipantsCount: e.target.value,
-                              },
-                            });
-                          }}
-                          inputProps={{ min: 0 }}
+                          value={currentFederation}
+                          onChange={(e) => handleParticipantsChange(reg.id, e.target.value, true)}
+                          inputProps={{ min: 0, max: currentTotal }}
                         />
                       </Grid>
                       <Grid item xs={6} sm={3}>
@@ -489,20 +586,14 @@ export const CombinedPayment: React.FC = () => {
                       <Grid item xs={6} sm={3}>
                         <TextField
                           fullWidth
-                          label="Дипломов"
-                          type="number"
+                          label={`Дипломов (${diplomasCount})`}
+                          type="text"
                           size="small"
-                          value={data.diplomasCount || reg.diplomasCount || 0}
-                          onChange={(e) => {
-                            setRegistrationData({
-                              ...registrationData,
-                              [reg.id]: {
-                                ...data,
-                                diplomasCount: e.target.value,
-                              },
-                            });
+                          value={diplomasCount}
+                          InputProps={{
+                            readOnly: true,
                           }}
-                          inputProps={{ min: 0 }}
+                          helperText="Количество считается автоматически"
                         />
                       </Grid>
                       <Grid item xs={12}>
@@ -511,7 +602,7 @@ export const CombinedPayment: React.FC = () => {
                           label="ФИО на дипломы (каждое на новой строке)"
                           multiline
                           rows={3}
-                          value={data.diplomasList || reg.diplomasList || ''}
+                          value={diplomasList}
                           onChange={(e) => {
                             setRegistrationData({
                               ...registrationData,
@@ -521,9 +612,25 @@ export const CombinedPayment: React.FC = () => {
                               },
                             });
                           }}
+                          helperText={`Строк с русскими символами: ${diplomasCount}`}
                         />
                       </Grid>
                     </Grid>
+                    <Divider sx={{ my: 2 }} />
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Стоимость за номер: <strong>{formatCurrency(prices.performancePrice)}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Дипломы: <strong>{formatCurrency(prices.diplomasPrice)}</strong>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Медали: <strong>{formatCurrency(prices.medalsPrice)}</strong>
+                      </Typography>
+                      <Typography variant="body1" sx={{ mt: 1 }}>
+                        Итого за номер: <strong>{formatCurrency(prices.total)}</strong>
+                      </Typography>
+                    </Box>
                   </CardContent>
                 </Card>
               );
@@ -606,6 +713,20 @@ export const CombinedPayment: React.FC = () => {
               onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, cash: e.target.value })}
               sx={{ mb: 2 }}
               inputProps={{ min: 0 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => fillPaymentMethod('cash')}
+                      edge="end"
+                      size="small"
+                      title="Заполнить всей суммой"
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
 
             <TextField
@@ -616,6 +737,20 @@ export const CombinedPayment: React.FC = () => {
               onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, card: e.target.value })}
               sx={{ mb: 2 }}
               inputProps={{ min: 0 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => fillPaymentMethod('card')}
+                      edge="end"
+                      size="small"
+                      title="Заполнить всей суммой"
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
 
             <TextField
@@ -626,6 +761,20 @@ export const CombinedPayment: React.FC = () => {
               onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, transfer: e.target.value })}
               sx={{ mb: 2 }}
               inputProps={{ min: 0 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => fillPaymentMethod('transfer')}
+                      edge="end"
+                      size="small"
+                      title="Заполнить всей суммой"
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
 
             {priceCalculation && (
