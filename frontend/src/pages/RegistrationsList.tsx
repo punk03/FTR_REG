@@ -568,7 +568,7 @@ export const RegistrationsList: React.FC = () => {
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="body2">
-                    Участники: {reg.participantsCount || 0} | {formatDate(reg.createdAt)}
+                    Участники: {reg.participantsCount || 0}
                   </Typography>
                 </Box>
               </Paper>
