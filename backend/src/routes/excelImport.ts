@@ -322,8 +322,6 @@ router.post(
         return;
       }
 
-      const parsedRows: ParsedRow[] = [];
-
       // Загружаем справочники один раз
       const [disciplines, nominations, ages, categories] = await Promise.all([
         prisma.discipline.findMany(),
@@ -372,33 +370,20 @@ router.post(
             continue;
           }
 
-          // Правильно читаем значения ячеек (учитываем richText и обрезанные значения)
-          let categoryValue = '';
-          if (categoryCell.value) {
-            if (categoryCell.value.richText) {
-              categoryValue = categoryCell.value.richText.map((rt: any) => rt.text || '').join('').trim();
-            } else {
-              categoryValue = String(categoryCell.value).trim();
+          // Вспомогательная функция для чтения значения ячейки
+          const readCellValue = (cell: any): string => {
+            if (!cell || !cell.value) return '';
+            // Проверяем тип значения
+            if (typeof cell.value === 'object' && 'richText' in cell.value) {
+              return (cell.value.richText as any[]).map((rt: any) => rt.text || '').join('').trim();
             }
-          }
+            return String(cell.value).trim();
+          };
 
-          let collectiveValue = '';
-          if (collectiveCell.value) {
-            if (collectiveCell.value.richText) {
-              collectiveValue = collectiveCell.value.richText.map((rt: any) => rt.text || '').join('').trim();
-            } else {
-              collectiveValue = String(collectiveCell.value).trim();
-            }
-          }
-
-          let danceNameValue = '';
-          if (danceNameCell.value) {
-            if (danceNameCell.value.richText) {
-              danceNameValue = danceNameCell.value.richText.map((rt: any) => rt.text || '').join('').trim();
-            } else {
-              danceNameValue = String(danceNameCell.value).trim();
-            }
-          }
+          // Правильно читаем значения ячеек
+          const categoryValue = readCellValue(categoryCell);
+          const collectiveValue = readCellValue(collectiveCell);
+          const danceNameValue = readCellValue(danceNameCell);
 
           // Определяем, является ли строка строкой категории
           // Проверяем начало строк (первые 50 символов) вместо полного совпадения
