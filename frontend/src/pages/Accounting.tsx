@@ -250,11 +250,16 @@ export const Accounting: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<FileDownloadIcon />}
-          onClick={() => {
+          onClick={async () => {
             if (accountingData && selectedEventId) {
-              const event = events.find((e) => e.id === selectedEventId);
-              exportAccountingToPDF(accountingData, event?.name || 'Неизвестное мероприятие', selectedEventId as number);
-              showSuccess('PDF отчет успешно сгенерирован');
+              try {
+                const event = events.find((e) => e.id === selectedEventId);
+                await exportAccountingToPDF(accountingData, event?.name || 'Неизвестное мероприятие', selectedEventId as number);
+                showSuccess('PDF отчет успешно сгенерирован');
+              } catch (error: any) {
+                console.error('Error exporting PDF:', error);
+                showError(error.message || 'Ошибка при создании PDF файла');
+              }
             }
           }}
           disabled={!accountingData || !selectedEventId}
