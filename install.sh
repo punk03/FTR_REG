@@ -124,12 +124,19 @@ setup_repository() {
 fix_permissions() {
     print_info "Setting correct permissions..."
     
-    CURRENT_USER=$(whoami)
-    
-    # Fix ownership
-    sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$PROJECT_DIR" 2>/dev/null || {
-        print_warning "Could not change ownership. You may need to run: sudo chown -R $CURRENT_USER:$CURRENT_USER $PROJECT_DIR"
-    }
+    if [ "$EUID" -eq 0 ]; then
+        # Running as root, use APP_USER
+        CURRENT_USER="${APP_USER:-ftr}"
+        chown -R "$CURRENT_USER:$CURRENT_USER" "$PROJECT_DIR" 2>/dev/null || {
+            print_warning "Could not change ownership. You may need to run: chown -R $CURRENT_USER:$CURRENT_USER $PROJECT_DIR"
+        }
+    else
+        CURRENT_USER=$(whoami)
+        # Fix ownership
+        sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$PROJECT_DIR" 2>/dev/null || {
+            print_warning "Could not change ownership. You may need to run: sudo chown -R $CURRENT_USER:$CURRENT_USER $PROJECT_DIR"
+        }
+    fi
     
     # Make scripts executable
     chmod +x "$PROJECT_DIR/deploy.sh" 2>/dev/null || true
@@ -152,11 +159,20 @@ run_deployment() {
     # Make sure deploy.sh is executable
     chmod +x deploy.sh
     
-    # Run deployment
-    ./deploy.sh || {
-        print_error "Deployment failed. Please check the error messages above."
-        exit 1
-    }
+    # If running as root and APP_USER is set, run deploy.sh as that user
+    if [ "$EUID" -eq 0 ] && [ -n "$APP_USER" ] && [ "$APP_USER" != "root" ]; then
+        print_info "Running deploy.sh as user $APP_USER..."
+        sudo -u "$APP_USER" ./deploy.sh || {
+            print_error "Deployment failed. Please check the error messages above."
+            exit 1
+        }
+    else
+        # Run deployment as current user
+        ./deploy.sh || {
+            print_error "Deployment failed. Please check the error messages above."
+            exit 1
+        }
+    fi
 }
 
 # Show summary

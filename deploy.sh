@@ -43,10 +43,20 @@ check_root() {
     fi
 }
 
-# Get current user (works with sudo -u)
+# Get current user (works with sudo -u and root)
 get_current_user() {
-    if [ -n "$SUDO_USER" ]; then
+    if [ -n "$APP_USER" ]; then
+        echo "$APP_USER"
+    elif [ -n "$SUDO_USER" ]; then
         echo "$SUDO_USER"
+    elif [ "$EUID" -eq 0 ]; then
+        # Running as root, try to find appropriate user
+        if [ -n "$APP_USER" ]; then
+            echo "$APP_USER"
+        else
+            # Try to get owner of current directory
+            stat -c '%U' . 2>/dev/null || echo "root"
+        fi
     elif [ -n "$USER" ]; then
         echo "$USER"
     else
@@ -94,6 +104,14 @@ check_permissions() {
 
 # Check Docker access
 check_docker_access() {
+    # If running as root, Docker is always accessible
+    if [ "$EUID" -eq 0 ]; then
+        DOCKER_CMD="docker"
+        DOCKER_COMPOSE_CMD="docker compose"
+        print_info "Running as root, Docker access granted"
+        return 0
+    fi
+    
     if docker ps &>/dev/null; then
         DOCKER_CMD="docker"
         DOCKER_COMPOSE_CMD="docker compose"
@@ -566,6 +584,12 @@ main() {
     # Check/Install Docker
     check_docker
     check_docker_compose
+    
+    # If running as root, ensure APP_USER has proper permissions
+    if [ "$EUID" -eq 0 ] && [ -n "$APP_USER" ] && [ "$APP_USER" != "root" ]; then
+        print_info "Setting ownership of project files to $APP_USER..."
+        chown -R "$APP_USER:$APP_USER" . 2>/dev/null || true
+    fi
     
     # Check if update or new installation
     IS_UPDATE=false
