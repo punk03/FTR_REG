@@ -73,7 +73,6 @@ export const RegistrationsList: React.FC = () => {
       eventId: '',
       search: '',
       paymentStatus: '',
-      registrationStatus: '',
       dateFrom: '',
       dateTo: '',
     };
@@ -83,7 +82,6 @@ export const RegistrationsList: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<number | ''>(filters.eventId || '');
   const [search, setSearch] = useState(filters.search || '');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState(filters.paymentStatus || '');
-  const [registrationStatusFilter, setRegistrationStatusFilter] = useState(filters.registrationStatus || '');
   const [dateFrom, setDateFrom] = useState(filters.dateFrom || '');
   const [dateTo, setDateTo] = useState(filters.dateTo || '');
   
@@ -105,7 +103,6 @@ export const RegistrationsList: React.FC = () => {
       eventId: selectedEventId,
       search,
       paymentStatus: paymentStatusFilter,
-      registrationStatus: registrationStatusFilter,
       dateFrom,
       dateTo,
     };
@@ -114,7 +111,7 @@ export const RegistrationsList: React.FC = () => {
     } catch (error) {
       console.error('Error saving filters to localStorage:', error);
     }
-  }, [selectedEventId, search, paymentStatusFilter, registrationStatusFilter, dateFrom, dateTo]);
+  }, [selectedEventId, search, paymentStatusFilter, dateFrom, dateTo]);
 
   // Загрузка событий
   useEffect(() => {
@@ -176,7 +173,7 @@ export const RegistrationsList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedEventId, page, rowsPerPage, search, paymentStatusFilter, registrationStatusFilter, dateFrom, dateTo]);
+  }, [selectedEventId, page, rowsPerPage, search, paymentStatusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchRegistrations();
@@ -245,7 +242,6 @@ export const RegistrationsList: React.FC = () => {
   const handleClearFilters = () => {
     setSearch('');
     setPaymentStatusFilter('');
-    setRegistrationStatusFilter('');
     setDateFrom('');
     setDateTo('');
     setPage(0);
@@ -256,7 +252,7 @@ export const RegistrationsList: React.FC = () => {
     }
   };
 
-  const hasActiveFilters = search || paymentStatusFilter || registrationStatusFilter || dateFrom || dateTo;
+  const hasActiveFilters = search || paymentStatusFilter || dateFrom || dateTo;
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
@@ -412,24 +408,6 @@ export const RegistrationsList: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Статус регистрации</InputLabel>
-                <Select
-                  value={registrationStatusFilter}
-                  label="Статус регистрации"
-                  onChange={(e) => {
-                    setRegistrationStatusFilter(e.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <MenuItem value="">Все</MenuItem>
-                  <MenuItem value="PENDING">На рассмотрении</MenuItem>
-                  <MenuItem value="APPROVED">Одобрено</MenuItem>
-                  <MenuItem value="REJECTED">Отклонено</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
               <TextField
                 fullWidth
                 label="Дата от"
@@ -491,7 +469,6 @@ export const RegistrationsList: React.FC = () => {
               <TableCell>Возраст</TableCell>
               <TableCell>Участников</TableCell>
               <TableCell>Статус оплаты</TableCell>
-              <TableCell>Дата создания</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -536,7 +513,6 @@ export const RegistrationsList: React.FC = () => {
                       size="small"
                     />
                   </TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{formatDate(reg.createdAt)}</TableCell>
                 </TableRow>
               ))
             )}
