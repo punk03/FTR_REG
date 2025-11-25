@@ -570,10 +570,14 @@ run_migrations() {
         }
     }
     
-    # Seed database only on first deployment
-    if [ ! -f "../.deployed" ]; then
-        print_info "Seeding database..."
-        npx prisma db seed || print_warning "Seed failed or already executed"
+    # Seed database - check if users exist, if not, run seed
+    print_info "Checking if database needs seeding..."
+    USER_COUNT=$(npx prisma db execute --stdin <<< "SELECT COUNT(*) FROM \"User\";" 2>/dev/null | grep -o '[0-9]*' | head -1 || echo "0")
+    if [ "$USER_COUNT" = "0" ] || [ -z "$USER_COUNT" ]; then
+        print_info "No users found. Seeding database..."
+        npx prisma db seed || print_warning "Seed failed, but continuing..."
+    else
+        print_info "Database already has users (count: $USER_COUNT). Skipping seed."
     fi
     
     cd ..
