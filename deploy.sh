@@ -627,23 +627,29 @@ start_application() {
     cd frontend
     
     # Check if frontend server is already running
-    if pgrep -f "serve.*dist" > /dev/null || pgrep -f "http-server.*dist" > /dev/null; then
+    if pgrep -f "serve.*dist" > /dev/null || pgrep -f "vite.*preview" > /dev/null || pgrep -f "node.*serve" > /dev/null; then
         print_warning "Frontend server is already running"
     else
-        # Check if serve is installed, if not install it
-        if ! command -v serve &> /dev/null; then
-            print_info "Installing serve for frontend..."
-            npm install -g serve
+        # Use npx serve (no global install needed) or vite preview
+        # Try vite preview first (already available), fallback to npx serve
+        if command -v npx &> /dev/null; then
+            # Start frontend server using npx serve (port 3000 to avoid root requirement)
+            print_info "Starting frontend on port 3000..."
+            nohup npx -y serve -s dist -l 3000 > ../frontend.log 2>&1 &
+            FRONTEND_PID=$!
+            echo $FRONTEND_PID > ../frontend.pid
+            print_success "Frontend started (PID: $FRONTEND_PID) on port 3000"
+        else
+            # Fallback: use vite preview
+            print_info "Using vite preview for frontend..."
+            nohup npm run preview -- --port 3000 --host > ../frontend.log 2>&1 &
+            FRONTEND_PID=$!
+            echo $FRONTEND_PID > ../frontend.pid
+            print_success "Frontend started (PID: $FRONTEND_PID) on port 3000"
         fi
         
-        # Start frontend server in background
-        nohup serve -s dist -l 80 > ../frontend.log 2>&1 &
-        FRONTEND_PID=$!
-        echo $FRONTEND_PID > ../frontend.pid
-        print_success "Frontend started (PID: $FRONTEND_PID)"
-        
         # Wait a bit for frontend to start
-        sleep 2
+        sleep 3
         
         # Check if frontend is running
         if ! kill -0 $FRONTEND_PID 2>/dev/null; then
@@ -656,7 +662,7 @@ start_application() {
     
     print_success "Application services started"
     print_info "Backend: http://localhost:3001"
-    print_info "Frontend: http://localhost"
+    print_info "Frontend: http://localhost:3000"
     print_info "Logs: backend.log, frontend.log"
 }
 
@@ -676,7 +682,7 @@ show_status() {
     echo "=== Service URLs ==="
     if [ -f "docker-compose.prod.yml" ]; then
         echo "Backend API: http://localhost:3001"
-        echo "Frontend: http://localhost"
+        echo "Frontend: http://localhost:3000"
         echo "PostgreSQL: localhost:5432"
         echo "Redis: localhost:6379"
     else
