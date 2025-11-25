@@ -278,7 +278,7 @@ router.post(
 
             // Поиск ID в справочниках
             if (parsed.disciplineName) {
-              const discipline = disciplines.find((d) => d.name === parsed.disciplineName);
+              const discipline = disciplines.find((d: any) => d.name === parsed.disciplineName);
               if (discipline) {
                 parsedRow.parsed.disciplineId = discipline.id;
               } else {
@@ -287,7 +287,7 @@ router.post(
             }
 
             if (parsed.nominationName) {
-              const nomination = nominations.find((n) => n.name === parsed.nominationName);
+              const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
               if (nomination) {
                 parsedRow.parsed.nominationId = nomination.id;
               } else {
@@ -296,7 +296,7 @@ router.post(
             }
 
             if (parsed.ageName) {
-              const age = ages.find((a) => a.name === parsed.ageName);
+              const age = ages.find((a: any) => a.name === parsed.ageName);
               if (age) {
                 parsedRow.parsed.ageId = age.id;
               } else {
@@ -305,7 +305,7 @@ router.post(
             }
 
             if (parsed.categoryName) {
-              const category = categories.find((c) => c.name === parsed.categoryName);
+              const category = categories.find((c: any) => c.name === parsed.categoryName);
               if (category) {
                 parsedRow.parsed.categoryId = category.id;
               } else {
