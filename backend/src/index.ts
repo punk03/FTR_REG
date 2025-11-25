@@ -27,8 +27,13 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+// Parse CORS_ORIGIN - can be comma-separated string or array
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://185.185.68.105:3000', 'http://185.185.68.105', 'http://localhost:3000', 'http://localhost:5173', 'http://localhost'];
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || ['http://localhost:3000', 'http://localhost:5173', 'http://localhost'],
+  origin: corsOrigins,
   credentials: true
 }));
 app.use(express.json());

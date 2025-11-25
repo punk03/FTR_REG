@@ -406,7 +406,7 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 
 # CORS
-CORS_ORIGIN=http://localhost
+CORS_ORIGIN=http://185.185.68.105:3000,http://185.185.68.105,http://localhost:3000,http://localhost:5173,http://localhost
 EOF
             chmod 600 backend/.env 2>/dev/null || true
             print_info "Created backend/.env with default values"
@@ -708,13 +708,13 @@ show_status() {
     echo ""
     echo "=== Service URLs ==="
     if [ -f "docker-compose.prod.yml" ]; then
-        echo "Backend API: http://localhost:3001"
-        echo "Frontend: http://localhost:3000"
+        echo "Backend API: http://185.185.68.105:3001"
+        echo "Frontend: http://185.185.68.105:3000"
         echo "PostgreSQL: localhost:5432"
         echo "Redis: localhost:6379"
     else
-        echo "Backend API: http://localhost:3001"
-        echo "Frontend: http://localhost:5173"
+        echo "Backend API: http://185.185.68.105:3001"
+        echo "Frontend: http://185.185.68.105:3000"
         echo "PostgreSQL: localhost:5432"
         echo "Redis: localhost:6379"
     fi
