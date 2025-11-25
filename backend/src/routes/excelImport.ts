@@ -163,7 +163,7 @@ router.post(
 
       // Парсинг Excel файла
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(Buffer.from(req.file.buffer));
+      await workbook.xlsx.load(req.file.buffer as Buffer);
 
       const worksheet = workbook.worksheets[0];
       if (!worksheet) {
