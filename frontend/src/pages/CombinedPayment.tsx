@@ -243,10 +243,20 @@ export const CombinedPayment: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedRegistrations.size === registrations.length) {
-      setSelectedRegistrations(new Set());
+    // Выбираем только отфильтрованные заявки
+    const filteredIds = filteredRegistrations.map((r) => r.id);
+    const allFilteredSelected = filteredIds.every((id) => selectedRegistrations.has(id));
+    
+    if (allFilteredSelected) {
+      // Снимаем выбор со всех отфильтрованных
+      const newSelected = new Set(selectedRegistrations);
+      filteredIds.forEach((id) => newSelected.delete(id));
+      setSelectedRegistrations(newSelected);
     } else {
-      setSelectedRegistrations(new Set(registrations.map((r) => r.id)));
+      // Выбираем все отфильтрованные
+      const newSelected = new Set(selectedRegistrations);
+      filteredIds.forEach((id) => newSelected.add(id));
+      setSelectedRegistrations(newSelected);
     }
   };
 
@@ -435,9 +445,13 @@ export const CombinedPayment: React.FC = () => {
       <Paper sx={{ p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">Выберите заявки для оплаты</Typography>
-          <Button size="small" onClick={handleSelectAll}>
-            {selectedRegistrations.size === registrations.length ? 'Снять все' : 'Выбрать все'}
-          </Button>
+          {search && (
+            <Button size="small" onClick={handleSelectAll}>
+              {filteredRegistrations.every((r) => selectedRegistrations.has(r.id)) 
+                ? 'Снять все' 
+                : 'Выбрать все'}
+            </Button>
+          )}
         </Box>
 
         <TextField
