@@ -360,7 +360,10 @@ router.post(
             parsedRow.errors.push(`Ошибка парсинга строки: ${error.message}`);
           }
 
-          parsedRows.push(parsedRow);
+          // Добавляем только непустые строки
+          if (parsedRow.collective || parsedRow.categoryString) {
+            parsedRows.push(parsedRow);
+          }
           rowNumber++;
         })();
 
