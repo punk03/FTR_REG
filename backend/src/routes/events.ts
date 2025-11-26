@@ -202,9 +202,9 @@ router.put(
       if (req.body.paymentEnable !== undefined) updateData.paymentEnable = req.body.paymentEnable;
       if (req.body.categoryEnable !== undefined) updateData.categoryEnable = req.body.categoryEnable;
       if (req.body.songEnable !== undefined) updateData.songEnable = req.body.songEnable;
-      if (req.body.durationMax !== undefined) updateData.durationMax = req.body.durationMax;
-      if (req.body.durationGroupsInterval !== undefined) updateData.durationGroupsInterval = req.body.durationGroupsInterval;
-      if (req.body.durationParticipantsInterval !== undefined) updateData.durationParticipantsInterval = req.body.durationParticipantsInterval;
+      if (req.body.durationMax !== undefined) updateData.durationMax = parseInt(String(req.body.durationMax), 10);
+      if (req.body.durationGroupsInterval !== undefined) updateData.durationGroupsInterval = parseInt(String(req.body.durationGroupsInterval), 10);
+      if (req.body.durationParticipantsInterval !== undefined) updateData.durationParticipantsInterval = parseInt(String(req.body.durationParticipantsInterval), 10);
       if (req.body.pricePerDiploma !== undefined) updateData.pricePerDiploma = req.body.pricePerDiploma ? parseFloat(req.body.pricePerDiploma) : null;
       if (req.body.pricePerMedal !== undefined) updateData.pricePerMedal = req.body.pricePerMedal ? parseFloat(req.body.pricePerMedal) : null;
       if (req.body.discountTiers !== undefined) {
