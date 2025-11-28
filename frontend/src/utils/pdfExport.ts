@@ -406,7 +406,7 @@ export const exportAccountingToPDF = async (
   }
 
   // Добавление одиночных выступлений
-  const performanceEntries = data.ungrouped.filter((e.paidFor === 'PERFORMANCE');
+  const performanceEntries = data.ungrouped.filter((e) => e.paidFor === 'PERFORMANCE');
   if (performanceEntries.length > 0) {
     docDefinition.content.push({
       text: 'Одиночные выступления',
