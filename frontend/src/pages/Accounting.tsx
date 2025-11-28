@@ -36,7 +36,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import api from '../services/api';
 import { Event } from '../types';
-import { formatCurrency, formatDate } from '../utils/format';
+import { formatCurrency, formatDate, formatRegistrationNumber } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -454,6 +454,7 @@ export const Accounting: React.FC = () => {
                               <Table size="small">
                                 <TableHead>
                                   <TableRow>
+                                    <TableCell>Номер</TableCell>
                                     <TableCell>Коллектив</TableCell>
                                     <TableCell>Название</TableCell>
                                     <TableCell>Сумма</TableCell>
@@ -464,6 +465,7 @@ export const Accounting: React.FC = () => {
                                 <TableBody>
                                   {performanceEntries.map((entry: any) => (
                                     <TableRow key={entry.id}>
+                                      <TableCell>{formatRegistrationNumber(entry.registration)}</TableCell>
                                       <TableCell>{entry.collective?.name}</TableCell>
                                       <TableCell>{entry.registration?.danceName || '-'}</TableCell>
                                       <TableCell>{formatCurrency(entry.amount)}</TableCell>
@@ -486,6 +488,7 @@ export const Accounting: React.FC = () => {
                               <Table size="small">
                                 <TableHead>
                                   <TableRow>
+                                    <TableCell>Номер</TableCell>
                                     <TableCell>Коллектив</TableCell>
                                     <TableCell>Название</TableCell>
                                     <TableCell>Сумма</TableCell>
@@ -495,6 +498,7 @@ export const Accounting: React.FC = () => {
                                 <TableBody>
                                   {diplomasEntries.map((entry: any) => (
                                     <TableRow key={entry.id}>
+                                      <TableCell>{formatRegistrationNumber(entry.registration)}</TableCell>
                                       <TableCell>{entry.collective?.name}</TableCell>
                                       <TableCell>{entry.registration?.danceName || '-'}</TableCell>
                                       <TableCell>{formatCurrency(entry.amount)}</TableCell>
@@ -535,6 +539,7 @@ export const Accounting: React.FC = () => {
                       .map((entry: any) => (
                         <TableRow key={entry.id}>
                           <TableCell>{formatDate(entry.createdAt)}</TableCell>
+                          <TableCell>{formatRegistrationNumber(entry.registration)}</TableCell>
                           <TableCell>{entry.collective?.name}</TableCell>
                           <TableCell>{entry.registration?.danceName || '-'}</TableCell>
                           <TableCell>{formatCurrency(entry.amount)}</TableCell>
@@ -597,6 +602,7 @@ export const Accounting: React.FC = () => {
                       .map((entry: any) => (
                         <TableRow key={entry.id}>
                           <TableCell>{formatDate(entry.createdAt)}</TableCell>
+                          <TableCell>{formatRegistrationNumber(entry.registration)}</TableCell>
                           <TableCell>{entry.collective?.name}</TableCell>
                           <TableCell>{entry.registration?.danceName || '-'}</TableCell>
                           <TableCell>{formatCurrency(entry.amount)}</TableCell>

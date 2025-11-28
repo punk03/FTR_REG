@@ -10,6 +10,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
+  TableSortLabel,
   TextField,
   Button,
   Chip,
@@ -93,6 +94,8 @@ export const RegistrationsList: React.FC = () => {
   const [bulkMenuAnchor, setBulkMenuAnchor] = useState<null | HTMLElement>(null);
   const [bulkStatusDialogOpen, setBulkStatusDialogOpen] = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState<string>('');
+  const [orderBy, setOrderBy] = useState<string | null>(null);
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
 
@@ -248,6 +251,12 @@ export const RegistrationsList: React.FC = () => {
   };
 
   const hasActiveFilters = search || paymentStatusFilter || dateFrom || dateTo;
+
+  const handleRequestSort = (property: string) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
@@ -456,14 +465,78 @@ export const RegistrationsList: React.FC = () => {
                   onChange={handleSelectAll}
                 />
               </TableCell>
-              <TableCell>№</TableCell>
-              <TableCell>Коллектив</TableCell>
-              <TableCell>Название танца</TableCell>
-              <TableCell>Дисциплина</TableCell>
-              <TableCell>Номинация</TableCell>
-              <TableCell>Возраст</TableCell>
-              <TableCell>Участников</TableCell>
-              <TableCell>Статус оплаты</TableCell>
+              <TableCell sortDirection={orderBy === 'number' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'number'}
+                  direction={orderBy === 'number' ? order : 'asc'}
+                  onClick={() => handleRequestSort('number')}
+                >
+                  №
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'collective' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'collective'}
+                  direction={orderBy === 'collective' ? order : 'asc'}
+                  onClick={() => handleRequestSort('collective')}
+                >
+                  Коллектив
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'danceName' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'danceName'}
+                  direction={orderBy === 'danceName' ? order : 'asc'}
+                  onClick={() => handleRequestSort('danceName')}
+                >
+                  Название танца
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'discipline' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'discipline'}
+                  direction={orderBy === 'discipline' ? order : 'asc'}
+                  onClick={() => handleRequestSort('discipline')}
+                >
+                  Дисциплина
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'nomination' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'nomination'}
+                  direction={orderBy === 'nomination' ? order : 'asc'}
+                  onClick={() => handleRequestSort('nomination')}
+                >
+                  Номинация
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'age' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'age'}
+                  direction={orderBy === 'age' ? order : 'asc'}
+                  onClick={() => handleRequestSort('age')}
+                >
+                  Возраст
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'participantsCount' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'participantsCount'}
+                  direction={orderBy === 'participantsCount' ? order : 'asc'}
+                  onClick={() => handleRequestSort('participantsCount')}
+                >
+                  Участников
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sortDirection={orderBy === 'paymentStatus' ? order : false}>
+                <TableSortLabel
+                  active={orderBy === 'paymentStatus'}
+                  direction={orderBy === 'paymentStatus' ? order : 'asc'}
+                  onClick={() => handleRequestSort('paymentStatus')}
+                >
+                  Статус оплаты
+                </TableSortLabel>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -482,7 +555,40 @@ export const RegistrationsList: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              registrations.map((reg: any) => (
+              [...registrations]
+                .sort((a: any, b: any) => {
+                  if (!orderBy) return 0;
+                  const direction = order === 'asc' ? 1 : -1;
+                  const getValue = (reg: any) => {
+                    switch (orderBy) {
+                      case 'number':
+                        return reg.number || 0;
+                      case 'collective':
+                        return reg.collective?.name || '';
+                      case 'danceName':
+                        return reg.danceName || '';
+                      case 'discipline':
+                        return reg.discipline?.name || '';
+                      case 'nomination':
+                        return reg.nomination?.name || '';
+                      case 'age':
+                        return reg.age?.name || '';
+                      case 'participantsCount':
+                        return reg.participantsCount || 0;
+                      case 'paymentStatus':
+                        return reg.paymentStatus || '';
+                      default:
+                        return '';
+                    }
+                  };
+                  const aVal = getValue(a);
+                  const bVal = getValue(b);
+                  if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return (aVal - bVal) * direction;
+                  }
+                  return String(aVal).localeCompare(String(bVal)) * direction;
+                })
+                .map((reg: any) => (
                 <TableRow
                   key={reg.id}
                   hover

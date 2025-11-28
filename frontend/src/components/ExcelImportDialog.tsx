@@ -23,6 +23,7 @@ import {
   FormControlLabel,
   Checkbox,
   Alert,
+  TextField,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import api from '../services/api';
@@ -69,6 +70,8 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
     skipped: number;
     errors: Array<{ row: number; error: string }>;
   } | null>(null);
+  const [errorEditOpen, setErrorEditOpen] = useState(false);
+  const [editableErrorRows, setEditableErrorRows] = useState<PreviewRow[]>([]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -141,6 +144,13 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
         errors: response.data.errors || [],
       });
 
+      if (response.data.errors && response.data.errors.length > 0) {
+        const errorRowsMap = new Set<number>(response.data.errors.map((e: any) => e.row));
+        const rowsToEdit = preview.filter((row) => errorRowsMap.has(row.rowNumber));
+        setEditableErrorRows(rowsToEdit);
+        setErrorEditOpen(true);
+      }
+
       if (response.data.imported > 0) {
         showSuccess(`Успешно импортировано ${response.data.imported} регистраций`);
       }
@@ -164,7 +174,68 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
     setPreview([]);
     setImportResult(null);
     setDeleteExisting(false);
+    setErrorEditOpen(false);
+    setEditableErrorRows([]);
     onClose();
+  };
+
+  const handleErrorRowChange = (index: number, field: keyof PreviewRow | 'disciplineName' | 'nominationName' | 'ageName' | 'categoryName') => (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = event.target.value;
+    setEditableErrorRows((prev) => {
+      const copy = [...prev];
+      const row = { ...copy[index] };
+      if (field === 'disciplineName' || field === 'nominationName' || field === 'ageName' || field === 'categoryName') {
+        row.parsed = row.parsed || {};
+        (row.parsed as any)[field] = value;
+      } else {
+        (row as any)[field] = value;
+      }
+      copy[index] = row;
+      return copy;
+    });
+  };
+
+  const handleImportCorrectedRows = async () => {
+    if (!selectedEventId || editableErrorRows.length === 0) {
+      return;
+    }
+
+    try {
+      const rowsPayload = editableErrorRows.map((row) => ({
+        rowNumber: row.rowNumber,
+        collective: row.collective || '',
+        danceName: row.danceName || '',
+        participantsCount: row.participantsCount || 0,
+        disciplineName: row.parsed?.disciplineName || '',
+        nominationName: row.parsed?.nominationName || '',
+        ageName: row.parsed?.ageName || '',
+        categoryName: row.parsed?.categoryName || '',
+      }));
+
+      const response = await api.post('/api/excel-import/manual', {
+        eventId: selectedEventId,
+        rows: rowsPayload,
+      });
+
+      const imported = response.data.imported || 0;
+      if (imported > 0) {
+        showSuccess(`Дополнительно импортировано ${imported} исправленных строк`);
+      }
+      if (response.data.errors && response.data.errors.length > 0) {
+        showError(`Не удалось импортировать ${response.data.errors.length} строк. Проверьте данные.`);
+      }
+
+      if (onImportComplete) {
+        onImportComplete();
+      }
+
+      setErrorEditOpen(false);
+    } catch (error: any) {
+      console.error('Error importing corrected rows:', error);
+      showError(error.response?.data?.error || 'Ошибка импорта исправленных строк');
+    }
   };
 
   return (
@@ -337,6 +408,105 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
       <DialogActions>
         <Button onClick={handleClose}>Закрыть</Button>
       </DialogActions>
+
+      {/* Диалог редактирования строк с ошибками */}
+      <Dialog open={errorEditOpen} onClose={() => setErrorEditOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>Исправление строк с ошибками</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Вы можете исправить поля и импортировать только эти строки без повторного загрузки файла.
+          </Typography>
+          <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+            <Table stickyHeader size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Строка</TableCell>
+                  <TableCell>Коллектив</TableCell>
+                  <TableCell>Название</TableCell>
+                  <TableCell>Дисциплина</TableCell>
+                  <TableCell>Номинация</TableCell>
+                  <TableCell>Возраст</TableCell>
+                  <TableCell>Категория</TableCell>
+                  <TableCell>Участники</TableCell>
+                  <TableCell>Ошибки</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {editableErrorRows.map((row, index) => (
+                  <TableRow key={row.rowNumber}>
+                    <TableCell>{row.rowNumber}</TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.collective || ''}
+                        onChange={handleErrorRowChange(index, 'collective')}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.danceName || ''}
+                        onChange={handleErrorRowChange(index, 'danceName')}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.parsed?.disciplineName || ''}
+                        onChange={handleErrorRowChange(index, 'disciplineName')}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.parsed?.nominationName || ''}
+                        onChange={handleErrorRowChange(index, 'nominationName')}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.parsed?.ageName || ''}
+                        onChange={handleErrorRowChange(index, 'ageName')}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.parsed?.categoryName || ''}
+                        onChange={handleErrorRowChange(index, 'categoryName')}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <TextField
+                        value={row.participantsCount ?? ''}
+                        onChange={handleErrorRowChange(index, 'participantsCount')}
+                        size="small"
+                        type="number"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {row.errors && row.errors.length > 0 ? (
+                        <Typography variant="caption" color="error">
+                          {row.errors.join('; ')}
+                        </Typography>
+                      ) : (
+                        <Chip label="OK" color="success" size="small" />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setErrorEditOpen(false)}>Отмена</Button>
+          <Button variant="contained" onClick={handleImportCorrectedRows} disabled={editableErrorRows.length === 0}>
+            Импортировать исправленные
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

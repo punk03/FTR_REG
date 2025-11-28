@@ -843,5 +843,127 @@ router.post(
   }
 );
 
+// Ручной импорт исправленных строк после Excel-предпросмотра
+router.post(
+  '/manual',
+  authenticateToken,
+  requireRole('ADMIN', 'REGISTRATOR'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { eventId, rows } = req.body as {
+        eventId: number;
+        rows: Array<{
+          rowNumber: number;
+          collective: string;
+          danceName?: string;
+          participantsCount?: number;
+          disciplineName?: string;
+          nominationName?: string;
+          ageName?: string;
+          categoryName?: string;
+        }>;
+      };
+
+      if (!eventId || !Array.isArray(rows) || rows.length === 0) {
+        res.status(400).json({ error: 'eventId and rows are required' });
+        return;
+      }
+
+      let imported = 0;
+      const errors: Array<{ row: number; error: string }> = [];
+
+      for (const row of rows) {
+        try {
+          if (!row.collective) {
+            throw new Error('Не указан коллектив');
+          }
+          if (!row.disciplineName) {
+            throw new Error('Не указана дисциплина');
+          }
+          if (!row.nominationName) {
+            throw new Error('Не указана номинация');
+          }
+          if (!row.ageName) {
+            throw new Error('Не указан возраст');
+          }
+
+          const discipline = await prisma.discipline.findFirst({
+            where: { name: { equals: row.disciplineName, mode: 'insensitive' } },
+          });
+          if (!discipline) {
+            throw new Error(`Дисциплина "${row.disciplineName}" не найдена`);
+          }
+
+          let nomination = await prisma.nomination.findFirst({
+            where: { name: { equals: row.nominationName, mode: 'insensitive' } },
+          });
+          if (!nomination) {
+            nomination = await prisma.nomination.create({
+              data: { name: row.nominationName },
+            });
+          }
+
+          const age = await prisma.age.findFirst({
+            where: { name: { equals: row.ageName, mode: 'insensitive' } },
+          });
+          if (!age) {
+            throw new Error(`Возраст "${row.ageName}" не найден`);
+          }
+
+          let categoryId: number | undefined;
+          if (row.categoryName) {
+            const category = await prisma.category.findFirst({
+              where: { name: { equals: row.categoryName, mode: 'insensitive' } },
+            });
+            if (category) {
+              categoryId = category.id;
+            }
+          }
+
+          let collective = await prisma.collective.findFirst({
+            where: { name: { equals: row.collective, mode: 'insensitive' } },
+          });
+          if (!collective) {
+            collective = await prisma.collective.create({
+              data: { name: row.collective },
+            });
+          }
+
+          await prisma.registration.create({
+            data: {
+              userId: (req as any).user.id,
+              eventId,
+              collectiveId: collective.id,
+              disciplineId: discipline.id,
+              nominationId: nomination.id,
+              ageId: age.id,
+              categoryId,
+              danceName: row.danceName,
+              participantsCount: row.participantsCount || 0,
+              federationParticipantsCount: 0,
+              diplomasCount: 0,
+              medalsCount: 0,
+              agreement: true,
+              agreement2: true,
+              status: 'APPROVED',
+            },
+          });
+
+          imported++;
+        } catch (e: any) {
+          errors.push({
+            row: row.rowNumber,
+            error: e.message || 'Ошибка импорта строки',
+          });
+        }
+      }
+
+      res.json({ success: true, imported, errors });
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
 export default router;
 

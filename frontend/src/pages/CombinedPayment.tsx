@@ -35,7 +35,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '../services/api';
 import { Event } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatRegistrationNumber } from '../utils/format';
 import { useNotification } from '../context/NotificationContext';
 
 type StepType = 'select' | 'edit';
@@ -497,7 +497,9 @@ export const CombinedPayment: React.FC = () => {
                           onChange={() => handleToggleRegistration(reg.id)}
                         />
                       </TableCell>
-                      <TableCell>{reg.collective?.name || '-'}</TableCell>
+                      <TableCell>
+                        №{formatRegistrationNumber(reg)} — {reg.collective?.name || '-'}
+                      </TableCell>
                       <TableCell>{reg.danceName || '-'}</TableCell>
                       <TableCell>{leaders}</TableCell>
                       <TableCell>{trainers}</TableCell>

@@ -34,7 +34,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import api from '../services/api';
 import { Event } from '../types';
-// import { formatDate } from '../utils/format';
+import { formatRegistrationNumber } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -372,6 +372,7 @@ export const Diplomas: React.FC = () => {
               </TableCell>
               <TableCell />
               <TableCell>Блок</TableCell>
+              <TableCell>№</TableCell>
               <TableCell>Коллектив</TableCell>
               <TableCell>Дисциплина</TableCell>
               <TableCell>Номинация</TableCell>
@@ -404,6 +405,7 @@ export const Diplomas: React.FC = () => {
                       </IconButton>
                     </TableCell>
                     <TableCell>{reg.blockNumber || '-'}</TableCell>
+                    <TableCell>{formatRegistrationNumber(reg)}</TableCell>
                     <TableCell>{reg.collective?.name || '-'}</TableCell>
                     <TableCell>{reg.discipline?.name || '-'}</TableCell>
                     <TableCell>{reg.nomination?.name || '-'}</TableCell>
