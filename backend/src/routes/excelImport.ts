@@ -429,13 +429,20 @@ router.post(
             }
 
             if (parsed.nominationName) {
-              const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
-              if (nomination) {
-                parsedData.nominationId = nomination.id;
-                parsedData.nominationName = nomination.name;
-              } else {
-                console.warn(`[Excel Import] Номинация "${parsed.nominationName}" не найдена в строке ${rowIndex}`);
+              let nomination = nominations.find((n: any) => n.name === parsed.nominationName);
+              if (!nomination) {
+                // Если номинация не найдена в БД — создаём новую на лету
+                nomination = await prisma.nomination.create({
+                  data: { name: parsed.nominationName },
+                });
+                nominations.push(nomination);
+                console.log(
+                  `[Excel Import] Создана новая номинация "${parsed.nominationName}" (id=${nomination.id}) из строки ${rowIndex}`
+                );
               }
+
+              parsedData.nominationId = nomination.id;
+              parsedData.nominationName = nomination.name;
             }
 
             if (parsed.ageName) {
@@ -500,13 +507,21 @@ router.post(
                   parsedData.disciplineName = discipline.name;
                 }
               }
-              if (parsed.nominationName) {
-                const nomination = nominations.find((n: any) => n.name === parsed.nominationName);
-                if (nomination) {
-                  parsedData.nominationId = nomination.id;
-                  parsedData.nominationName = nomination.name;
-                }
+            if (parsed.nominationName) {
+              let nomination = nominations.find((n: any) => n.name === parsed.nominationName);
+              if (!nomination) {
+                nomination = await prisma.nomination.create({
+                  data: { name: parsed.nominationName },
+                });
+                nominations.push(nomination);
+                console.log(
+                  `[Excel Import] Создана новая номинация "${parsed.nominationName}" (id=${nomination.id}) из строки ${rowIndex}`
+                );
               }
+
+              parsedData.nominationId = nomination.id;
+              parsedData.nominationName = nomination.name;
+            }
               if (parsed.ageName) {
                 const age = ages.find((a: any) => a.name === parsed.ageName);
                 if (age) {
