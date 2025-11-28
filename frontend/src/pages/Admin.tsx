@@ -416,6 +416,18 @@ export const Admin: React.FC = () => {
   const [eventToDelete, setEventToDelete] = useState<number | null>(null);
   const [excelImportOpen, setExcelImportOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [priceEvent, setPriceEvent] = useState<Event | null>(null);
+  const [priceRows, setPriceRows] = useState<
+    Array<{
+      nominationId: number;
+      nominationName: string;
+      pricePerParticipant: string;
+      pricePerFederationParticipant: string;
+    }>
+  >([]);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceSaving, setPriceSaving] = useState(false);
 
   useEffect(() => {
     if (tabValue === 0) {
@@ -448,6 +460,75 @@ export const Admin: React.FC = () => {
       console.error('Error fetching events:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openPricesDialog = async (event: Event) => {
+    setPriceEvent(event);
+    setPriceDialogOpen(true);
+    setPriceLoading(true);
+    try {
+      const [nominationsRes, pricesRes] = await Promise.all([
+        api.get('/api/reference/nominations'),
+        api.get(`/api/events/${event.id}/prices`),
+      ]);
+      const nominations = nominationsRes.data || [];
+      const prices = pricesRes.data || [];
+
+      const rows = nominations.map((nom: any) => {
+        const existing = prices.find((p: any) => p.nominationId === nom.id) || {};
+        return {
+          nominationId: nom.id,
+          nominationName: nom.name,
+          pricePerParticipant:
+            existing.pricePerParticipant !== undefined && existing.pricePerParticipant !== null
+              ? String(existing.pricePerParticipant)
+              : '',
+          pricePerFederationParticipant:
+            existing.pricePerFederationParticipant !== undefined && existing.pricePerFederationParticipant !== null
+              ? String(existing.pricePerFederationParticipant)
+              : '',
+        };
+      });
+      setPriceRows(rows);
+    } catch (error) {
+      console.error('Error loading event prices:', error);
+      showError('Не удалось загрузить цены для мероприятия');
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
+  const handleSavePrices = async () => {
+    if (!priceEvent) return;
+    setPriceSaving(true);
+    try {
+      const pricesPayload = priceRows
+        .filter(
+          (row) =>
+            row.pricePerParticipant !== '' || row.pricePerFederationParticipant !== ''
+        )
+        .map((row) => ({
+          nominationId: row.nominationId,
+          pricePerParticipant: parseInt(row.pricePerParticipant || '0', 10),
+          pricePerFederationParticipant:
+            row.pricePerFederationParticipant !== ''
+              ? parseInt(row.pricePerFederationParticipant, 10)
+              : undefined,
+        }));
+
+      await api.put(`/api/events/${priceEvent.id}/prices`, {
+        prices: pricesPayload,
+      });
+
+      showSuccess('Цены по номинациям сохранены');
+      setPriceDialogOpen(false);
+      setPriceEvent(null);
+    } catch (error: any) {
+      console.error('Error saving prices:', error);
+      showError(error.response?.data?.error || 'Ошибка сохранения цен');
+    } finally {
+      setPriceSaving(false);
     }
   };
 
@@ -837,8 +918,15 @@ export const Admin: React.FC = () => {
                       <TableCell>{event.endDate ? formatDate(event.endDate) : '-'}</TableCell>
                       <TableCell>{event.status}</TableCell>
                       <TableCell>
-                        <IconButton size="small" onClick={() => handleEditEvent(event)}>
+                        <IconButton size="small" onClick={() => handleEditEvent(event)} title="Редактировать">
                           <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => openPricesDialog(event)}
+                          title="Цены по номинациям"
+                        >
+                          <SaveIcon fontSize="small" />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -847,7 +935,11 @@ export const Admin: React.FC = () => {
                         >
                           <AddIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" onClick={() => handleDeleteEventClick(event.id)}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteEventClick(event.id)}
+                          title="Удалить"
+                        >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
@@ -1149,6 +1241,91 @@ export const Admin: React.FC = () => {
           setExcelImportOpen(false);
         }}
       />
+
+      {/* Диалог настройки цен по номинациям для мероприятия */}
+      <Dialog open={priceDialogOpen} onClose={() => setPriceDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Цены по номинациям{priceEvent ? ` — ${priceEvent.name}` : ''}
+        </DialogTitle>
+        <DialogContent>
+          {priceLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Укажите стоимость выступления для каждой номинации отдельно для обычных участников и членов федерации.
+                Цены указываются в рублях за одного участника.
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Номинация</TableCell>
+                      <TableCell>Цена за участника</TableCell>
+                      <TableCell>Цена за участника федерации</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {priceRows.map((row, index) => (
+                      <TableRow key={row.nominationId}>
+                        <TableCell>{row.nominationName}</TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            size="small"
+                            value={row.pricePerParticipant}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setPriceRows((prev) => {
+                                const copy = [...prev];
+                                copy[index] = { ...copy[index], pricePerParticipant: value };
+                                return copy;
+                              });
+                            }}
+                            inputProps={{ min: 0 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            type="number"
+                            size="small"
+                            value={row.pricePerFederationParticipant}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setPriceRows((prev) => {
+                                const copy = [...prev];
+                                copy[index] = { ...copy[index], pricePerFederationParticipant: value };
+                                return copy;
+                              });
+                            }}
+                            inputProps={{ min: 0 }}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                Если цена для члена федерации не указана, будет использована обычная цена для этой номинации.
+              </Alert>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPriceDialogOpen(false)}>Отмена</Button>
+          <Button
+            variant="contained"
+            onClick={handleSavePrices}
+            disabled={priceSaving || priceLoading || !priceEvent}
+            startIcon={priceSaving ? <CircularProgress size={18} /> : <SaveIcon />}
+          >
+            Сохранить цены
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
