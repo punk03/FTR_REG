@@ -28,7 +28,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import api from '../services/api';
 import { Registration } from '../types';
-import { formatDate, formatCurrency } from '../utils/format';
+import { formatDate, formatCurrency, formatRegistrationNumber } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -174,7 +174,7 @@ export const RegistrationDetails: React.FC = () => {
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h5" gutterBottom>
-              Регистрация №{reg.number || '-'}
+              Регистрация №{formatRegistrationNumber(reg)}
             </Typography>
             <Divider sx={{ my: 2 }} />
 

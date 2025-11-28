@@ -385,7 +385,12 @@ router.get(
         if (reg.danceName) {
           doc.text(`Название номера: ${reg.danceName}`);
         }
-        doc.text(`Блок: ${reg.blockNumber || '-'}, Номер: ${reg.number || '-'}`);
+        let displayNumber = reg.number;
+        if (reg.blockNumber && reg.number) {
+          const index = reg.number % 1000 || 0;
+          displayNumber = index > 0 ? `${reg.blockNumber}.${index}` : reg.blockNumber;
+        }
+        doc.text(`Блок: ${reg.blockNumber || '-'}, Номер: ${displayNumber || '-'}`);
         doc.moveDown();
 
         // Diplomas list

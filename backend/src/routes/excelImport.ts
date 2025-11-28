@@ -646,6 +646,8 @@ router.post(
       let imported = 0;
       let skipped = 0;
       const importErrors: Array<{ row: number; error: string }> = [];
+      // Счётчики порядковых номеров внутри каждого блока (номинации)
+      const blockCounters: Record<number, number> = {};
 
       // Удаляем старые регистрации события (если указано)
       const deleteExisting = req.body.deleteExisting === 'true' || req.body.deleteExisting === true;
@@ -698,6 +700,16 @@ router.post(
           // Парсинг участников из diplomasList
           const participantsResult = row.diplomasList ? parseParticipants(row.diplomasList) : { participants: [], count: 0 };
 
+          // Определяем номер внутри номинации (для отображения вида 29.1, 29.2 и т.д.)
+          let registrationNumber: number | undefined;
+          if (row.parsed?.blockNumber) {
+            const blockNumber = row.parsed.blockNumber;
+            const currentIndex = (blockCounters[blockNumber] || 0) + 1;
+            blockCounters[blockNumber] = currentIndex;
+            // Кодируем номер как blockNumber * 1000 + index, чтобы сохранить уникальность eventId+number
+            registrationNumber = blockNumber * 1000 + currentIndex;
+          }
+
           // Создание регистрации
           const registration = await prisma.registration.create({
             data: {
@@ -717,6 +729,7 @@ router.post(
               duration: row.duration,
               videoUrl: row.videoUrl,
               blockNumber: row.parsed?.blockNumber,
+              number: registrationNumber,
               agreement: true,
               agreement2: true,
               status: 'APPROVED',

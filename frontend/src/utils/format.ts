@@ -1,4 +1,5 @@
 import { formatInTimeZone } from 'date-fns-tz';
+import { Registration } from '../types';
 
 const MOSCOW_TIMEZONE = 'Europe/Moscow';
 
@@ -23,5 +24,28 @@ export const formatDateTime = (date: Date | string): string => {
  */
 export const formatCurrency = (amount: number): string => {
   return `${Math.round(amount)} ₽`;
+};
+
+/**
+ * Формат отображаемого номера регистрации.
+ * - Если есть blockNumber и number закодирован как blockNumber * 1000 + index,
+ *   показываем в виде \"blockNumber.index\" (например, 29.1, 29.2).
+ * - В остальных случаях показываем обычный номер или \"-\".
+ */
+export const formatRegistrationNumber = (reg: Partial<Registration> | any): string => {
+  if (reg.blockNumber && reg.number) {
+    const block = reg.blockNumber;
+    const index = reg.number % 1000 || 0;
+    if (index > 0) {
+      return `${block}.${index}`;
+    }
+    return String(block);
+  }
+
+  if (reg.number) {
+    return String(reg.number);
+  }
+
+  return '-';
 };
 

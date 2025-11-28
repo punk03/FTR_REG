@@ -39,7 +39,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import api from '../services/api';
 import { Registration, Event } from '../types';
-import { formatDate } from '../utils/format';
+import { formatDate, formatRegistrationNumber } from '../utils/format';
 import { useNotification } from '../context/NotificationContext';
 
 const ITEMS_PER_PAGE = 25;
@@ -494,7 +494,9 @@ export const RegistrationsList: React.FC = () => {
                       onChange={() => handleSelectOne(reg.id)}
                     />
                   </TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.number || '-'}</TableCell>
+                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>
+                    {formatRegistrationNumber(reg)}
+                  </TableCell>
                   <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.collective?.name || '-'}</TableCell>
                   <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.danceName || '-'}</TableCell>
                   <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.discipline?.name || '-'}</TableCell>
@@ -563,7 +565,7 @@ export const RegistrationsList: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
                   <Typography variant="caption">
-                    №{reg.number || '-'} | {reg.discipline?.name || '-'} | {reg.nomination?.name || '-'}
+                    №{formatRegistrationNumber(reg)} | {reg.discipline?.name || '-'} | {reg.nomination?.name || '-'}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

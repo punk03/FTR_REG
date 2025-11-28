@@ -31,7 +31,7 @@ import {
 } from 'recharts';
 import api from '../services/api';
 import { Event, Registration } from '../types';
-import { formatDate } from '../utils/format';
+import { formatDate, formatRegistrationNumber } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -287,7 +287,7 @@ export const Dashboard: React.FC = () => {
                     sx={{ cursor: 'pointer' }}
                     onClick={() => navigate(`/registrations/${reg.id}`)}
                   >
-                    <TableCell>{reg.number || '-'}</TableCell>
+                  <TableCell>{formatRegistrationNumber(reg)}</TableCell>
                     <TableCell>{reg.collective?.name || '-'}</TableCell>
                     <TableCell>{reg.danceName || '-'}</TableCell>
                     <TableCell>
@@ -335,7 +335,7 @@ export const Dashboard: React.FC = () => {
                     sx={{ cursor: 'pointer' }}
                     onClick={() => navigate(`/registrations/${reg.id}`)}
                   >
-                    <TableCell>{reg.number || '-'}</TableCell>
+                  <TableCell>{formatRegistrationNumber(reg)}</TableCell>
                     <TableCell>{reg.collective?.name || '-'}</TableCell>
                     <TableCell>{reg.danceName || '-'}</TableCell>
                     <TableCell>{formatDate(reg.createdAt)}</TableCell>
