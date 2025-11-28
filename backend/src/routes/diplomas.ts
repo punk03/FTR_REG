@@ -385,12 +385,17 @@ router.get(
         if (reg.danceName) {
           doc.text(`Название номера: ${reg.danceName}`);
         }
-        let displayNumber = reg.number;
+
+        // Человекочитаемый номер: блок.номерВнутриБлока (например, 29.1)
+        let displayNumber = '-';
         if (reg.blockNumber && reg.number) {
           const index = reg.number % 1000 || 0;
-          displayNumber = index > 0 ? `${reg.blockNumber}.${index}` : reg.blockNumber;
+          displayNumber = index > 0 ? `${reg.blockNumber}.${index}` : String(reg.blockNumber);
+        } else if (reg.number) {
+          displayNumber = String(reg.number);
         }
-        doc.text(`Блок: ${reg.blockNumber || '-'}, Номер: ${displayNumber || '-'}`);
+
+        doc.text(`Блок: ${reg.blockNumber || '-'}, Номер: ${displayNumber}`);
         doc.moveDown();
 
         // Diplomas list
