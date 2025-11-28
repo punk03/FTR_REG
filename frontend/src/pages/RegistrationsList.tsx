@@ -84,10 +84,7 @@ export const RegistrationsList: React.FC = () => {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState(filters.paymentStatus || '');
   const [dateFrom, setDateFrom] = useState(filters.dateFrom || '');
   const [dateTo, setDateTo] = useState(filters.dateTo || '');
-  
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(ITEMS_PER_PAGE);
-  const [total, setTotal] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -143,8 +140,8 @@ export const RegistrationsList: React.FC = () => {
     try {
       const params: any = {
         eventId: selectedEventId,
-        page: page + 1,
-        limit: rowsPerPage,
+        // Загружаем все регистрации для события за один запрос
+        limit: 100000,
       };
 
       if (search) {
@@ -164,14 +161,14 @@ export const RegistrationsList: React.FC = () => {
       }
 
       const response = await api.get('/api/registrations', { params });
-      setRegistrations(response.data.registrations || []);
-      setTotal(response.data.pagination?.total || 0);
+      const regs = response.data.registrations || [];
+      setRegistrations(regs);
     } catch (error) {
       console.error('Error fetching registrations:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedEventId, page, rowsPerPage, search, paymentStatusFilter, dateFrom, dateTo]);
+  }, [selectedEventId, search, paymentStatusFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchRegistrations();
@@ -184,7 +181,8 @@ export const RegistrationsList: React.FC = () => {
       clearTimeout(searchDebounce);
     }
     const timeout = setTimeout(() => {
-      setPage(0);
+      // перезагрузка с новыми параметрами поиска
+      fetchRegistrations();
     }, 300);
     setSearchDebounce(timeout);
   };
@@ -242,7 +240,6 @@ export const RegistrationsList: React.FC = () => {
     setPaymentStatusFilter('');
     setDateFrom('');
     setDateTo('');
-    setPage(0);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (error) {
@@ -334,7 +331,6 @@ export const RegistrationsList: React.FC = () => {
               label="Событие"
               onChange={(e) => {
                 setSelectedEventId(e.target.value as number);
-                setPage(0);
               }}
             >
               {events.map((event) => (
@@ -541,7 +537,7 @@ export const RegistrationsList: React.FC = () => {
           </TableHead>
           <TableBody>
             {loading ? (
-              Array.from({ length: rowsPerPage }).map((_, index) => (
+              Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
                 <TableRow key={index}>
                   <TableCell colSpan={9}>
                     <Skeleton height={40} />
@@ -639,7 +635,7 @@ export const RegistrationsList: React.FC = () => {
       {/* Mobile card view */}
       <Box sx={{ display: { xs: 'block', md: 'none' } }}>
         {loading ? (
-          Array.from({ length: rowsPerPage }).map((_, index) => (
+          Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
             <Paper key={index} sx={{ p: 2, mb: 2 }}>
               <Skeleton height={60} />
             </Paper>
@@ -681,19 +677,6 @@ export const RegistrationsList: React.FC = () => {
                 </Box>
               </Paper>
             ))}
-            <TablePagination
-              component="div"
-              count={total}
-              page={page}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-              rowsPerPageOptions={[10, 25, 50, 100]}
-              labelRowsPerPage="Записей на странице:"
-            />
           </>
         )}
       </Box>
