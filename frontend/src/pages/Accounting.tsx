@@ -490,7 +490,7 @@ export const Accounting: React.FC = () => {
                                 )}
                               </>
                             )}
-                            {(user?.role === 'ACCOUNTANT' && user?.role !== 'ADMIN') && performanceEntries.length > 0 && (
+                            {user?.role === 'ACCOUNTANT' && performanceEntries.length > 0 && (
                               <Button
                                 variant="outlined"
                                 size="small"
@@ -660,7 +660,7 @@ export const Accounting: React.FC = () => {
                                   </IconButton>
                                 </>
                               )}
-                              {(user?.role === 'ACCOUNTANT' && user?.role !== 'ADMIN') && (
+                              {user?.role === 'ACCOUNTANT' && (
                                 <IconButton size="small" onClick={() => handleEdit(entry)}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
@@ -746,7 +746,7 @@ export const Accounting: React.FC = () => {
                                   </IconButton>
                                 </>
                               )}
-                              {(user?.role === 'ACCOUNTANT' && user?.role !== 'ADMIN') && (
+                              {user?.role === 'ACCOUNTANT' && (
                                 <IconButton size="small" onClick={() => handleEdit(entry)}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
