@@ -9,7 +9,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   TableSortLabel,
   TextField,
   Button,
@@ -396,7 +395,6 @@ export const RegistrationsList: React.FC = () => {
                   label="Статус оплаты"
                   onChange={(e) => {
                     setPaymentStatusFilter(e.target.value);
-                    setPage(0);
                   }}
                 >
                   <MenuItem value="">Все</MenuItem>
@@ -415,7 +413,6 @@ export const RegistrationsList: React.FC = () => {
                 value={dateFrom}
                 onChange={(e) => {
                   setDateFrom(e.target.value);
-                  setPage(0);
                 }}
                 InputLabelProps={{ shrink: true }}
               />
@@ -428,7 +425,6 @@ export const RegistrationsList: React.FC = () => {
                 value={dateTo}
                 onChange={(e) => {
                   setDateTo(e.target.value);
-                  setPage(0);
                 }}
                 InputLabelProps={{ shrink: true }}
               />
@@ -617,19 +613,6 @@ export const RegistrationsList: React.FC = () => {
             )}
           </TableBody>
         </Table>
-        <TablePagination
-          component="div"
-          count={total}
-          page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-          rowsPerPageOptions={[10, 25, 50, 100]}
-          labelRowsPerPage="Записей на странице:"
-        />
       </TableContainer>
 
       {/* Mobile card view */}
