@@ -74,6 +74,8 @@ export const Accounting: React.FC = () => {
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState('');
+  const [editGroupNameDialogOpen, setEditGroupNameDialogOpen] = useState(false);
+  const [groupName, setGroupName] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [editFormData, setEditFormData] = useState({
@@ -216,6 +218,31 @@ export const Accounting: React.FC = () => {
     } catch (error: any) {
       console.error('Error applying discount:', error);
       showError(error.response?.data?.error || 'Ошибка применения отката');
+    }
+  };
+
+  const handleEditGroupNameClick = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    const groupEntries = grouped[groupId] || [];
+    setGroupName(groupEntries[0]?.paymentGroupName || '');
+    setEditGroupNameDialogOpen(true);
+  };
+
+  const handleSaveGroupName = async () => {
+    if (!selectedGroupId) return;
+
+    try {
+      await api.put(`/api/accounting/payment-group/${selectedGroupId}/name`, {
+        name: groupName,
+      });
+      fetchAccounting();
+      showSuccess('Название группы платежей успешно обновлено');
+      setEditGroupNameDialogOpen(false);
+      setSelectedGroupId(null);
+      setGroupName('');
+    } catch (error: any) {
+      console.error('Error updating group name:', error);
+      showError(error.response?.data?.error || 'Ошибка обновления названия группы');
     }
   };
 
@@ -442,6 +469,37 @@ export const Accounting: React.FC = () => {
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', gap: 1 }}>
+                            {user?.role === 'ADMIN' && (
+                              <>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => handleEditGroupNameClick(groupId)}
+                                >
+                                  Редактировать название
+                                </Button>
+                                {performanceEntries.length > 0 && (
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    color="secondary"
+                                    onClick={() => handleDiscountClick(groupId)}
+                                  >
+                                    Откат
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {(user?.role === 'ACCOUNTANT' && user?.role !== 'ADMIN') && performanceEntries.length > 0 && (
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                color="secondary"
+                                onClick={() => handleDiscountClick(groupId)}
+                              >
+                                Откат
+                              </Button>
+                            )}
                             <Button
                               variant="outlined"
                               size="small"
@@ -592,17 +650,20 @@ export const Accounting: React.FC = () => {
                               >
                                 <ReceiptIcon fontSize="small" />
                               </IconButton>
-                              {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                              {user?.role === 'ADMIN' && (
                                 <>
                                   <IconButton size="small" onClick={() => handleEdit(entry)}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                  {user?.role === 'ADMIN' && (
-                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  )}
+                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
                                 </>
+                              )}
+                              {(user?.role === 'ACCOUNTANT' && user?.role !== 'ADMIN') && (
+                                <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
                               )}
                             </Box>
                           </TableCell>
@@ -675,17 +736,20 @@ export const Accounting: React.FC = () => {
                               >
                                 <ReceiptIcon fontSize="small" />
                               </IconButton>
-                              {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                              {user?.role === 'ADMIN' && (
                                 <>
                                   <IconButton size="small" onClick={() => handleEdit(entry)}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                  {user?.role === 'ADMIN' && (
-                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  )}
+                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
                                 </>
+                              )}
+                              {(user?.role === 'ACCOUNTANT' && user?.role !== 'ADMIN') && (
+                                <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
                               )}
                             </Box>
                           </TableCell>
@@ -836,6 +900,34 @@ export const Accounting: React.FC = () => {
           </Button>
           <Button variant="contained" onClick={handleApplyDiscount}>
             Применить откат
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={editGroupNameDialogOpen} onClose={() => setEditGroupNameDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Редактирование названия группы платежей</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Название группы"
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            sx={{ mt: 2 }}
+            helperText="Введите новое название для группы платежей"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setEditGroupNameDialogOpen(false);
+              setSelectedGroupId(null);
+              setGroupName('');
+            }}
+          >
+            Отмена
+          </Button>
+          <Button variant="contained" onClick={handleSaveGroupName}>
+            Сохранить
           </Button>
         </DialogActions>
       </Dialog>

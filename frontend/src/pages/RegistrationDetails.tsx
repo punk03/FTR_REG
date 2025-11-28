@@ -140,6 +140,7 @@ export const RegistrationDetails: React.FC = () => {
   const reg: any = registration;
   const canEdit = user?.role === 'ADMIN' || user?.role === 'REGISTRATOR';
   const canDelete = user?.role === 'ADMIN';
+  // Администратор может делать всё
 
   return (
     <Box>
