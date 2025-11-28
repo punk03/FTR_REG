@@ -111,7 +111,7 @@ export const CombinedPayment: React.FC = () => {
       });
       const regs = response.data.registrations || [];
       setRegistrations(regs);
-      
+
       // Инициализация данных регистраций
       const initialData: Record<number, any> = {};
       regs.forEach((reg: any) => {
@@ -120,6 +120,7 @@ export const CombinedPayment: React.FC = () => {
           federationParticipantsCount: reg.federationParticipantsCount,
           medalsCount: reg.medalsCount,
           diplomasList: reg.diplomasList || '',
+          diplomasCount: reg.diplomasCount,
         };
       });
       setRegistrationData(initialData);
@@ -142,7 +143,12 @@ export const CombinedPayment: React.FC = () => {
 
       const data = registrationData[regId] || {};
       const diplomasList = data.diplomasList || reg.diplomasList || '';
-      const diplomasCount = countRussianLines(diplomasList);
+      const baseDiplomasCount = data.diplomasCount ?? reg.diplomasCount ?? 0;
+      let diplomasCount = countRussianLines(diplomasList);
+      // Если при редактировании временно получилось 0, но ранее уже было количество дипломов — не обнуляем сумму
+      if (diplomasCount === 0 && baseDiplomasCount > 0) {
+        diplomasCount = baseDiplomasCount;
+      }
 
       try {
         const response = await api.get(`/api/registrations/${regId}/calculate-price`, {
@@ -185,7 +191,11 @@ export const CombinedPayment: React.FC = () => {
       for (const reg of selectedRegs) {
         const data = registrationData[reg.id] || {};
         const diplomasList = data.diplomasList || reg.diplomasList || '';
-        const diplomasCount = countRussianLines(diplomasList);
+        const baseDiplomasCount = data.diplomasCount ?? reg.diplomasCount ?? 0;
+        let diplomasCount = countRussianLines(diplomasList);
+        if (diplomasCount === 0 && baseDiplomasCount > 0) {
+          diplomasCount = baseDiplomasCount;
+        }
         
         const response = await api.get(`/api/registrations/${reg.id}/calculate-price`, {
           params: {
@@ -343,7 +353,11 @@ export const CombinedPayment: React.FC = () => {
         const reg = registrations.find((r) => r.id === id);
         const data = registrationData[id] || {};
         const diplomasList = data.diplomasList || reg?.diplomasList || '';
-        const diplomasCount = countRussianLines(diplomasList);
+        const baseDiplomasCount = data.diplomasCount ?? reg?.diplomasCount ?? 0;
+        let diplomasCount = countRussianLines(diplomasList);
+        if (diplomasCount === 0 && baseDiplomasCount > 0) {
+          diplomasCount = baseDiplomasCount;
+        }
         
         return {
           registrationId: id,
