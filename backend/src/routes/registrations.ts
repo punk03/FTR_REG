@@ -196,7 +196,15 @@ router.post(
       }
 
       // Validate participant count
-      const finalParticipantsCount = participantsCount || nomination.name.toLowerCase().includes('соло') ? 1 : 0;
+      const nominationNameLower = nomination.name.toLowerCase();
+      let finalParticipantsCount =
+        typeof participantsCount === 'number' && participantsCount > 0 ? participantsCount : 0;
+
+      // Для соло по умолчанию считаем 1 участника, если явно не передано другое положительное значение
+      if (finalParticipantsCount === 0 && nominationNameLower.includes('соло')) {
+        finalParticipantsCount = 1;
+      }
+
       const validation = validateNominationParticipants(nomination.name, finalParticipantsCount, participantIds);
       if (!validation.valid) {
         res.status(400).json({ error: validation.error });

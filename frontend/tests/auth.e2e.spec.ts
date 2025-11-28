@@ -56,6 +56,30 @@ test.describe('Auth and basic navigation', () => {
       page.getByRole('heading', { name: /регистрации/i }).or(page.getByText(/список регистраций/i))
     ).toBeVisible({ timeout: 10_000 });
   });
+
+  test('admin can open combined payment page from navigation', async ({ page }) => {
+    await page.goto('/');
+
+    // Логин
+    await expect(page).toHaveURL(/.*login/i);
+    await page.getByLabel(/email/i).fill('admin@ftr.ru');
+    await page.getByLabel(/пароль/i).fill('admin123');
+    await page.getByRole('button', { name: /войти/i }).click();
+
+    await expect(page.getByRole('navigation')).toBeVisible();
+
+    // Переходим в раздел объединённой оплаты
+    const combinedPaymentLink = page.getByText(/объединенная оплата|combined payment/i);
+    await combinedPaymentLink.click();
+
+    await expect(page).toHaveURL(/.*combined-payment/i);
+
+    // Проверяем базовые элементы UI
+    await expect(
+      page.getByRole('heading', { name: /оплата|оплат|combined payment/i })
+        .or(page.getByText(/заявок для оплаты/i))
+    ).toBeVisible({ timeout: 10_000 });
+  });
 });
 
 

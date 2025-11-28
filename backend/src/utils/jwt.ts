@@ -6,9 +6,10 @@ dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-change-in-production';
 
-// 100 years in seconds (practically never expires)
-const ACCESS_TOKEN_EXPIRES_IN = 100 * 365 * 24 * 60 * 60; // ~3,153,600,000 seconds
-const REFRESH_TOKEN_EXPIRES_IN = 100 * 365 * 24 * 60 * 60; // ~3,153,600,000 seconds
+// Access token: короткоживущий (30 минут) для повышения безопасности
+const ACCESS_TOKEN_EXPIRES_IN = 30 * 60; // 30 minutes in seconds
+// Refresh token: длительный (30 дней), используется для обновления access-токена
+const REFRESH_TOKEN_EXPIRES_IN = 30 * 24 * 60 * 60; // 30 days in seconds
 
 export interface TokenPayload {
   userId: number;

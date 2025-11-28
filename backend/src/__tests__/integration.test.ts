@@ -102,6 +102,43 @@ describe('Auth flow and protected routes', () => {
     expect(res.body).toHaveProperty('registrations');
     expect(res.body).toHaveProperty('pagination');
   });
+
+  it('POST /api/registrations should default solo participantsCount to 1 when not provided', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send(adminCredentials);
+
+    expect(loginRes.status).toBe(200);
+    const token: string = loginRes.body.accessToken;
+
+    // We rely on seed data: eventId=1 is test event, and there is a nomination "Соло"
+    const eventsRes = await request(app)
+      .get('/api/reference/nominations')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(eventsRes.status).toBe(200);
+    const soloNomination = eventsRes.body.find((n: any) =>
+      String(n.name).toLowerCase().includes('соло')
+    );
+    expect(soloNomination).toBeDefined();
+
+    const createRes = await request(app)
+      .post('/api/registrations')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        eventId: 1,
+        collectiveName: 'Тестовый коллектив (интеграционный тест)',
+        disciplineId: 1,
+        nominationId: soloNomination.id,
+        ageId: 1,
+        // participantsCount не передаём, ожидаем значение по умолчанию = 1
+        agreement: true,
+        agreement2: true,
+      });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body).toHaveProperty('participantsCount', 1);
+  });
 });
 
 
