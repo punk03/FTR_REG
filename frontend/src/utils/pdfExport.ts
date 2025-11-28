@@ -66,8 +66,8 @@ const initializePdfMake = async () => {
 interface AccountingEntry {
   id: number;
   createdAt: string;
-  amount: number;
-  discountAmount: number;
+  amount: number | string | null | undefined;
+  discountAmount: number | string | null | undefined;
   method: 'CASH' | 'CARD' | 'TRANSFER';
   paidFor: 'PERFORMANCE' | 'DIPLOMAS_MEDALS';
   collective?: { name: string };
@@ -82,18 +82,18 @@ interface AccountingEntry {
 
 interface AccountingData {
   summary: {
-    totalAmount: number;
-    totalDiscount: number;
-    grandTotal: number;
+    totalAmount: number | string | null | undefined;
+    totalDiscount: number | string | null | undefined;
+    grandTotal: number | string | null | undefined;
     performance: {
-      cash: number;
-      card: number;
-      transfer: number;
+      cash: number | string | null | undefined;
+      card: number | string | null | undefined;
+      transfer: number | string | null | undefined;
     };
     diplomasMedals: {
-      cash: number;
-      card: number;
-      transfer: number;
+      cash: number | string | null | undefined;
+      card: number | string | null | undefined;
+      transfer: number | string | null | undefined;
     };
   };
   grouped: Record<string, AccountingEntry[]>;
@@ -114,8 +114,12 @@ export const exportAccountingToPDF = async (
     throw new Error('Не удалось инициализировать библиотеку для создания PDF. Пожалуйста, обновите страницу.');
   }
 
-  const formatCurrency = (amount: number): string => {
-    return `${amount.toFixed(2)} ₽`;
+  const formatCurrency = (amount: number | string | null | undefined): string => {
+    const numAmount = typeof amount === 'number' ? amount : (typeof amount === 'string' ? parseFloat(amount) : 0);
+    if (isNaN(numAmount)) {
+      return '0.00 ₽';
+    }
+    return `${numAmount.toFixed(2)} ₽`;
   };
 
   const formatDate = (dateString: string): string => {
@@ -279,10 +283,16 @@ export const exportAccountingToPDF = async (
 
     groupedEntries.forEach(([groupId, entries]) => {
       const groupEntries = Array.isArray(entries) ? entries : [];
-      const totalAmount = groupEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalAmount = groupEntries.reduce((sum, e) => {
+        const amt = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount || 0));
+        return sum + (isNaN(amt) ? 0 : amt);
+      }, 0);
       const totalDiscount = groupEntries
         .filter((e) => e.paidFor === 'PERFORMANCE')
-        .reduce((sum, e) => sum + Number(e.discountAmount), 0);
+        .reduce((sum, e) => {
+          const disc = typeof e.discountAmount === 'number' ? e.discountAmount : parseFloat(String(e.discountAmount || 0));
+          return sum + (isNaN(disc) ? 0 : disc);
+        }, 0);
 
       docDefinition.content.push({
         text: `Группа: ${groupEntries[0]?.paymentGroupName || groupId.slice(0, 8)}`,
@@ -309,12 +319,14 @@ export const exportAccountingToPDF = async (
       ];
 
       groupEntries.forEach((entry) => {
+        const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
+        const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
         tableBody.push([
           formatDate(entry.createdAt),
           entry.collective?.name || '-',
           entry.registration?.danceName || '-',
-          formatCurrency(entry.amount),
-          formatCurrency(entry.discountAmount),
+          formatCurrency(amount),
+          formatCurrency(discountAmount),
           getMethodName(entry.method),
           getPaidForName(entry.paidFor),
         ]);
@@ -353,12 +365,14 @@ export const exportAccountingToPDF = async (
     ];
 
     performanceEntries.forEach((entry) => {
+      const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
+      const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
       tableBody.push([
         formatDate(entry.createdAt),
         entry.collective?.name || '-',
         entry.registration?.danceName || '-',
-        formatCurrency(entry.amount),
-        formatCurrency(entry.discountAmount),
+        formatCurrency(amount),
+        formatCurrency(discountAmount),
         getMethodName(entry.method),
       ]);
     });
@@ -394,11 +408,12 @@ export const exportAccountingToPDF = async (
     ];
 
     diplomasEntries.forEach((entry) => {
+      const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
       tableBody.push([
         formatDate(entry.createdAt),
         entry.collective?.name || '-',
         entry.registration?.danceName || '-',
-        formatCurrency(entry.amount),
+        formatCurrency(amount),
         getMethodName(entry.method),
       ]);
     });
@@ -444,8 +459,12 @@ export const generatePaymentStatement = async (
     throw new Error('Не удалось инициализировать библиотеку для создания PDF. Пожалуйста, обновите страницу.');
   }
 
-  const formatCurrency = (amount: number): string => {
-    return `${amount.toFixed(2)} ₽`;
+  const formatCurrency = (amount: number | string | null | undefined): string => {
+    const numAmount = typeof amount === 'number' ? amount : (typeof amount === 'string' ? parseFloat(amount) : 0);
+    if (isNaN(numAmount)) {
+      return '0.00 ₽';
+    }
+    return `${numAmount.toFixed(2)} ₽`;
   };
 
   const formatDate = (dateString: string): string => {
@@ -477,16 +496,31 @@ export const generatePaymentStatement = async (
   };
 
   // Подсчет итогов
-  const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalAmount = entries.reduce((sum, e) => {
+    const amt = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount || 0));
+    return sum + (isNaN(amt) ? 0 : amt);
+  }, 0);
   const totalDiscount = entries
     .filter((e) => e.paidFor === 'PERFORMANCE')
-    .reduce((sum, e) => sum + Number(e.discountAmount), 0);
+    .reduce((sum, e) => {
+      const disc = typeof e.discountAmount === 'number' ? e.discountAmount : parseFloat(String(e.discountAmount || 0));
+      return sum + (isNaN(disc) ? 0 : disc);
+    }, 0);
   const totalBeforeDiscount = totalAmount + totalDiscount;
 
   const byMethod = {
-    cash: entries.filter((e) => e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
-    card: entries.filter((e) => e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
-    transfer: entries.filter((e) => e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
+    cash: entries.filter((e) => e.method === 'CASH').reduce((sum, e) => {
+      const amt = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount || 0));
+      return sum + (isNaN(amt) ? 0 : amt);
+    }, 0),
+    card: entries.filter((e) => e.method === 'CARD').reduce((sum, e) => {
+      const amt = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount || 0));
+      return sum + (isNaN(amt) ? 0 : amt);
+    }, 0),
+    transfer: entries.filter((e) => e.method === 'TRANSFER').reduce((sum, e) => {
+      const amt = typeof e.amount === 'number' ? e.amount : parseFloat(String(e.amount || 0));
+      return sum + (isNaN(amt) ? 0 : amt);
+    }, 0),
   };
 
   const performanceEntries = entries.filter((e) => e.paidFor === 'PERFORMANCE');
@@ -635,14 +669,16 @@ export const generatePaymentStatement = async (
     performanceEntries.forEach((entry) => {
       const reg = entry.registration as any;
       const regNumber = formatRegistrationNumber(reg || {});
+      const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
+      const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
       
       tableBody.push([
         formatDate(entry.createdAt),
         regNumber,
         entry.collective?.name || '-',
         reg?.danceName || '-',
-        formatCurrency(entry.amount),
-        formatCurrency(entry.discountAmount),
+        formatCurrency(amount),
+        formatCurrency(discountAmount),
         getMethodName(entry.method),
       ]);
     });
@@ -680,13 +716,14 @@ export const generatePaymentStatement = async (
     diplomasEntries.forEach((entry) => {
       const reg = entry.registration as any;
       const regNumber = formatRegistrationNumber(reg || {});
+      const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
       
       tableBody.push([
         formatDate(entry.createdAt),
         regNumber,
         entry.collective?.name || '-',
         reg?.danceName || '-',
-        formatCurrency(entry.amount),
+        formatCurrency(amount),
         getMethodName(entry.method),
       ]);
     });
