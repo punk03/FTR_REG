@@ -33,6 +33,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CalculateIcon from '@mui/icons-material/Calculate';
 import api from '../services/api';
 import { Event } from '../types';
 import { formatCurrency, formatRegistrationNumber } from '../utils/format';
@@ -71,6 +72,7 @@ export const CombinedPayment: React.FC = () => {
   const [registrationData, setRegistrationData] = useState<Record<number, any>>({});
   const [priceCalculation, setPriceCalculation] = useState<any>(null);
   const [registrationPrices, setRegistrationPrices] = useState<Record<number, any>>({});
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -93,14 +95,27 @@ export const CombinedPayment: React.FC = () => {
     }
   }, [selectedEventId]);
 
+  // Сброс расчётов при переходе на шаг выбора
   useEffect(() => {
-    if (currentStep === 'edit' && selectedRegistrations.size > 0) {
-      calculateTotalPrice();
-      calculateIndividualPrices();
-    } else {
+    if (currentStep !== 'edit') {
       setPriceCalculation(null);
       setRegistrationPrices({});
     }
+  }, [currentStep]);
+
+  // Автоматический пересчёт при изменении данных (с дебаунсом),
+  // чтобы суммы обновлялись "на лету" во время редактирования
+  useEffect(() => {
+    if (currentStep !== 'edit' || selectedRegistrations.size === 0) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      calculateTotalPrice();
+      calculateIndividualPrices();
+    }, 400);
+
+    return () => clearTimeout(timeout);
   }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount]);
 
   const fetchRegistrations = async () => {
@@ -132,7 +147,7 @@ export const CombinedPayment: React.FC = () => {
   };
 
   // Расчет стоимости для каждого номера отдельно
-  const calculateIndividualPrices = async () => {
+  const calculateIndividualPrices = async (): Promise<void> => {
     if (selectedRegistrations.size === 0) return;
 
     const prices: Record<number, any> = {};
@@ -168,19 +183,21 @@ export const CombinedPayment: React.FC = () => {
         };
       } catch (error) {
         console.error(`Error calculating price for registration ${regId}:`, error);
-        prices[regId] = {
-          performancePrice: 0,
-          diplomasPrice: 0,
-          medalsPrice: 0,
-          total: 0,
-        };
+        // Не перетираем предыдущие значения нулями, просто логируем ошибку
       }
     }
 
-    setRegistrationPrices(prices);
+    // Мягко обновляем только те заявки, для которых расчёт прошёл успешно
+    setRegistrationPrices((prev) => {
+      const updated = { ...prev };
+      Object.entries(prices).forEach(([id, value]) => {
+        updated[Number(id)] = value;
+      });
+      return updated;
+    });
   };
 
-  const calculateTotalPrice = async () => {
+  const calculateTotalPrice = async (): Promise<void> => {
     if (selectedRegistrations.size === 0) return;
 
     try {
@@ -239,6 +256,29 @@ export const CombinedPayment: React.FC = () => {
       });
     } catch (error) {
       console.error('Error calculating price:', error);
+      showError('Ошибка при расчёте итоговой суммы');
+    }
+  };
+
+  // Функция для ручного пересчёта цен
+  const handleRecalculate = async () => {
+    if (selectedRegistrations.size === 0) {
+      showError('Выберите хотя бы одну регистрацию');
+      return;
+    }
+
+    setIsRecalculating(true);
+    try {
+      await Promise.all([
+        calculateIndividualPrices(),
+        calculateTotalPrice(),
+      ]);
+      showSuccess('Пересчёт выполнен успешно');
+    } catch (error) {
+      console.error('Error recalculating prices:', error);
+      showError('Ошибка при пересчёте цен');
+    } finally {
+      setIsRecalculating(false);
     }
   };
 
@@ -733,6 +773,17 @@ export const CombinedPayment: React.FC = () => {
 
             <Divider sx={{ my: 2 }} />
 
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={isRecalculating ? <CircularProgress size={20} /> : <CalculateIcon />}
+              onClick={handleRecalculate}
+              disabled={isRecalculating || selectedRegistrations.size === 0}
+              sx={{ mb: 2 }}
+            >
+              {isRecalculating ? 'Пересчёт...' : 'Сделать перерасчёт'}
+            </Button>
+
             {priceCalculation && (
               <Box sx={{ mb: 2 }}>
                 <Typography variant="body2" color="text.secondary">
@@ -750,6 +801,12 @@ export const CombinedPayment: React.FC = () => {
                   Итого: {formatCurrency(priceCalculation.total)}
                 </Typography>
               </Box>
+            )}
+
+            {!priceCalculation && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Нажмите "Сделать перерасчёт" для расчёта итоговой суммы
+              </Alert>
             )}
 
             <TextField

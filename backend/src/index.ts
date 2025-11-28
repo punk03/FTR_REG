@@ -144,8 +144,15 @@ app.get('/api/health/redis', async (_req, res) => {
   }
 });
 
-// Apply rate limiting to all API routes
-app.use('/api', apiRateLimiter);
+// Apply rate limiting to API routes, но пропускаем лёгкий расчёт цен,
+// который может вызываться очень часто из интерфейса объединённой оплаты.
+app.use('/api', (req, res, next) => {
+  // Не ограничиваем /api/registrations/:id/calculate-price
+  if (req.path.startsWith('/registrations/') && req.path.endsWith('/calculate-price')) {
+    return next();
+  }
+  return apiRateLimiter(req, res, next);
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
