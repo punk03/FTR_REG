@@ -148,12 +148,20 @@ export const exportAccountingToPDF = async (
     return paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы/Медали';
   };
 
+  // Вычисляем реальные значения для проверки отката
+  const totalDiscountValue = typeof data.summary.totalDiscount === 'number' 
+    ? data.summary.totalDiscount 
+    : parseFloat(String(data.summary.totalDiscount || 0));
+  const hasDiscount = !isNaN(totalDiscountValue) && totalDiscountValue > 0;
+
   const docDefinition: any = {
+    pageSize: 'A4',
+    pageMargins: [40, 60, 40, 60],
     content: [
       {
         text: `Бухгалтерский отчет: ${eventName}`,
         style: 'header',
-        margin: [0, 0, 0, 20],
+        margin: [0, 0, 0, 10],
       },
       {
         text: `Дата формирования: ${new Date().toLocaleDateString('ru-RU', {
@@ -164,16 +172,16 @@ export const exportAccountingToPDF = async (
           minute: '2-digit',
         })}`,
         style: 'subheader',
-        margin: [0, 0, 0, 20],
+        margin: [0, 0, 0, 15],
       },
       // Сводная информация
       {
         text: 'Сводная информация',
         style: 'sectionHeader',
-        margin: [0, 20, 0, 10],
+        margin: [0, 10, 0, 8],
       },
       {
-        columns: [
+        columns: hasDiscount ? [
           {
             width: '*',
             text: [
@@ -185,7 +193,7 @@ export const exportAccountingToPDF = async (
             width: '*',
             text: [
               { text: 'Откаты: ', bold: true },
-              { text: formatCurrency(data.summary.totalDiscount) },
+              { text: formatCurrency(data.summary.totalDiscount), color: 'red' },
             ],
           },
           {
@@ -195,79 +203,106 @@ export const exportAccountingToPDF = async (
               { text: formatCurrency(data.summary.grandTotal) },
             ],
           },
+        ] : [
+          {
+            width: '*',
+            text: [
+              { text: 'Общая сумма: ', bold: true },
+              { text: formatCurrency(data.summary.totalAmount) },
+            ],
+          },
+          {
+            width: '*',
+            text: [
+              { text: 'Итого: ', bold: true },
+              { text: formatCurrency(data.summary.grandTotal) },
+            ],
+          },
         ],
-        margin: [0, 0, 0, 10],
+        margin: [0, 0, 0, 8],
       },
       {
         text: 'Выступления:',
         style: 'subsectionHeader',
-        margin: [0, 10, 0, 5],
+        margin: [0, 8, 0, 4],
       },
       {
         columns: [
           {
             width: '*',
             text: `Наличные: ${formatCurrency(data.summary.performance.cash)}`,
+            fontSize: 9,
           },
           {
             width: '*',
             text: `Карта: ${formatCurrency(data.summary.performance.card)}`,
+            fontSize: 9,
           },
           {
             width: '*',
             text: `Перевод: ${formatCurrency(data.summary.performance.transfer)}`,
+            fontSize: 9,
           },
         ],
-        margin: [0, 0, 0, 10],
+        margin: [0, 0, 0, 8],
       },
       {
         text: 'Дипломы/Медали:',
         style: 'subsectionHeader',
-        margin: [0, 10, 0, 5],
+        margin: [0, 8, 0, 4],
       },
       {
         columns: [
           {
             width: '*',
             text: `Наличные: ${formatCurrency(data.summary.diplomasMedals.cash)}`,
+            fontSize: 9,
           },
           {
             width: '*',
             text: `Карта: ${formatCurrency(data.summary.diplomasMedals.card)}`,
+            fontSize: 9,
           },
           {
             width: '*',
             text: `Перевод: ${formatCurrency(data.summary.diplomasMedals.transfer)}`,
+            fontSize: 9,
           },
         ],
-        margin: [0, 0, 0, 20],
+        margin: [0, 0, 0, 12],
       },
     ],
     styles: {
       header: {
-        fontSize: 18,
+        fontSize: 16,
         bold: true,
         alignment: 'center',
       },
       subheader: {
-        fontSize: 10,
+        fontSize: 9,
         alignment: 'center',
         color: '#666',
       },
       sectionHeader: {
-        fontSize: 14,
-        bold: true,
-        margin: [0, 10, 0, 5],
-      },
-      subsectionHeader: {
         fontSize: 12,
         bold: true,
-        margin: [0, 5, 0, 3],
+        margin: [0, 8, 0, 4],
+      },
+      subsectionHeader: {
+        fontSize: 10,
+        bold: true,
+        margin: [0, 4, 0, 2],
+      },
+      tableHeader: {
+        bold: true,
+        fontSize: 8,
+        color: 'black',
+        fillColor: '#f0f0f0',
       },
     },
     defaultStyle: {
       font: pdfMake.vfs && Object.keys(pdfMake.vfs).length > 0 ? 'Roboto' : 'Helvetica',
-      fontSize: 10,
+      fontSize: 8,
     },
   };
 
@@ -277,8 +312,7 @@ export const exportAccountingToPDF = async (
     docDefinition.content.push({
       text: 'Объединенные платежи',
       style: 'sectionHeader',
-      margin: [0, 20, 0, 10],
-      pageBreak: 'before',
+      margin: [0, 12, 0, 8],
     });
 
     groupedEntries.forEach(([groupId, entries]) => {
@@ -297,22 +331,33 @@ export const exportAccountingToPDF = async (
       docDefinition.content.push({
         text: `Группа: ${groupEntries[0]?.paymentGroupName || groupId.slice(0, 8)}`,
         style: 'subsectionHeader',
-        margin: [0, 10, 0, 5],
+        margin: [0, 8, 0, 4],
       });
 
+      const groupHasDiscount = totalDiscount > 0;
       docDefinition.content.push({
-        text: `Всего: ${formatCurrency(totalAmount)} | Откат: ${formatCurrency(totalDiscount)}`,
-        margin: [0, 0, 0, 5],
+        text: groupHasDiscount 
+          ? `Всего: ${formatCurrency(totalAmount)} | Откат: ${formatCurrency(totalDiscount)}`
+          : `Всего: ${formatCurrency(totalAmount)}`,
+        fontSize: 8,
+        margin: [0, 0, 0, 4],
       });
 
       // Таблица записей группы
       const tableBody: any[] = [
-        [
+        groupHasDiscount ? [
           { text: 'Дата', style: 'tableHeader' },
           { text: 'Коллектив', style: 'tableHeader' },
           { text: 'Название', style: 'tableHeader' },
           { text: 'Сумма', style: 'tableHeader' },
           { text: 'Откат', style: 'tableHeader' },
+          { text: 'Способ', style: 'tableHeader' },
+          { text: 'Категория', style: 'tableHeader' },
+        ] : [
+          { text: 'Дата', style: 'tableHeader' },
+          { text: 'Коллектив', style: 'tableHeader' },
+          { text: 'Название', style: 'tableHeader' },
+          { text: 'Сумма', style: 'tableHeader' },
           { text: 'Способ', style: 'tableHeader' },
           { text: 'Категория', style: 'tableHeader' },
         ],
@@ -321,45 +366,72 @@ export const exportAccountingToPDF = async (
       groupEntries.forEach((entry) => {
         const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
         const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
-        tableBody.push([
-          formatDate(entry.createdAt),
-          entry.collective?.name || '-',
-          entry.registration?.danceName || '-',
-          formatCurrency(amount),
-          formatCurrency(discountAmount),
-          getMethodName(entry.method),
-          getPaidForName(entry.paidFor),
-        ]);
+        if (groupHasDiscount) {
+          tableBody.push([
+            formatDate(entry.createdAt),
+            entry.collective?.name || '-',
+            entry.registration?.danceName || '-',
+            formatCurrency(amount),
+            formatCurrency(discountAmount),
+            getMethodName(entry.method),
+            getPaidForName(entry.paidFor),
+          ]);
+        } else {
+          tableBody.push([
+            formatDate(entry.createdAt),
+            entry.collective?.name || '-',
+            entry.registration?.danceName || '-',
+            formatCurrency(amount),
+            getMethodName(entry.method),
+            getPaidForName(entry.paidFor),
+          ]);
+        }
       });
 
       docDefinition.content.push({
         table: {
           headerRows: 1,
-          widths: ['*', '*', '*', '*', '*', '*', '*'],
+          widths: groupHasDiscount ? ['auto', '*', '*', 'auto', 'auto', 'auto', 'auto'] : ['auto', '*', '*', 'auto', 'auto', 'auto'],
           body: tableBody,
         },
-        margin: [0, 0, 0, 15],
+        margin: [0, 0, 0, 10],
+        layout: {
+          paddingLeft: () => 4,
+          paddingRight: () => 4,
+          paddingTop: () => 3,
+          paddingBottom: () => 3,
+        },
       });
     });
   }
 
   // Добавление одиночных выступлений
-  const performanceEntries = data.ungrouped.filter((e) => e.paidFor === 'PERFORMANCE');
+  const performanceEntries = data.ungrouped.filter((e.paidFor === 'PERFORMANCE');
   if (performanceEntries.length > 0) {
     docDefinition.content.push({
       text: 'Одиночные выступления',
       style: 'sectionHeader',
-      margin: [0, 20, 0, 10],
-      pageBreak: groupedEntries.length > 0 ? 'before' : undefined,
+      margin: [0, 12, 0, 8],
+    });
+
+    const performanceHasDiscount = performanceEntries.some(e => {
+      const disc = typeof e.discountAmount === 'number' ? e.discountAmount : parseFloat(String(e.discountAmount || 0));
+      return !isNaN(disc) && disc > 0;
     });
 
     const tableBody: any[] = [
-      [
+      performanceHasDiscount ? [
         { text: 'Дата', style: 'tableHeader' },
         { text: 'Коллектив', style: 'tableHeader' },
         { text: 'Название', style: 'tableHeader' },
         { text: 'Сумма', style: 'tableHeader' },
         { text: 'Откат', style: 'tableHeader' },
+        { text: 'Способ', style: 'tableHeader' },
+      ] : [
+        { text: 'Дата', style: 'tableHeader' },
+        { text: 'Коллектив', style: 'tableHeader' },
+        { text: 'Название', style: 'tableHeader' },
+        { text: 'Сумма', style: 'tableHeader' },
         { text: 'Способ', style: 'tableHeader' },
       ],
     ];
@@ -367,23 +439,39 @@ export const exportAccountingToPDF = async (
     performanceEntries.forEach((entry) => {
       const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
       const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
-      tableBody.push([
-        formatDate(entry.createdAt),
-        entry.collective?.name || '-',
-        entry.registration?.danceName || '-',
-        formatCurrency(amount),
-        formatCurrency(discountAmount),
-        getMethodName(entry.method),
-      ]);
+      if (performanceHasDiscount) {
+        tableBody.push([
+          formatDate(entry.createdAt),
+          entry.collective?.name || '-',
+          entry.registration?.danceName || '-',
+          formatCurrency(amount),
+          formatCurrency(discountAmount),
+          getMethodName(entry.method),
+        ]);
+      } else {
+        tableBody.push([
+          formatDate(entry.createdAt),
+          entry.collective?.name || '-',
+          entry.registration?.danceName || '-',
+          formatCurrency(amount),
+          getMethodName(entry.method),
+        ]);
+      }
     });
 
     docDefinition.content.push({
       table: {
         headerRows: 1,
-        widths: ['*', '*', '*', '*', '*', '*'],
+        widths: performanceHasDiscount ? ['auto', '*', '*', 'auto', 'auto', 'auto'] : ['auto', '*', '*', 'auto', 'auto'],
         body: tableBody,
       },
-      margin: [0, 0, 0, 15],
+      margin: [0, 0, 0, 10],
+      layout: {
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 3,
+        paddingBottom: () => 3,
+      },
     });
   }
 
@@ -393,8 +481,7 @@ export const exportAccountingToPDF = async (
     docDefinition.content.push({
       text: 'Одиночные дипломы/медали',
       style: 'sectionHeader',
-      margin: [0, 20, 0, 10],
-      pageBreak: performanceEntries.length > 0 ? 'before' : undefined,
+      margin: [0, 12, 0, 8],
     });
 
     const tableBody: any[] = [
@@ -421,20 +508,18 @@ export const exportAccountingToPDF = async (
     docDefinition.content.push({
       table: {
         headerRows: 1,
-        widths: ['*', '*', '*', '*', '*'],
+        widths: ['auto', '*', '*', 'auto', 'auto'],
         body: tableBody,
       },
-      margin: [0, 0, 0, 15],
+      margin: [0, 0, 0, 10],
+      layout: {
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 3,
+        paddingBottom: () => 3,
+      },
     });
   }
-
-  // Добавление стилей для таблиц
-  docDefinition.styles.tableHeader = {
-    bold: true,
-    fontSize: 10,
-    color: 'black',
-    fillColor: '#f0f0f0',
-  };
 
   // Генерация PDF
   try {
@@ -525,25 +610,29 @@ export const generatePaymentStatement = async (
 
   const performanceEntries = entries.filter((e) => e.paidFor === 'PERFORMANCE');
   const diplomasEntries = entries.filter((e) => e.paidFor === 'DIPLOMAS_MEDALS');
+  
+  const hasDiscount = !isNaN(totalDiscount) && totalDiscount > 0;
 
   const docDefinition: any = {
+    pageSize: 'A4',
+    pageMargins: [40, 60, 40, 60],
     content: [
       {
         text: 'ВЫПИСКА ПО ОПЛАТЕ',
         style: 'header',
-        margin: [0, 0, 0, 10],
+        margin: [0, 0, 0, 8],
       },
       {
         text: `Мероприятие: ${eventName}`,
         style: 'subheader',
-        margin: [0, 0, 0, 5],
+        margin: [0, 0, 0, 4],
       },
       {
         text: paymentGroupName 
           ? `Группа платежей: ${paymentGroupName}`
           : 'Одиночная оплата',
         style: 'subheader',
-        margin: [0, 0, 0, 20],
+        margin: [0, 0, 0, 15],
       },
       {
         text: `Дата формирования: ${new Date().toLocaleDateString('ru-RU', {
@@ -554,16 +643,16 @@ export const generatePaymentStatement = async (
           minute: '2-digit',
         })}`,
         style: 'subheader',
-        margin: [0, 0, 0, 20],
+        margin: [0, 0, 0, 15],
       },
       // Итоговая информация
       {
         text: 'Итоговая информация',
         style: 'sectionHeader',
-        margin: [0, 20, 0, 10],
+        margin: [0, 12, 0, 8],
       },
       {
-        columns: [
+        columns: hasDiscount ? [
           {
             width: '*',
             text: [
@@ -575,73 +664,84 @@ export const generatePaymentStatement = async (
             width: '*',
             text: [
               { text: 'Сумма отката: ', bold: true },
-              { text: formatCurrency(totalDiscount), color: totalDiscount > 0 ? 'red' : 'black' },
+              { text: formatCurrency(totalDiscount), color: 'red' },
             ],
           },
           {
             width: '*',
             text: [
               { text: 'Итого к оплате: ', bold: true },
-              { text: formatCurrency(totalAmount), fontSize: 12 },
+              { text: formatCurrency(totalAmount), fontSize: 11 },
+            ],
+          },
+        ] : [
+          {
+            width: '*',
+            text: [
+              { text: 'Итого к оплате: ', bold: true },
+              { text: formatCurrency(totalAmount), fontSize: 11 },
             ],
           },
         ],
-        margin: [0, 0, 0, 10],
+        margin: [0, 0, 0, 8],
       },
       {
         text: 'Распределение по способам оплаты:',
         style: 'subsectionHeader',
-        margin: [0, 10, 0, 5],
+        margin: [0, 8, 0, 4],
       },
       {
         columns: [
           {
             width: '*',
             text: `Наличные: ${formatCurrency(byMethod.cash)}`,
+            fontSize: 9,
           },
           {
             width: '*',
             text: `Карта: ${formatCurrency(byMethod.card)}`,
+            fontSize: 9,
           },
           {
             width: '*',
             text: `Перевод: ${formatCurrency(byMethod.transfer)}`,
+            fontSize: 9,
           },
         ],
-        margin: [0, 0, 0, 20],
+        margin: [0, 0, 0, 12],
       },
     ],
     styles: {
       header: {
-        fontSize: 20,
+        fontSize: 16,
         bold: true,
         alignment: 'center',
       },
       subheader: {
-        fontSize: 11,
+        fontSize: 9,
         alignment: 'center',
         color: '#666',
       },
       sectionHeader: {
-        fontSize: 14,
-        bold: true,
-        margin: [0, 10, 0, 5],
-      },
-      subsectionHeader: {
         fontSize: 12,
         bold: true,
-        margin: [0, 5, 0, 3],
+        margin: [0, 8, 0, 4],
+      },
+      subsectionHeader: {
+        fontSize: 10,
+        bold: true,
+        margin: [0, 4, 0, 2],
       },
       tableHeader: {
         bold: true,
-        fontSize: 10,
+        fontSize: 8,
         color: 'black',
         fillColor: '#f0f0f0',
       },
     },
     defaultStyle: {
       font: pdfMake.vfs && Object.keys(pdfMake.vfs).length > 0 ? 'Roboto' : 'Helvetica',
-      fontSize: 10,
+      fontSize: 8,
     },
   };
 
@@ -650,19 +750,30 @@ export const generatePaymentStatement = async (
     docDefinition.content.push({
       text: 'Выступления',
       style: 'sectionHeader',
-      margin: [0, 20, 0, 10],
-      pageBreak: 'before',
+      margin: [0, 12, 0, 8],
+    });
+
+    const performanceHasDiscount = performanceEntries.some(e => {
+      const disc = typeof e.discountAmount === 'number' ? e.discountAmount : parseFloat(String(e.discountAmount || 0));
+      return !isNaN(disc) && disc > 0;
     });
 
     const tableBody: any[] = [
-      [
+      performanceHasDiscount ? [
         { text: 'Дата', style: 'tableHeader' },
         { text: 'Номер', style: 'tableHeader' },
         { text: 'Коллектив', style: 'tableHeader' },
-        { text: 'Название номера', style: 'tableHeader' },
+        { text: 'Название', style: 'tableHeader' },
         { text: 'Сумма', style: 'tableHeader' },
         { text: 'Откат', style: 'tableHeader' },
-        { text: 'Способ оплаты', style: 'tableHeader' },
+        { text: 'Способ', style: 'tableHeader' },
+      ] : [
+        { text: 'Дата', style: 'tableHeader' },
+        { text: 'Номер', style: 'tableHeader' },
+        { text: 'Коллектив', style: 'tableHeader' },
+        { text: 'Название', style: 'tableHeader' },
+        { text: 'Сумма', style: 'tableHeader' },
+        { text: 'Способ', style: 'tableHeader' },
       ],
     ];
 
@@ -672,24 +783,41 @@ export const generatePaymentStatement = async (
       const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
       const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
       
-      tableBody.push([
-        formatDate(entry.createdAt),
-        regNumber,
-        entry.collective?.name || '-',
-        reg?.danceName || '-',
-        formatCurrency(amount),
-        formatCurrency(discountAmount),
-        getMethodName(entry.method),
-      ]);
+      if (performanceHasDiscount) {
+        tableBody.push([
+          formatDate(entry.createdAt),
+          regNumber,
+          entry.collective?.name || '-',
+          reg?.danceName || '-',
+          formatCurrency(amount),
+          formatCurrency(discountAmount),
+          getMethodName(entry.method),
+        ]);
+      } else {
+        tableBody.push([
+          formatDate(entry.createdAt),
+          regNumber,
+          entry.collective?.name || '-',
+          reg?.danceName || '-',
+          formatCurrency(amount),
+          getMethodName(entry.method),
+        ]);
+      }
     });
 
     docDefinition.content.push({
       table: {
         headerRows: 1,
-        widths: ['*', '*', '*', '*', '*', '*', '*'],
+        widths: performanceHasDiscount ? ['auto', 'auto', '*', '*', 'auto', 'auto', 'auto'] : ['auto', 'auto', '*', '*', 'auto', 'auto'],
         body: tableBody,
       },
-      margin: [0, 0, 0, 15],
+      margin: [0, 0, 0, 10],
+      layout: {
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 3,
+        paddingBottom: () => 3,
+      },
     });
   }
 
@@ -698,8 +826,7 @@ export const generatePaymentStatement = async (
     docDefinition.content.push({
       text: 'Дипломы и медали',
       style: 'sectionHeader',
-      margin: [0, 20, 0, 10],
-      pageBreak: performanceEntries.length > 0 ? 'before' : undefined,
+      margin: [0, 12, 0, 8],
     });
 
     const tableBody: any[] = [
@@ -707,9 +834,9 @@ export const generatePaymentStatement = async (
         { text: 'Дата', style: 'tableHeader' },
         { text: 'Номер', style: 'tableHeader' },
         { text: 'Коллектив', style: 'tableHeader' },
-        { text: 'Название номера', style: 'tableHeader' },
+        { text: 'Название', style: 'tableHeader' },
         { text: 'Сумма', style: 'tableHeader' },
-        { text: 'Способ оплаты', style: 'tableHeader' },
+        { text: 'Способ', style: 'tableHeader' },
       ],
     ];
 
@@ -731,10 +858,16 @@ export const generatePaymentStatement = async (
     docDefinition.content.push({
       table: {
         headerRows: 1,
-        widths: ['*', '*', '*', '*', '*', '*'],
+        widths: ['auto', 'auto', '*', '*', 'auto', 'auto'],
         body: tableBody,
       },
-      margin: [0, 0, 0, 15],
+      margin: [0, 0, 0, 10],
+      layout: {
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 3,
+        paddingBottom: () => 3,
+      },
     });
   }
 
@@ -749,3 +882,4 @@ export const generatePaymentStatement = async (
     throw new Error('Ошибка при создании выписки. Проверьте консоль для деталей.');
   }
 };
+
