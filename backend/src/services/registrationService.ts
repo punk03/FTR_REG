@@ -62,15 +62,8 @@ export const validateNominationParticipants = (
     if (!participantIds || participantIds.length !== 2) {
       return { valid: false, error: 'Для дуэта/пары требуется указать 2 участников' };
     }
-  } else if (name.includes('трио')) {
-    if (participantsCount !== 3) {
-      return { valid: false, error: 'Трио требует ровно 3 участников' };
-    }
-  } else if (name.includes('квартет')) {
-    if (participantsCount !== 4) {
-      return { valid: false, error: 'Квартет требует ровно 4 участников' };
-    }
   } else if (name.includes('малая группа')) {
+    // Вся мелкая группа (любые малые составы) считается: от 3 до 7 участников
     if (participantsCount < 3 || participantsCount > 7) {
       return { valid: false, error: 'Малая группа требует от 3 до 7 участников' };
     }

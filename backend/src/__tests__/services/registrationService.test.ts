@@ -72,16 +72,6 @@ describe('RegistrationService', () => {
       expect(result.error).toContain('Дуэт/Пара требует ровно 2 участников');
     });
 
-    it('should validate trio nomination correctly', () => {
-      const result = validateNominationParticipants('Трио', 3);
-      expect(result.valid).toBe(true);
-    });
-
-    it('should validate quartet nomination correctly', () => {
-      const result = validateNominationParticipants('Квартет', 4);
-      expect(result.valid).toBe(true);
-    });
-
     it('should validate small group nomination correctly', () => {
       const result = validateNominationParticipants('Малая группа', 5);
       expect(result.valid).toBe(true);

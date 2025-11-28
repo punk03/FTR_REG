@@ -66,16 +66,9 @@ async function main() {
     });
   }
 
-  // Create nominations (7 items)
-  const nominations = [
-    'Соло',
-    'Дуэт/Пара',
-    'Трио',
-    'Квартет',
-    'Малая группа',
-    'Формейшн',
-    'Продакшн',
-  ];
+  // Create nominations
+  // Вся мелкая группа (мелкие составы от 3 до 7 человек) относится к "Малая группа"
+  const nominations = ['Соло', 'Дуэт/Пара', 'Малая группа', 'Формейшн', 'Продакшн'];
 
   console.log('Creating nominations...');
   for (const name of nominations) {

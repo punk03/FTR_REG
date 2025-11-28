@@ -472,7 +472,11 @@ export const Admin: React.FC = () => {
         api.get('/api/reference/nominations'),
         api.get(`/api/events/${event.id}/prices`),
       ]);
-      const nominations = nominationsRes.data || [];
+      // Фильтруем устаревшие номинации "Трио" и "Квартет" — все мелкие составы относятся к "Малая группа"
+      const nominations = (nominationsRes.data || []).filter((nom: any) => {
+        const name = String(nom.name || '').toLowerCase();
+        return !name.includes('трио') && !name.includes('квартет');
+      });
       const prices = pricesRes.data || [];
 
       const rows = nominations.map((nom: any) => {

@@ -541,10 +541,9 @@ export const RegistrationForm: React.FC = () => {
                         setFormData((prev) => ({ ...prev, nominationId: e.target.value, participantsCount: '1' }));
                       } else if (name.includes('дуэт') || name.includes('пара')) {
                         setFormData((prev) => ({ ...prev, nominationId: e.target.value, participantsCount: '2' }));
-                      } else if (name.includes('трио')) {
+                      } else if (name.includes('малая группа')) {
+                        // Малая группа (любые малые составы от 3 до 7) — по умолчанию ставим 3
                         setFormData((prev) => ({ ...prev, nominationId: e.target.value, participantsCount: '3' }));
-                      } else if (name.includes('квартет')) {
-                        setFormData((prev) => ({ ...prev, nominationId: e.target.value, participantsCount: '4' }));
                       }
                     }
                   }}
