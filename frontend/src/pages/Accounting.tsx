@@ -34,13 +34,14 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import ReceiptIcon from '@mui/icons-material/Receipt';
 import api from '../services/api';
 import { Event } from '../types';
 import { formatCurrency, formatDate, formatRegistrationNumber } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { exportAccountingToPDF } from '../utils/pdfExport';
+import { exportAccountingToPDF, generatePaymentStatement } from '../utils/pdfExport';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -440,9 +441,32 @@ export const Accounting: React.FC = () => {
                               Сумма: {formatCurrency(totalAmount)} | Откат: {formatCurrency(totalDiscount)}
                             </Typography>
                           </Box>
-                          <IconButton onClick={() => toggleGroup(groupId)}>
-                            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                          </IconButton>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              startIcon={<ReceiptIcon />}
+                              onClick={async () => {
+                                try {
+                                  const event = events.find((e) => e.id === selectedEventId);
+                                  await generatePaymentStatement(
+                                    groupEntries,
+                                    event?.name || 'Неизвестное мероприятие',
+                                    groupEntries[0]?.paymentGroupName || `Группа ${groupId.slice(0, 8)}`
+                                  );
+                                  showSuccess('Выписка успешно сформирована');
+                                } catch (error: any) {
+                                  console.error('Error generating payment statement:', error);
+                                  showError(error.message || 'Ошибка при создании выписки');
+                                }
+                              }}
+                            >
+                              Выписка
+                            </Button>
+                            <IconButton onClick={() => toggleGroup(groupId)}>
+                              {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                          </Box>
                         </Box>
 
                         <Collapse in={isExpanded}>
@@ -548,18 +572,39 @@ export const Accounting: React.FC = () => {
                             {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
                           </TableCell>
                           <TableCell>
-                            {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                              <>
-                                <IconButton size="small" onClick={() => handleEdit(entry)}>
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                                {user?.role === 'ADMIN' && (
-                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                    <DeleteIcon fontSize="small" />
+                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                              <IconButton
+                                size="small"
+                                onClick={async () => {
+                                  try {
+                                    const event = events.find((e) => e.id === selectedEventId);
+                                    await generatePaymentStatement(
+                                      [entry],
+                                      event?.name || 'Неизвестное мероприятие'
+                                    );
+                                    showSuccess('Выписка успешно сформирована');
+                                  } catch (error: any) {
+                                    console.error('Error generating payment statement:', error);
+                                    showError(error.message || 'Ошибка при создании выписки');
+                                  }
+                                }}
+                                title="Сформировать выписку"
+                              >
+                                <ReceiptIcon fontSize="small" />
+                              </IconButton>
+                              {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                <>
+                                  <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                    <EditIcon fontSize="small" />
                                   </IconButton>
-                                )}
-                              </>
-                            )}
+                                  {user?.role === 'ADMIN' && (
+                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -610,18 +655,39 @@ export const Accounting: React.FC = () => {
                             {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
                           </TableCell>
                           <TableCell>
-                            {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                              <>
-                                <IconButton size="small" onClick={() => handleEdit(entry)}>
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                                {user?.role === 'ADMIN' && (
-                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                    <DeleteIcon fontSize="small" />
+                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                              <IconButton
+                                size="small"
+                                onClick={async () => {
+                                  try {
+                                    const event = events.find((e) => e.id === selectedEventId);
+                                    await generatePaymentStatement(
+                                      [entry],
+                                      event?.name || 'Неизвестное мероприятие'
+                                    );
+                                    showSuccess('Выписка успешно сформирована');
+                                  } catch (error: any) {
+                                    console.error('Error generating payment statement:', error);
+                                    showError(error.message || 'Ошибка при создании выписки');
+                                  }
+                                }}
+                                title="Сформировать выписку"
+                              >
+                                <ReceiptIcon fontSize="small" />
+                              </IconButton>
+                              {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                <>
+                                  <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                    <EditIcon fontSize="small" />
                                   </IconButton>
-                                )}
-                              </>
-                            )}
+                                  {user?.role === 'ADMIN' && (
+                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
