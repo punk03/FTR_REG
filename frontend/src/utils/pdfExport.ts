@@ -14,28 +14,51 @@ const initializePdfMake = async () => {
     const pdfMakeModule = await import('pdfmake/build/pdfmake');
     const pdfFontsModule = await import('pdfmake/build/vfs_fonts');
     
-    pdfMakeInstance = pdfMakeModule.default;
-    const pdfFonts = pdfFontsModule.default;
+    pdfMakeInstance = pdfMakeModule.default || pdfMakeModule;
+    const pdfFonts = pdfFontsModule.default || pdfFontsModule;
 
-    // Инициализация шрифтов
+    // Инициализация шрифтов - проверяем различные варианты структуры
+    let vfs: any = null;
+    
     if (pdfFonts) {
-      if (pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
-        pdfMakeInstance.vfs = pdfFonts.pdfMake.vfs;
-      } else if ((pdfFonts as any).vfs) {
-        pdfMakeInstance.vfs = (pdfFonts as any).vfs;
-      } else if ((pdfFonts as any).pdfMake) {
-        pdfMakeInstance.vfs = (pdfFonts as any).pdfMake.vfs || {};
-      } else {
-        pdfMakeInstance.vfs = {};
+      // Вариант 1: pdfFonts.pdfMake.vfs (стандартный способ)
+      if (pdfFonts.pdfMake?.vfs) {
+        vfs = pdfFonts.pdfMake.vfs;
       }
+      // Вариант 2: pdfFonts.vfs напрямую
+      else if (pdfFonts.vfs) {
+        vfs = pdfFonts.vfs;
+      }
+      // Вариант 3: весь pdfFonts это vfs объект
+      else if (typeof pdfFonts === 'object' && pdfFonts !== null && !pdfFonts.pdfMake && !pdfFonts.vfs) {
+        // Проверяем, является ли это объектом vfs (содержит ключи типа 'Roboto-Regular.ttf')
+        const keys = Object.keys(pdfFonts);
+        if (keys.length > 0 && keys.some(key => key.includes('.ttf') || key.includes('Roboto'))) {
+          vfs = pdfFonts;
+        }
+      }
+    }
+
+    if (vfs && typeof vfs === 'object' && Object.keys(vfs).length > 0) {
+      pdfMakeInstance.vfs = vfs;
+      console.log('PDF fonts loaded successfully, vfs keys:', Object.keys(vfs).length);
     } else {
-      pdfMakeInstance.vfs = {};
+      console.warn('PDF fonts module structure is unexpected:', {
+        pdfFontsType: typeof pdfFonts,
+        pdfFontsKeys: pdfFonts ? Object.keys(pdfFonts) : null,
+        hasPdfMake: pdfFonts?.pdfMake ? true : false,
+        hasVfs: pdfFonts?.vfs ? true : false,
+      });
+      // Создаем минимальный vfs объект для работы pdfmake
+      pdfMakeInstance.vfs = pdfMakeInstance.vfs || {};
+      console.warn('Continuing with empty vfs - pdfmake may use default fonts');
     }
 
     fontsInitialized = true;
     return pdfMakeInstance;
   } catch (error) {
     console.error('Failed to initialize pdfmake:', error);
+    console.error('Error details:', error);
     throw new Error('Не удалось загрузить библиотеку для создания PDF. Пожалуйста, обновите страницу.');
   }
 };
@@ -85,9 +108,10 @@ export const exportAccountingToPDF = async (
   // Инициализируем pdfmake при первом вызове
   const pdfMake = await initializePdfMake();
   
-  if (!pdfMake.vfs || Object.keys(pdfMake.vfs).length === 0) {
-    console.error('PDF fonts not loaded. Cannot generate PDF.');
-    throw new Error('Шрифты для PDF не загружены. Пожалуйста, обновите страницу.');
+  // Проверяем, что pdfmake инициализирован
+  if (!pdfMake || typeof pdfMake.createPdf !== 'function') {
+    console.error('PDFMake not initialized properly');
+    throw new Error('Не удалось инициализировать библиотеку для создания PDF. Пожалуйста, обновите страницу.');
   }
 
   const formatCurrency = (amount: number): string => {
@@ -238,7 +262,7 @@ export const exportAccountingToPDF = async (
       },
     },
     defaultStyle: {
-      font: 'Roboto',
+      font: pdfMake.vfs && Object.keys(pdfMake.vfs).length > 0 ? 'Roboto' : 'Helvetica',
       fontSize: 10,
     },
   };
@@ -389,6 +413,14 @@ export const exportAccountingToPDF = async (
     });
   }
 
+  // Добавление стилей для таблиц
+  docDefinition.styles.tableHeader = {
+    bold: true,
+    fontSize: 10,
+    color: 'black',
+    fillColor: '#f0f0f0',
+  };
+
   // Генерация PDF
   try {
     pdfMake.createPdf(docDefinition).download(`accounting_${eventId}_${Date.now()}.pdf`);
@@ -406,9 +438,10 @@ export const generatePaymentStatement = async (
 ): Promise<void> => {
   const pdfMake = await initializePdfMake();
   
-  if (!pdfMake.vfs || Object.keys(pdfMake.vfs).length === 0) {
-    console.error('PDF fonts not loaded. Cannot generate PDF.');
-    throw new Error('Шрифты для PDF не загружены. Пожалуйста, обновите страницу.');
+  // Проверяем, что pdfmake инициализирован
+  if (!pdfMake || typeof pdfMake.createPdf !== 'function') {
+    console.error('PDFMake not initialized properly');
+    throw new Error('Не удалось инициализировать библиотеку для создания PDF. Пожалуйста, обновите страницу.');
   }
 
   const formatCurrency = (amount: number): string => {
@@ -573,7 +606,7 @@ export const generatePaymentStatement = async (
       },
     },
     defaultStyle: {
-      font: 'Roboto',
+      font: pdfMake.vfs && Object.keys(pdfMake.vfs).length > 0 ? 'Roboto' : 'Helvetica',
       fontSize: 10,
     },
   };
