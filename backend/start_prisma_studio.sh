@@ -28,6 +28,6 @@ fi
 echo "Starting Prisma Studio on 0.0.0.0:5555..."
 echo "DATABASE_URL=${DATABASE_URL:-not set}"
 
-npx prisma studio --port 5555 --host 0.0.0.0
+npx prisma studio --port 5555 --hostname 0.0.0.0
 
 
