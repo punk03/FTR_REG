@@ -126,10 +126,37 @@ router.post(
   [
     body('description').notEmpty().withMessage('Description is required'),
     body('paidFor').isIn(['PERFORMANCE', 'DIPLOMAS_MEDALS']).withMessage('Valid paidFor is required'),
-    body('eventId').isInt().withMessage('Valid eventId is required'),
-    body('cash').optional().isFloat({ min: 0 }).withMessage('Cash must be a positive number'),
-    body('card').optional().isFloat({ min: 0 }).withMessage('Card must be a positive number'),
-    body('transfer').optional().isFloat({ min: 0 }).withMessage('Transfer must be a positive number'),
+    body('eventId').custom((value) => {
+      const num = parseInt(value);
+      if (isNaN(num) || num <= 0) {
+        throw new Error('Valid eventId is required');
+      }
+      return true;
+    }),
+    body('cash').optional().custom((value) => {
+      if (value === undefined || value === null || value === '') return true;
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Cash must be a positive number');
+      }
+      return true;
+    }),
+    body('card').optional().custom((value) => {
+      if (value === undefined || value === null || value === '') return true;
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Card must be a positive number');
+      }
+      return true;
+    }),
+    body('transfer').optional().custom((value) => {
+      if (value === undefined || value === null || value === '') return true;
+      const num = parseFloat(value);
+      if (isNaN(num) || num < 0) {
+        throw new Error('Transfer must be a positive number');
+      }
+      return true;
+    }),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -160,7 +187,7 @@ router.post(
         entries.push({
           registrationId: null,
           collectiveId: null,
-          eventId: parseInt(eventId),
+          eventId: parsedEventId,
           amount: parseFloat(cash),
           discountAmount: 0,
           discountPercent: 0,
@@ -177,7 +204,7 @@ router.post(
         entries.push({
           registrationId: null,
           collectiveId: null,
-          eventId: parseInt(eventId),
+          eventId: parsedEventId,
           amount: parseFloat(card),
           discountAmount: 0,
           discountPercent: 0,
@@ -194,7 +221,7 @@ router.post(
         entries.push({
           registrationId: null,
           collectiveId: null,
-          eventId: parseInt(eventId),
+          eventId: parsedEventId,
           amount: parseFloat(transfer),
           discountAmount: 0,
           discountPercent: 0,
@@ -212,7 +239,7 @@ router.post(
       });
 
       // Invalidate statistics cache for this event
-      await cacheService.del(`statistics:${eventId}`);
+      await cacheService.del(`statistics:${parsedEventId}`);
 
       res.json({
         message: 'Manual payment entries created successfully',
