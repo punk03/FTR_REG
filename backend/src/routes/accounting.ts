@@ -121,6 +121,14 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
 // POST /api/accounting - Create manual payment entry
 router.post(
   '/',
+  (req, res, next) => {
+    console.log('[POST /api/accounting] Request received:', {
+      method: req.method,
+      path: req.path,
+      body: req.body,
+    });
+    next();
+  },
   authenticateToken,
   requireRole('ADMIN', 'ACCOUNTANT'),
   [
