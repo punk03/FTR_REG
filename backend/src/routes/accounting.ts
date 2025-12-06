@@ -58,7 +58,11 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
         take: limit,
       }),
       prisma.accountingEntry.count({ where }),
-    ]);
+    ]).catch((error) => {
+      console.error('Error fetching accounting entries:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      throw error;
+    });
 
     // Group by paymentGroupId
     const grouped: Record<string, typeof entries> = {};
