@@ -28,7 +28,7 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
     const where: any = {
       OR: [
         { registration: { eventId } },
-        { eventId, registrationId: null, collectiveId: null }, // Manual payments
+        { eventId: eventId, registrationId: null, collectiveId: null }, // Manual payments
       ],
     };
 
