@@ -53,30 +53,41 @@ if (process.env.CORS_ORIGIN) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
+    try {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Always allow production IPs
+      if (productionOrigins.includes(origin)) {
+        console.log('CORS allowed (production):', origin);
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed list
+      if (corsOrigins.includes(origin)) {
+        console.log('CORS allowed origin:', origin);
+        return callback(null, true);
+      } else {
+        console.warn('CORS blocked origin:', origin);
+        console.warn('Allowed origins:', corsOrigins);
+        // Return false instead of error to avoid 500
+        return callback(null, false);
+      }
+    } catch (error) {
+      console.error('CORS origin check error:', error);
+      // On error, allow the request to avoid breaking the app
       return callback(null, true);
-    }
-    
-    // Always allow production IPs
-    if (productionOrigins.includes(origin)) {
-      console.log('CORS allowed (production):', origin);
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed list
-    if (corsOrigins.includes(origin)) {
-      console.log('CORS allowed origin:', origin);
-      callback(null, true);
-    } else {
-      console.warn('CORS blocked origin:', origin);
-      console.warn('Allowed origins:', corsOrigins);
-      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  maxAge: 86400, // 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
