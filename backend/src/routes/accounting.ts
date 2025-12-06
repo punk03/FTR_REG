@@ -158,19 +158,19 @@ router.put(
           updateData.discountPercent = 0;
         }
       }
-      if (req.body.diplomasList !== undefined) {
+      if (req.body.diplomasList !== undefined && entry.registrationId) {
         await prisma.registration.update({
           where: { id: entry.registrationId },
           data: { diplomasList: req.body.diplomasList },
         });
       }
-      if (req.body.medalsCount !== undefined) {
+      if (req.body.medalsCount !== undefined && entry.registrationId) {
         await prisma.registration.update({
           where: { id: entry.registrationId },
           data: { medalsCount: req.body.medalsCount },
         });
       }
-      if (req.body.diplomasCount !== undefined) {
+      if (req.body.diplomasCount !== undefined && entry.registrationId) {
         await prisma.registration.update({
           where: { id: entry.registrationId },
           data: { diplomasCount: req.body.diplomasCount },
@@ -203,7 +203,9 @@ router.put(
         },
       });
 
-      await recalculateRegistrationPaymentStatus(entry.registrationId);
+      if (entry.registrationId) {
+        await recalculateRegistrationPaymentStatus(entry.registrationId);
+      }
 
       res.json(updated);
     } catch (error) {
@@ -270,15 +272,22 @@ router.post('/:id/restore', authenticateToken, requireRole('ADMIN'), async (req:
       // Data restoration logic if needed
     }
 
-    await recalculateRegistrationPaymentStatus(entry.registrationId);
+    if (entry.registrationId) {
+      await recalculateRegistrationPaymentStatus(entry.registrationId);
+    }
 
     // Invalidate statistics cache for this event
-    const registration = await prisma.registration.findUnique({
-      where: { id: entry.registrationId },
-      select: { eventId: true },
-    });
-    if (registration) {
-      await cacheService.del(`statistics:${registration.eventId}`);
+    if (entry.registrationId) {
+      const registration = await prisma.registration.findUnique({
+        where: { id: entry.registrationId },
+        select: { eventId: true },
+      });
+      if (registration) {
+        await cacheService.del(`statistics:${registration.eventId}`);
+      }
+    } else if (entry.eventId) {
+      // For manual payments, use eventId directly
+      await cacheService.del(`statistics:${entry.eventId}`);
     }
 
     res.json({ message: 'Accounting entry restored successfully', entry: restored });
@@ -374,12 +383,21 @@ router.put(
           },
         });
 
-        await recalculateRegistrationPaymentStatus(entry.registrationId);
+        if (entry.registrationId) {
+          await recalculateRegistrationPaymentStatus(entry.registrationId);
+        }
         updatedEntries.push(updated);
       }
 
       // Invalidate statistics cache for all affected events
-      const eventIds = [...new Set(entries.map((e) => e.registration.eventId))];
+      const eventIds = new Set<number>();
+      for (const entry of entries) {
+        if (entry.registration?.eventId) {
+          eventIds.add(entry.registration.eventId);
+        } else if (entry.eventId) {
+          eventIds.add(entry.eventId);
+        }
+      }
       for (const eventId of eventIds) {
         await cacheService.del(`statistics:${eventId}`);
       }
