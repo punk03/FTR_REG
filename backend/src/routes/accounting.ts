@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
@@ -121,7 +121,7 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
 // POST /api/accounting - Create manual payment entry
 router.post(
   '/',
-  (req: Request, _res: Response, next: express.NextFunction) => {
+  (req: Request, _res: Response, next: NextFunction) => {
     console.log('[POST /api/accounting] Request received:', {
       method: req.method,
       path: req.path,
