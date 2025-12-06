@@ -174,7 +174,14 @@ router.post(
         return;
       }
 
-      const { description, paidFor, eventId, cash, card, transfer } = req.body;
+      const { description, paidFor, eventId: eventIdRaw, cash, card, transfer } = req.body;
+
+      // Parse eventId to ensure it's a number
+      const parsedEventId = parseInt(eventIdRaw);
+      if (isNaN(parsedEventId) || parsedEventId <= 0) {
+        res.status(400).json({ error: 'Valid eventId is required' });
+        return;
+      }
 
       // At least one payment method must have amount > 0
       const totalAmount = (parseFloat(cash || 0) + parseFloat(card || 0) + parseFloat(transfer || 0));
