@@ -16,16 +16,27 @@ print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-PROJECT_DIR="${HOME}/FTR_REG}"
+# Определить директорию проекта автоматически
+# Проверяем текущую директорию, затем HOME, затем ищем FTR_REG
+if [ -d ".git" ] && [ -d "frontend" ] && [ -d "backend" ]; then
+    PROJECT_DIR=$(pwd)
+elif [ -d "${HOME}/FTR_REG" ]; then
+    PROJECT_DIR="${HOME}/FTR_REG"
+elif [ -d "/home/fil/FTR_REG" ]; then
+    PROJECT_DIR="/home/fil/FTR_REG"
+elif [ -d "/root/FTR_REG" ]; then
+    PROJECT_DIR="/root/FTR_REG"
+else
+    print_error "FTR_REG project directory not found!"
+    print_info "Please run this script from the project directory or set PROJECT_DIR environment variable"
+    exit 1
+fi
+
 FRONTEND_PORT=3000
 
 # Переход в директорию проекта
-if [ -d "$PROJECT_DIR" ]; then
-    cd "$PROJECT_DIR"
-else
-    print_error "Project directory not found: $PROJECT_DIR"
-    exit 1
-fi
+cd "$PROJECT_DIR"
+print_info "Using project directory: $PROJECT_DIR"
 
 print_info "Starting frontend server..."
 
