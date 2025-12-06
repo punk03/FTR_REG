@@ -118,6 +118,12 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
       },
     });
   } catch (error) {
+    console.error('GET /api/accounting error:', error);
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     errorHandler(error as Error, req, res, () => {});
   }
 });
