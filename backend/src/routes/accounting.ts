@@ -232,15 +232,22 @@ router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: Reque
       data: { deletedAt: new Date() },
     });
 
-    await recalculateRegistrationPaymentStatus(entry.registrationId);
+    if (entry.registrationId) {
+      await recalculateRegistrationPaymentStatus(entry.registrationId);
+    }
 
     // Invalidate statistics cache for this event
-    const registration = await prisma.registration.findUnique({
-      where: { id: entry.registrationId },
-      select: { eventId: true },
-    });
-    if (registration) {
-      await cacheService.del(`statistics:${registration.eventId}`);
+    if (entry.registrationId) {
+      const registration = await prisma.registration.findUnique({
+        where: { id: entry.registrationId },
+        select: { eventId: true },
+      });
+      if (registration) {
+        await cacheService.del(`statistics:${registration.eventId}`);
+      }
+    } else if (entry.eventId) {
+      // For manual payments, use eventId directly
+      await cacheService.del(`statistics:${entry.eventId}`);
     }
 
     res.json({ message: 'Accounting entry deleted successfully' });
