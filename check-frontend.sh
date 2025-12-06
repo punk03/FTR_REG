@@ -106,10 +106,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Starting frontend..."
     cd frontend
     
+    # serve.json должен быть в текущей директории (frontend/), не в dist/
     if [ -f "serve.json" ]; then
-        nohup npx -y serve@latest -s dist -l ${FRONTEND_PORT} -c serve.json > ../frontend.log 2>&1 &
+        # Используем --listen для указания хоста и порта
+        nohup npx -y serve@latest -s dist --listen tcp://0.0.0.0:${FRONTEND_PORT} > ../frontend.log 2>&1 &
     else
-        nohup npx -y serve@latest -s dist -l ${FRONTEND_PORT} > ../frontend.log 2>&1 &
+        # Без конфига, но с правильным хостом
+        nohup npx -y serve@latest -s dist --listen tcp://0.0.0.0:${FRONTEND_PORT} > ../frontend.log 2>&1 &
     fi
     
     FRONTEND_PID=$!

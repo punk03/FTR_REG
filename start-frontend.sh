@@ -94,37 +94,24 @@ fi
 # 6. Запустить serve
 print_info "Starting serve on 0.0.0.0:${FRONTEND_PORT}..."
 
-# Попробуем разные варианты запуска
-if npx -y serve@latest --version > /dev/null 2>&1; then
-    # Вариант 1: с явным указанием хоста и порта
-    nohup npx -y serve@latest -s dist --listen tcp://0.0.0.0:${FRONTEND_PORT} > ../frontend.log 2>&1 &
-    SERVE_PID=$!
-    
-    sleep 3
-    
-    # Проверить, запустился ли процесс
-    if ps -p $SERVE_PID > /dev/null 2>&1; then
-        echo $SERVE_PID > ../frontend.pid
-        print_success "Frontend started (PID: $SERVE_PID)"
-    else
-        print_error "Process died immediately. Trying alternative method..."
-        
-        # Вариант 2: через переменную окружения
-        PORT=${FRONTEND_PORT} HOST=0.0.0.0 nohup npx -y serve@latest -s dist > ../frontend.log 2>&1 &
-        SERVE_PID=$!
-        sleep 3
-        
-        if ps -p $SERVE_PID > /dev/null 2>&1; then
-            echo $SERVE_PID > ../frontend.pid
-            print_success "Frontend started with alternative method (PID: $SERVE_PID)"
-        else
-            print_error "All methods failed. Check frontend.log:"
-            tail -20 ../frontend.log
-            exit 1
-        fi
-    fi
+# serve.json должен быть в frontend/, не в dist/
+# serve автоматически найдет его в текущей директории
+# НЕ используем -c флаг, так как он ищет файл в dist/
+
+# Запускаем serve без указания конфига (он использует дефолтные настройки для SPA)
+# Флаг -s включает SPA режим автоматически
+nohup npx -y serve@latest -s dist --listen tcp://0.0.0.0:${FRONTEND_PORT} > ../frontend.log 2>&1 &
+SERVE_PID=$!
+
+sleep 3
+
+# Проверить, запустился ли процесс
+if ps -p $SERVE_PID > /dev/null 2>&1; then
+    echo $SERVE_PID > ../frontend.pid
+    print_success "Frontend started (PID: $SERVE_PID)"
 else
-    print_error "serve command not found"
+    print_error "Process died immediately. Check frontend.log:"
+    tail -20 ../frontend.log
     exit 1
 fi
 

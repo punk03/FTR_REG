@@ -151,8 +151,10 @@ EOF
 fi
 
 # Запуск serve на всех интерфейсах (0.0.0.0)
+# serve.json должен быть в frontend/, не используем -c флаг
+# Флаг -s включает SPA режим автоматически
 print_info "Starting serve on 0.0.0.0:${FRONTEND_PORT}..."
-nohup npx -y serve@latest -s dist -l tcp://0.0.0.0:${FRONTEND_PORT} -c serve.json > ../frontend.log 2>&1 &
+nohup npx -y serve@latest -s dist --listen tcp://0.0.0.0:${FRONTEND_PORT} > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > ../frontend.pid
 cd ..
