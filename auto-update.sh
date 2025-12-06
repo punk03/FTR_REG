@@ -221,7 +221,7 @@ build_applications() {
     
     # Убеждаемся, что .env файл существует
     if [ ! -f ".env" ]; then
-        echo "VITE_API_URL=http://185.185.68.105:3001" > .env
+        echo "VITE_API_URL=http://95.71.125.8:3001" > .env
     fi
     
     if npm run build >/dev/null 2>&1; then
@@ -305,10 +305,10 @@ check_health() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -s http://185.185.68.105:3001/api/health | grep -q '"status":"ok"'; then
+        if curl -s http://95.71.125.8:3001/api/health | grep -q '"status":"ok"'; then
             log_success "Backend работает корректно"
             
-            if curl -s http://185.185.68.105:3000 | grep -q '<div id="root"'; then
+            if curl -s http://95.71.125.8:3000 | grep -q '<div id="root"'; then
                 log_success "Frontend работает корректно"
                 return 0
             fi
@@ -409,8 +409,8 @@ main() {
     log_success "=========================================="
     log_info ""
     log_info "Логи сохранены в: $LOG_FILE"
-    log_info "Backend: http://185.185.68.105:3001"
-    log_info "Frontend: http://185.185.68.105:3000"
+    log_info "Backend: http://95.71.125.8:3001"
+    log_info "Frontend: http://95.71.125.8:3000"
 }
 
 # Запуск основной функции

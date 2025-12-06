@@ -406,7 +406,7 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 
 # CORS
-CORS_ORIGIN=http://185.185.68.105:3000,http://185.185.68.105,http://localhost:3000,http://localhost:5173,http://localhost
+CORS_ORIGIN=http://95.71.125.8:3000,http://95.71.125.8,http://localhost:3000,http://localhost:5173,http://localhost
 EOF
             chmod 600 backend/.env 2>/dev/null || true
             print_info "Created backend/.env with default values"
@@ -425,9 +425,9 @@ EOF
             sed -i 's/^REDIS_HOST=redis/REDIS_HOST=localhost/g' backend/.env 2>/dev/null || true
         fi
         # Update CORS_ORIGIN to use production IP if it uses localhost only
-        if grep -q "^CORS_ORIGIN=http://localhost" backend/.env 2>/dev/null && ! grep -q "185.185.68.105" backend/.env 2>/dev/null; then
+        if grep -q "^CORS_ORIGIN=http://localhost" backend/.env 2>/dev/null && ! grep -q "95.71.125.8" backend/.env 2>/dev/null; then
             print_info "Updating CORS_ORIGIN to include production IP..."
-            sed -i 's|^CORS_ORIGIN=.*|CORS_ORIGIN=http://185.185.68.105:3000,http://185.185.68.105,http://localhost:3000,http://localhost:5173,http://localhost|g' backend/.env 2>/dev/null || true
+            sed -i 's|^CORS_ORIGIN=.*|CORS_ORIGIN=http://95.71.125.8:3000,http://95.71.125.8,http://localhost:3000,http://localhost:5173,http://localhost|g' backend/.env 2>/dev/null || true
         fi
     fi
     
@@ -439,7 +439,7 @@ EOF
             print_info "Created frontend/.env from .env.example"
         else
             tee frontend/.env > /dev/null << EOF
-VITE_API_URL=http://185.185.68.105:3001
+VITE_API_URL=http://95.71.125.8:3001
 VITE_MODE=production
 EOF
             chmod 600 frontend/.env 2>/dev/null || true
@@ -451,7 +451,7 @@ EOF
         # Update VITE_API_URL if it uses localhost
         if grep -q "VITE_API_URL=http://localhost:3001" frontend/.env 2>/dev/null; then
             print_info "Updating VITE_API_URL to use production IP..."
-            sed -i 's|VITE_API_URL=http://localhost:3001|VITE_API_URL=http://185.185.68.105:3001|g' frontend/.env 2>/dev/null || true
+            sed -i 's|VITE_API_URL=http://localhost:3001|VITE_API_URL=http://95.71.125.8:3001|g' frontend/.env 2>/dev/null || true
         fi
     fi
     
@@ -604,11 +604,11 @@ build_frontend() {
     
     # Ensure .env file exists with API URL
     if [ ! -f ".env" ]; then
-        echo "VITE_API_URL=http://185.185.68.105:3001" > .env
+        echo "VITE_API_URL=http://95.71.125.8:3001" > .env
     else
         # Update existing .env if it has localhost
         if grep -q "VITE_API_URL=http://localhost:3001" .env 2>/dev/null; then
-            sed -i 's|VITE_API_URL=http://localhost:3001|VITE_API_URL=http://185.185.68.105:3001|g' .env 2>/dev/null || true
+            sed -i 's|VITE_API_URL=http://localhost:3001|VITE_API_URL=http://95.71.125.8:3001|g' .env 2>/dev/null || true
         fi
     fi
     
@@ -666,8 +666,13 @@ start_application() {
             # Start frontend server using npx serve with SPA mode
             # -s flag enables single-page app mode (all routes serve index.html)
             # -l sets the port
+            # Use serve.json config file for proper SPA routing
             print_info "Starting frontend on port 3000..."
-            nohup npx -y serve@latest -s dist -l 3000 > ../frontend.log 2>&1 &
+            if [ -f "serve.json" ]; then
+                nohup npx -y serve@latest -s dist -l 3000 -c serve.json > ../frontend.log 2>&1 &
+            else
+                nohup npx -y serve@latest -s dist -l 3000 > ../frontend.log 2>&1 &
+            fi
             FRONTEND_PID=$!
             echo $FRONTEND_PID > ../frontend.pid
             print_success "Frontend started (PID: $FRONTEND_PID) on port 3000"
@@ -684,7 +689,7 @@ start_application() {
             
             # Test if server is responding
             sleep 2
-            if curl -s http://185.185.68.105:3000 > /dev/null 2>&1 || curl -s http://localhost:3000 > /dev/null 2>&1; then
+            if curl -s http://95.71.125.8:3000 > /dev/null 2>&1 || curl -s http://localhost:3000 > /dev/null 2>&1; then
                 print_success "Frontend server is responding"
             else
                 print_warning "Frontend server may not be responding yet. Check logs: tail -f frontend.log"
@@ -707,8 +712,8 @@ start_application() {
     cd ..
     
     print_success "Application services started"
-    print_info "Backend: http://185.185.68.105:3001"
-    print_info "Frontend: http://185.185.68.105:3000"
+    print_info "Backend: http://95.71.125.8:3001"
+    print_info "Frontend: http://95.71.125.8:3000"
     print_info "Logs: backend.log, frontend.log"
 }
 
@@ -727,13 +732,13 @@ show_status() {
     echo ""
     echo "=== Service URLs ==="
     if [ -f "docker-compose.prod.yml" ]; then
-        echo "Backend API: http://185.185.68.105:3001"
-        echo "Frontend: http://185.185.68.105:3000"
+        echo "Backend API: http://95.71.125.8:3001"
+        echo "Frontend: http://95.71.125.8:3000"
         echo "PostgreSQL: localhost:5432"
         echo "Redis: localhost:6379"
     else
-        echo "Backend API: http://185.185.68.105:3001"
-        echo "Frontend: http://185.185.68.105:3000"
+        echo "Backend API: http://95.71.125.8:3001"
+        echo "Frontend: http://95.71.125.8:3000"
         echo "PostgreSQL: localhost:5432"
         echo "Redis: localhost:6379"
     fi

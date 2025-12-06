@@ -1,68 +1,118 @@
 #!/bin/bash
 
-# Script to check frontend deployment
+# Скрипт для проверки и перезапуска frontend сервера
 
-echo "=== Frontend Deployment Check ==="
-echo ""
+set -e
 
-cd "$(dirname "$0")/frontend" || exit 1
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-echo "1. Checking if dist directory exists..."
-if [ ! -d "dist" ]; then
-    echo "ERROR: dist directory not found! Run 'npm run build' first."
+print_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+PROJECT_DIR="${HOME}/FTR_REG"
+FRONTEND_PORT=3000
+FRONTEND_IP="95.71.125.8"
+
+# Переход в директорию проекта
+if [ -d "$PROJECT_DIR" ]; then
+    cd "$PROJECT_DIR"
+else
+    print_error "Project directory not found: $PROJECT_DIR"
     exit 1
 fi
-echo "OK: dist directory exists"
-echo ""
 
-echo "2. Checking dist/index.html..."
-if [ ! -f "dist/index.html" ]; then
-    echo "ERROR: dist/index.html not found!"
-    exit 1
-fi
-echo "OK: dist/index.html exists"
-echo ""
+print_info "Checking frontend status..."
 
-echo "3. Checking for JS files in dist..."
-JS_FILES=$(find dist -name "*.js" | head -5)
-if [ -z "$JS_FILES" ]; then
-    echo "ERROR: No JS files found in dist!"
-    exit 1
-fi
-echo "OK: JS files found:"
-echo "$JS_FILES" | head -3
-echo ""
-
-echo "4. Checking index.html content..."
-if grep -q "/src/main.tsx" dist/index.html; then
-    echo "ERROR: index.html still references /src/main.tsx (not built correctly)"
-    echo "Content:"
-    grep "src=" dist/index.html
-    exit 1
-fi
-echo "OK: index.html references built files"
-echo ""
-
-echo "5. Checking if serve is running..."
+# Проверка, запущен ли frontend
 if pgrep -f "serve.*dist" > /dev/null; then
-    SERVE_PID=$(pgrep -f "serve.*dist" | head -1)
-    echo "OK: serve is running (PID: $SERVE_PID)"
+    FRONTEND_PID=$(pgrep -f "serve.*dist" | head -1)
+    print_info "Frontend is running (PID: $FRONTEND_PID)"
 else
-    echo "WARNING: serve is not running"
+    print_warning "Frontend is not running"
 fi
-echo ""
 
-echo "6. Testing HTTP response..."
-if curl -s http://localhost:3000 > /dev/null 2>&1; then
-    echo "OK: Frontend responds on port 3000"
-    echo ""
-    echo "First 500 chars of response:"
-    curl -s http://localhost:3000 | head -c 500
-    echo ""
+# Проверка доступности
+print_info "Testing frontend accessibility..."
+if curl -s -o /dev/null -w "%{http_code}" "http://${FRONTEND_IP}:${FRONTEND_PORT}" | grep -q "200\|301\|302"; then
+    print_success "Frontend is accessible at http://${FRONTEND_IP}:${FRONTEND_PORT}"
 else
-    echo "ERROR: Frontend does not respond on port 3000"
+    print_error "Frontend is not accessible at http://${FRONTEND_IP}:${FRONTEND_PORT}"
+    
+    # Проверка локальной доступности
+    if curl -s -o /dev/null -w "%{http_code}" "http://localhost:${FRONTEND_PORT}" | grep -q "200\|301\|302"; then
+        print_warning "Frontend is accessible locally but not from external IP"
+        print_info "Possible issues:"
+        print_info "  1. Firewall blocking port ${FRONTEND_PORT}"
+        print_info "  2. Server not bound to 0.0.0.0"
+        print_info "  3. Network configuration issue"
+    else
+        print_error "Frontend is not accessible even locally"
+    fi
 fi
+
+# Проверка SPA routing
+print_info "Testing SPA routing..."
+ROOT_RESPONSE=$(curl -s "http://localhost:${FRONTEND_PORT}/" | head -20)
+if echo "$ROOT_RESPONSE" | grep -q "root\|id=\"root\"\|<html"; then
+    print_success "Root route (/) returns HTML"
+else
+    print_error "Root route (/) does not return HTML"
+    echo "Response: $ROOT_RESPONSE"
+fi
+
+# Проверка несуществующего маршрута (должен вернуть index.html для SPA)
+print_info "Testing SPA fallback routing..."
+SPA_RESPONSE=$(curl -s "http://localhost:${FRONTEND_PORT}/nonexistent-route" | head -20)
+if echo "$SPA_RESPONSE" | grep -q "root\|id=\"root\"\|<html"; then
+    print_success "SPA routing works (nonexistent route returns index.html)"
+else
+    print_error "SPA routing broken (nonexistent route does not return index.html)"
+    echo "Response: $SPA_RESPONSE"
+fi
+
+# Показать логи
+if [ -f "frontend.log" ]; then
+    print_info "Last 20 lines of frontend.log:"
+    tail -20 frontend.log
+fi
+
+# Предложение перезапуска
 echo ""
-
-echo "=== Check Complete ==="
-
+read -p "Do you want to restart frontend? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Stopping frontend..."
+    pkill -f "serve.*dist" || true
+    sleep 2
+    
+    print_info "Starting frontend..."
+    cd frontend
+    
+    if [ -f "serve.json" ]; then
+        nohup npx -y serve@latest -s dist -l ${FRONTEND_PORT} -c serve.json > ../frontend.log 2>&1 &
+    else
+        nohup npx -y serve@latest -s dist -l ${FRONTEND_PORT} > ../frontend.log 2>&1 &
+    fi
+    
+    FRONTEND_PID=$!
+    echo $FRONTEND_PID > ../frontend.pid
+    cd ..
+    
+    print_success "Frontend restarted (PID: $FRONTEND_PID)"
+    print_info "Waiting 5 seconds for startup..."
+    sleep 5
+    
+    # Проверка после перезапуска
+    if curl -s -o /dev/null -w "%{http_code}" "http://localhost:${FRONTEND_PORT}" | grep -q "200\|301\|302"; then
+        print_success "Frontend is now accessible"
+    else
+        print_error "Frontend still not accessible. Check frontend.log for details"
+    fi
+fi

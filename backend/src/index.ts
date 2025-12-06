@@ -29,8 +29,8 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 // CORS configuration - always include production IP
 const productionOrigins = [
-  'http://185.185.68.105:3000',
-  'http://185.185.68.105',
+  'http://95.71.125.8:3000',
+  'http://95.71.125.8',
 ];
 
 const developmentOrigins = [
