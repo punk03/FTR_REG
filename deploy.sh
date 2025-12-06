@@ -665,13 +665,13 @@ start_application() {
         if command -v npx &> /dev/null; then
             # Start frontend server using npx serve with SPA mode
             # -s flag enables single-page app mode (all routes serve index.html)
-            # -l sets the port
+            # -l sets the port and bind to all interfaces (0.0.0.0)
             # Use serve.json config file for proper SPA routing
-            print_info "Starting frontend on port 3000..."
+            print_info "Starting frontend on 0.0.0.0:3000..."
             if [ -f "serve.json" ]; then
-                nohup npx -y serve@latest -s dist -l 3000 -c serve.json > ../frontend.log 2>&1 &
+                nohup npx -y serve@latest -s dist -l tcp://0.0.0.0:3000 -c serve.json > ../frontend.log 2>&1 &
             else
-                nohup npx -y serve@latest -s dist -l 3000 > ../frontend.log 2>&1 &
+                nohup npx -y serve@latest -s dist -l tcp://0.0.0.0:3000 > ../frontend.log 2>&1 &
             fi
             FRONTEND_PID=$!
             echo $FRONTEND_PID > ../frontend.pid
