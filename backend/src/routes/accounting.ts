@@ -51,6 +51,7 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
             },
           },
           collective: true,
+          event: true,
         },
         orderBy: { createdAt: 'desc' },
         skip,
