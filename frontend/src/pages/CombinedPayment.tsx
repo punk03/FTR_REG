@@ -38,6 +38,9 @@ import api from '../services/api';
 import { Event } from '../types';
 import { formatCurrency, formatRegistrationNumber } from '../utils/format';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import AddIcon from '@mui/icons-material/Add';
 
 type StepType = 'select' | 'edit';
 
@@ -52,6 +55,8 @@ const countRussianLines = (text: string): number => {
 
 export const CombinedPayment: React.FC = () => {
   const { showSuccess, showError } = useNotification();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -486,14 +491,25 @@ export const CombinedPayment: React.FC = () => {
             ))}
           </Select>
         </FormControl>
-        <Button
-          variant="contained"
-          onClick={handleNext}
-          disabled={selectedRegistrations.size === 0}
-          endIcon={<ArrowForwardIcon />}
-        >
-          Перейти к оплате ({selectedRegistrations.size})
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/accounting')}
+            >
+              Добавить платеж
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={handleNext}
+            disabled={selectedRegistrations.size === 0}
+            endIcon={<ArrowForwardIcon />}
+          >
+            Перейти к оплате ({selectedRegistrations.size})
+          </Button>
+        </Box>
       </Box>
 
       <Paper sx={{ p: 2 }}>

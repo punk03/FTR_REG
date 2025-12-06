@@ -352,25 +352,38 @@ export const Accounting: React.FC = () => {
           </Select>
         </FormControl>
 
-        <Button
-          variant="outlined"
-          startIcon={<FileDownloadIcon />}
-          onClick={async () => {
-            if (accountingData && selectedEventId) {
-              try {
-                const event = events.find((e) => e.id === selectedEventId);
-                await exportAccountingToPDF(accountingData, event?.name || 'Неизвестное мероприятие', selectedEventId as number);
-                showSuccess('PDF отчет успешно сгенерирован');
-              } catch (error: any) {
-                console.error('Error exporting PDF:', error);
-                showError(error.message || 'Ошибка при создании PDF файла');
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={async () => {
+              if (accountingData && selectedEventId) {
+                try {
+                  const event = events.find((e) => e.id === selectedEventId);
+                  await exportAccountingToPDF(accountingData, event?.name || 'Неизвестное мероприятие', selectedEventId as number);
+                  showSuccess('PDF отчет успешно сгенерирован');
+                } catch (error: any) {
+                  console.error('Error exporting PDF:', error);
+                  showError(error.message || 'Ошибка при создании PDF файла');
+                }
               }
-            }
-          }}
-          disabled={!accountingData || !selectedEventId}
-        >
-          Экспорт в PDF
-        </Button>
+            }}
+            disabled={!accountingData || !selectedEventId}
+          >
+            Экспорт в PDF
+          </Button>
+          {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => setCreatePaymentDialogOpen(true)}
+              disabled={!selectedEventId}
+            >
+              Добавить платеж
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {selectedEventId && (
@@ -506,6 +519,18 @@ export const Accounting: React.FC = () => {
                 >
                   Экспорт в PDF
                 </Button>
+                {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={() => setCreatePaymentDialogOpen(true)}
+                    disabled={!selectedEventId}
+                    fullWidth={window.innerWidth < 600}
+                  >
+                    Добавить платеж
+                  </Button>
+                )}
               </Box>
             </Grid>
           </Grid>
