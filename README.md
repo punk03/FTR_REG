@@ -52,6 +52,8 @@ sudo ./update.sh
 
 ## Быстрый старт / Quick Start
 
+📖 **Подробная инструкция по установке:** [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
+
 ### Требования / Requirements
 
 - Node.js 18+
@@ -134,9 +136,12 @@ Frontend будет доступен на http://localhost:5173
 
 ## Документация / Documentation
 
-Подробная документация доступна в файле `TECHNICAL_SPECIFICATION.md`
+- 📖 **[Руководство по установке](INSTALLATION_GUIDE.md)** - подробная инструкция по установке проекта из GitHub
+- 📋 **[Техническое задание](TECHNICAL_SPECIFICATION.md)** - полное описание системы и требований
+- 🔄 **[Инструкции по установке на Ubuntu](INSTALL_INSTRUCTIONS.md)** - решение проблем с правами доступа
 
-Detailed documentation is available in `TECHNICAL_SPECIFICATION.md`
+- 📖 **[Installation Guide](INSTALLATION_GUIDE.md)** - detailed installation instructions from GitHub
+- 📋 **[Technical Specification](TECHNICAL_SPECIFICATION.md)** - complete system description and requirements
 
 ## Лицензия / License
 
