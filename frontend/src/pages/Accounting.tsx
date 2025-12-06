@@ -28,6 +28,8 @@ import {
   TextField,
   CircularProgress,
   TablePagination,
+  Divider,
+  InputAdornment,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -35,6 +37,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import AddIcon from '@mui/icons-material/Add';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import api from '../services/api';
 import { Event } from '../types';
 import { formatCurrency, formatDate, formatRegistrationNumber } from '../utils/format';
@@ -84,6 +88,15 @@ export const Accounting: React.FC = () => {
     paidFor: 'PERFORMANCE' as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
     discountPercent: '',
   });
+  const [createPaymentDialogOpen, setCreatePaymentDialogOpen] = useState(false);
+  const [createPaymentForm, setCreatePaymentForm] = useState({
+    description: '',
+    paidFor: 'PERFORMANCE' as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
+    cash: '',
+    card: '',
+    transfer: '',
+  });
+  const [creatingPayment, setCreatingPayment] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -244,6 +257,70 @@ export const Accounting: React.FC = () => {
       console.error('Error updating group name:', error);
       showError(error.response?.data?.error || 'Ошибка обновления названия группы');
     }
+  };
+
+  const handleCreatePayment = async () => {
+    if (!selectedEventId) {
+      showError('Выберите мероприятие');
+      return;
+    }
+
+    if (!createPaymentForm.description.trim()) {
+      showError('Введите название платежа');
+      return;
+    }
+
+    const totalAmount = 
+      parseFloat(createPaymentForm.cash || '0') +
+      parseFloat(createPaymentForm.card || '0') +
+      parseFloat(createPaymentForm.transfer || '0');
+
+    if (totalAmount === 0) {
+      showError('Укажите сумму хотя бы в одном способе оплаты');
+      return;
+    }
+
+    setCreatingPayment(true);
+    try {
+      await api.post('/api/accounting', {
+        description: createPaymentForm.description,
+        paidFor: createPaymentForm.paidFor,
+        eventId: selectedEventId,
+        cash: createPaymentForm.cash || '0',
+        card: createPaymentForm.card || '0',
+        transfer: createPaymentForm.transfer || '0',
+      });
+      showSuccess('Платеж успешно добавлен');
+      setCreatePaymentDialogOpen(false);
+      setCreatePaymentForm({
+        description: '',
+        paidFor: 'PERFORMANCE',
+        cash: '',
+        card: '',
+        transfer: '',
+      });
+      fetchAccounting();
+    } catch (error: any) {
+      console.error('Error creating payment:', error);
+      showError(error.response?.data?.error || 'Ошибка создания платежа');
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
+  const fillPaymentMethodTotal = (method: 'cash' | 'card' | 'transfer') => {
+    const total = 
+      parseFloat(createPaymentForm.cash || '0') +
+      parseFloat(createPaymentForm.card || '0') +
+      parseFloat(createPaymentForm.transfer || '0');
+    
+    // Clear other methods and fill selected one with total
+    setCreatePaymentForm({
+      ...createPaymentForm,
+      cash: method === 'cash' ? (total > 0 ? total.toString() : '') : '',
+      card: method === 'card' ? (total > 0 ? total.toString() : '') : '',
+      transfer: method === 'transfer' ? (total > 0 ? total.toString() : '') : '',
+    });
   };
 
   const summary = accountingData?.summary || {
@@ -928,6 +1005,141 @@ export const Accounting: React.FC = () => {
           </Button>
           <Button variant="contained" onClick={handleSaveGroupName}>
             Сохранить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog for creating manual payment */}
+      <Dialog
+        open={createPaymentDialogOpen}
+        onClose={() => setCreatePaymentDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Добавить платеж</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Название платежа"
+            value={createPaymentForm.description}
+            onChange={(e) => setCreatePaymentForm({ ...createPaymentForm, description: e.target.value })}
+            margin="normal"
+            required
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Категория платежа</InputLabel>
+            <Select
+              value={createPaymentForm.paidFor}
+              onChange={(e) => setCreatePaymentForm({ ...createPaymentForm, paidFor: e.target.value as 'PERFORMANCE' | 'DIPLOMAS_MEDALS' })}
+              label="Категория платежа"
+            >
+              <MenuItem value="PERFORMANCE">Участие</MenuItem>
+              <MenuItem value="DIPLOMAS_MEDALS">Дипломы и медали</MenuItem>
+            </Select>
+          </FormControl>
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="subtitle2" gutterBottom>
+            Способы оплаты
+          </Typography>
+          <TextField
+            fullWidth
+            label="Наличные"
+            type="number"
+            value={createPaymentForm.cash}
+            onChange={(e) => setCreatePaymentForm({ ...createPaymentForm, cash: e.target.value })}
+            margin="normal"
+            inputProps={{ min: 0, step: 0.01 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => fillPaymentMethodTotal('cash')}
+                    edge="end"
+                    size="small"
+                    title="Заполнить всей суммой"
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TextField
+            fullWidth
+            label="Карта"
+            type="number"
+            value={createPaymentForm.card}
+            onChange={(e) => setCreatePaymentForm({ ...createPaymentForm, card: e.target.value })}
+            margin="normal"
+            inputProps={{ min: 0, step: 0.01 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => fillPaymentMethodTotal('card')}
+                    edge="end"
+                    size="small"
+                    title="Заполнить всей суммой"
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <TextField
+            fullWidth
+            label="Перевод"
+            type="number"
+            value={createPaymentForm.transfer}
+            onChange={(e) => setCreatePaymentForm({ ...createPaymentForm, transfer: e.target.value })}
+            margin="normal"
+            inputProps={{ min: 0, step: 0.01 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => fillPaymentMethodTotal('transfer')}
+                    edge="end"
+                    size="small"
+                    title="Заполнить всей суммой"
+                  >
+                    <ContentCopyIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Итого: {formatCurrency(
+                parseFloat(createPaymentForm.cash || '0') +
+                parseFloat(createPaymentForm.card || '0') +
+                parseFloat(createPaymentForm.transfer || '0')
+              )}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setCreatePaymentDialogOpen(false);
+            setCreatePaymentForm({
+              description: '',
+              paidFor: 'PERFORMANCE',
+              cash: '',
+              card: '',
+              transfer: '',
+            });
+          }}>
+            Отмена
+          </Button>
+          <Button
+            onClick={handleCreatePayment}
+            variant="contained"
+            disabled={creatingPayment}
+            startIcon={creatingPayment ? <CircularProgress size={20} /> : <AddIcon />}
+          >
+            {creatingPayment ? 'Создание...' : 'Создать'}
           </Button>
         </DialogActions>
       </Dialog>

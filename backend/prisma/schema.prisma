@@ -94,8 +94,9 @@ model Event {
   createdAt                    DateTime    @default(now())
   updatedAt                    DateTime    @updatedAt
 
-  registrations Registration[]
-  eventPrices   EventPrice[]
+  registrations     Registration[]
+  eventPrices       EventPrice[]
+  accountingEntries AccountingEntry[]
 
   @@index([status])
 }
@@ -338,8 +339,9 @@ model RegistrationParticipant {
 
 model AccountingEntry {
   id               Int           @id @default(autoincrement())
-  registrationId   Int
-  collectiveId     Int
+  registrationId   Int?
+  collectiveId     Int?
+  eventId          Int? // Event ID for manual payments
   amount           Decimal       @db.Decimal(10, 2) // Amount AFTER discount
   discountAmount   Decimal       @default(0) @db.Decimal(10, 2) // Discount amount, only for PERFORMANCE
   discountPercent  Decimal       @default(0) @db.Decimal(5, 2) // Discount percentage, only for PERFORMANCE
@@ -347,14 +349,17 @@ model AccountingEntry {
   paidFor          PaidFor
   paymentGroupId   String? // UUID for grouping
   paymentGroupName String?
+  description      String? // Description for manual payments
   deletedAt        DateTime? // Soft delete
   createdAt        DateTime      @default(now())
 
-  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  collective   Collective   @relation(fields: [collectiveId], references: [id])
+  registration Registration? @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  collective   Collective?   @relation(fields: [collectiveId], references: [id])
+  event        Event?        @relation(fields: [eventId], references: [id])
 
   @@index([registrationId])
   @@index([collectiveId])
+  @@index([eventId])
   @@index([paymentGroupId])
   @@index([deletedAt])
   @@index([paidFor])
