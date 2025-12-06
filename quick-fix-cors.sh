@@ -33,8 +33,13 @@ cd "$PROJECT_DIR"
 
 print_info "Quick CORS Fix - Updating and restarting backend..."
 
+# Исправить проблему с Git ownership если нужно
+git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+
 # Обновить код
-git pull origin main
+git pull origin main || {
+    print_error "Git pull failed, but continuing with current code..."
+}
 
 # Остановить backend
 pkill -f "node.*dist/index.js" 2>/dev/null || true

@@ -39,6 +39,8 @@ echo ""
 
 # 1. Обновить код
 print_info "1. Updating code from GitHub..."
+# Исправить проблему с Git ownership если нужно
+git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
 git pull origin main || print_warning "Git pull failed, continuing with current code"
 echo ""
 
