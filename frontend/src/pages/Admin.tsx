@@ -428,6 +428,10 @@ export const Admin: React.FC = () => {
   >([]);
   const [priceLoading, setPriceLoading] = useState(false);
   const [priceSaving, setPriceSaving] = useState(false);
+  const [importErrors, setImportErrors] = useState<any[]>([]);
+  const [selectedEventForErrors, setSelectedEventForErrors] = useState<number | ''>('');
+  const [editingError, setEditingError] = useState<any | null>(null);
+  const [errorEditFormData, setErrorEditFormData] = useState<any>({});
 
   useEffect(() => {
     if (tabValue === 0) {
@@ -435,6 +439,8 @@ export const Admin: React.FC = () => {
     } else if (tabValue === 1) {
       fetchEvents();
     } else if (tabValue === 2) {
+      // Ошибки импорта загружаются при выборе события
+    } else if (tabValue === 3) {
       fetchSettings();
     }
   }, [tabValue]);
