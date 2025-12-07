@@ -434,6 +434,10 @@ export const Admin: React.FC = () => {
   const [editingError, setEditingError] = useState<any | null>(null);
   const [errorEditFormData, setErrorEditFormData] = useState<any>({});
   const [importErrorsLoading, setImportErrorsLoading] = useState(false);
+  const [errorEditDisciplines, setErrorEditDisciplines] = useState<any[]>([]);
+  const [errorEditNominations, setErrorEditNominations] = useState<any[]>([]);
+  const [errorEditAges, setErrorEditAges] = useState<any[]>([]);
+  const [errorEditCategories, setErrorEditCategories] = useState<any[]>([]);
 
   useEffect(() => {
     if (tabValue === 0) {
