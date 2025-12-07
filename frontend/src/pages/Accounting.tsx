@@ -462,51 +462,55 @@ export const Accounting: React.FC = () => {
       {selectedEventId && (
         <>
           <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Итого получено
                   </Typography>
-                  <Typography variant="h6">{formatCurrency(summary.grandTotal + summary.totalDiscount)}</Typography>
+                  <Typography variant="h6"h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                    {formatCurrency(summary.grandTotal + summary.totalDiscount)}
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     После откатов
                   </Typography>
-                  <Typography variant="h6">{formatCurrency(summary.grandTotal)}</Typography>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                    {formatCurrency(summary.grandTotal)}
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Выданные откаты
                   </Typography>
-                  <Typography variant="h6" color="error">
+                  <Typography variant="h6" color="error" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     {formatCurrency(summary.totalDiscount)}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} sm={12} md={3}>
               <Card>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary">
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 0.5 }}>
                     Выступления
                   </Typography>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Наличные: {formatCurrency(summary.performance.cash)}
                   </Typography>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Карта: {formatCurrency(summary.performance.card)}
                   </Typography>
-                  <Typography variant="body2">
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Перевод: {formatCurrency(summary.performance.transfer)}
                   </Typography>
                 </CardContent>
