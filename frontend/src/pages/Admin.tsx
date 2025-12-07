@@ -1075,6 +1075,10 @@ export const Admin: React.FC = () => {
                 Выберите мероприятие для просмотра записей с ошибками импорта
               </Typography>
             </Box>
+          ) : importErrorsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
           ) : (
             <TableContainer component={Paper}>
               <Table>
