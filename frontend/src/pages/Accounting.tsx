@@ -936,10 +936,21 @@ export const Accounting: React.FC = () => {
                 />
               </Grid>
             )}
-            {selectedEntry && (
+            {selectedEntry && !selectedEntry.registrationId && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Название платежа"
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  helperText="Для ручных платежей"
+                />
+              </Grid>
+            )}
+            {selectedEntry && selectedEntry.registrationId && (
               <Grid item xs={12}>
                 <Typography variant="body2" color="text.secondary">
-                  Коллектив: {selectedEntry.collective?.name}
+                  Коллектив: {selectedEntry.collective?.name || '-'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Регистрация: {selectedEntry.registration?.danceName || '-'}
