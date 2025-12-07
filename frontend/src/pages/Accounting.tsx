@@ -87,6 +87,7 @@ export const Accounting: React.FC = () => {
     method: 'CASH' as 'CASH' | 'CARD' | 'TRANSFER',
     paidFor: 'PERFORMANCE' as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
     discountPercent: '',
+    description: '',
   });
   const [createPaymentDialogOpen, setCreatePaymentDialogOpen] = useState(false);
   const [createPaymentForm, setCreatePaymentForm] = useState({
@@ -155,6 +156,7 @@ export const Accounting: React.FC = () => {
       method: entry.method,
       paidFor: entry.paidFor,
       discountPercent: entry.discountPercent ? String(entry.discountPercent) : '',
+      description: entry.description || '',
     });
     setEditDialogOpen(true);
   };
@@ -164,13 +166,18 @@ export const Accounting: React.FC = () => {
 
     try {
       const payload: any = {
-        amount: parseInt(editFormData.amount),
+        amount: parseFloat(editFormData.amount),
         method: editFormData.method,
         paidFor: editFormData.paidFor,
       };
 
       if (editFormData.paidFor === 'PERFORMANCE' && editFormData.discountPercent) {
         payload.discountPercent = parseFloat(editFormData.discountPercent);
+      }
+
+      // Для ручных платежей (без registrationId) можно редактировать description
+      if (!selectedEntry.registrationId && editFormData.description) {
+        payload.description = editFormData.description;
       }
 
       await api.put(`/api/accounting/${selectedEntry.id}`, payload);
@@ -592,7 +599,7 @@ export const Accounting: React.FC = () => {
                                 )}
                               </>
                             )}
-                            {user?.role === 'ACCOUNTANT' && performanceEntries.length > 0 && (
+                            {(user?.role === 'ACCOUNTANT' || user?.role === 'ADMIN') && performanceEntries.length > 0 && (
                               <Button
                                 variant="outlined"
                                 size="small"
@@ -752,20 +759,17 @@ export const Accounting: React.FC = () => {
                               >
                                 <ReceiptIcon fontSize="small" />
                               </IconButton>
-                              {user?.role === 'ADMIN' && (
+                              {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                 <>
                                   <IconButton size="small" onClick={() => handleEdit(entry)}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                  {user?.role === 'ADMIN' && (
+                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
                                 </>
-                              )}
-                              {user?.role === 'ACCOUNTANT' && (
-                                <IconButton size="small" onClick={() => handleEdit(entry)}>
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
                               )}
                             </Box>
                           </TableCell>
@@ -838,20 +842,17 @@ export const Accounting: React.FC = () => {
                               >
                                 <ReceiptIcon fontSize="small" />
                               </IconButton>
-                              {user?.role === 'ADMIN' && (
+                              {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                 <>
                                   <IconButton size="small" onClick={() => handleEdit(entry)}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
-                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
+                                  {user?.role === 'ADMIN' && (
+                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
                                 </>
-                              )}
-                              {user?.role === 'ACCOUNTANT' && (
-                                <IconButton size="small" onClick={() => handleEdit(entry)}>
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
                               )}
                             </Box>
                           </TableCell>

@@ -287,6 +287,7 @@ router.put(
     body('amount').optional().isFloat({ min: 0 }),
     body('method').optional().isIn(['CASH', 'CARD', 'TRANSFER']),
     body('paidFor').optional().isIn(['PERFORMANCE', 'DIPLOMAS_MEDALS']),
+    body('description').optional().isString(),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -316,6 +317,14 @@ router.put(
         if (req.body.paidFor === 'DIPLOMAS_MEDALS') {
           updateData.discountAmount = 0;
           updateData.discountPercent = 0;
+        }
+      }
+      // Allow editing description for manual payments (entries without registrationId)
+      if (req.body.description !== undefined && !entry.registrationId) {
+        updateData.description = req.body.description;
+        // Also update paymentGroupName if it matches the old description
+        if (entry.paymentGroupName === entry.description) {
+          updateData.paymentGroupName = req.body.description;
         }
       }
       if (req.body.diplomasList !== undefined && entry.registrationId) {
