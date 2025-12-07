@@ -1059,7 +1059,13 @@ export const Admin: React.FC = () => {
             </FormControl>
           </Box>
 
-          {selectedEventForErrors && (
+          {!selectedEventForErrors ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                Выберите мероприятие для просмотра записей с ошибками импорта
+              </Typography>
+            </Box>
+          ) : (
             <TableContainer component={Paper}>
               <Table>
                 <TableHead>
@@ -1079,7 +1085,7 @@ export const Admin: React.FC = () => {
                   {importErrors.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} align="center">
-                        Нет записей с ошибками импорта
+                        Нет записей с ошибками импорта для выбранного мероприятия
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1102,13 +1108,13 @@ export const Admin: React.FC = () => {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <IconButton size="small" onClick={() => handleEditImportError(error)}>
+                          <IconButton size="small" onClick={() => handleEditImportError(error)} title="Редактировать">
                             <EditIcon fontSize="small" />
                           </IconButton>
-                          <IconButton size="small" onClick={() => handleImportError(error.id)} color="primary">
+                          <IconButton size="small" onClick={() => handleImportError(error.id)} color="primary" title="Импортировать">
                             <CheckCircleIcon fontSize="small" />
                           </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteImportError(error.id)} color="error">
+                          <IconButton size="small" onClick={() => handleDeleteImportError(error.id)} color="error" title="Удалить">
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         </TableCell>

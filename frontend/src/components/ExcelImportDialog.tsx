@@ -152,10 +152,13 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
       }
 
       if (response.data.imported > 0) {
-        showSuccess(`Успешно импортировано ${response.data.imported} регистраций`);
-      }
-      if (response.data.skipped > 0) {
-        showError(`Пропущено ${response.data.skipped} регистраций из-за ошибок`);
+        if (response.data.skipped > 0) {
+          showSuccess(`Импортировано ${response.data.imported} регистраций. ${response.data.skipped} записей с ошибками сохранены в разделе "Ошибки импорта" для последующего исправления.`);
+        } else {
+          showSuccess(`Успешно импортировано ${response.data.imported} регистраций`);
+        }
+      } else if (response.data.skipped > 0) {
+        showSuccess(`${response.data.skipped} записей с ошибками сохранены в разделе "Ошибки импорта" для последующего исправления.`);
       }
 
       if (onImportComplete) {
