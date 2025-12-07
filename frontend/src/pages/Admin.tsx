@@ -696,6 +696,76 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const fetchImportErrors = async (eventId: number) => {
+    try {
+      const response = await api.get(`/api/events/${eventId}/import-errors`);
+      setImportErrors(response.data);
+    } catch (error: any) {
+      console.error('Error fetching import errors:', error);
+      showError(error.response?.data?.error || 'Ошибка загрузки ошибок импорта');
+    }
+  };
+
+  const handleImportError = async (errorId: number) => {
+    if (!selectedEventForErrors) return;
+    try {
+      await api.post(`/api/events/${selectedEventForErrors}/import-errors/${errorId}/import`);
+      showSuccess('Запись успешно импортирована');
+      fetchImportErrors(selectedEventForErrors);
+    } catch (error: any) {
+      console.error('Error importing error:', error);
+      showError(error.response?.data?.error || 'Ошибка импорта записи');
+    }
+  };
+
+  const handleDeleteImportError = async (errorId: number) => {
+    if (!selectedEventForErrors) return;
+    try {
+      await api.delete(`/api/events/${selectedEventForErrors}/import-errors/${errorId}`);
+      showSuccess('Запись с ошибкой удалена');
+      fetchImportErrors(selectedEventForErrors);
+    } catch (error: any) {
+      console.error('Error deleting import error:', error);
+      showError(error.response?.data?.error || 'Ошибка удаления записи');
+    }
+  };
+
+  const handleEditImportError = (error: any) => {
+    setEditingError(error);
+    setErrorEditFormData({
+      collective: error.rowData.collective || '',
+      danceName: error.rowData.danceName || '',
+      participantsCount: error.rowData.participantsCount || 0,
+      disciplineName: error.rowData.parsed?.disciplineName || '',
+      nominationName: error.rowData.parsed?.nominationName || '',
+      ageName: error.rowData.parsed?.ageName || '',
+      categoryName: error.rowData.parsed?.categoryName || '',
+    });
+  };
+
+  const handleSaveErrorEdit = async () => {
+    if (!editingError || !selectedEventForErrors) return;
+    try {
+      await api.put(`/api/events/${selectedEventForErrors}/import-errors/${editingError.id}`, {
+        parsed: {
+          disciplineName: errorEditFormData.disciplineName,
+          nominationName: errorEditFormData.nominationName,
+          ageName: errorEditFormData.ageName,
+          categoryName: errorEditFormData.categoryName,
+        },
+        collective: errorEditFormData.collective,
+        danceName: errorEditFormData.danceName,
+        participantsCount: errorEditFormData.participantsCount,
+      });
+      showSuccess('Запись обновлена');
+      setEditingError(null);
+      fetchImportErrors(selectedEventForErrors);
+    } catch (error: any) {
+      console.error('Error updating import error:', error);
+      showError(error.response?.data?.error || 'Ошибка обновления записи');
+    }
+  };
+
   const handleDeleteEventClick = (eventId: number) => {
     setEventToDelete(eventId);
     setDeleteEventConfirmOpen(true);
