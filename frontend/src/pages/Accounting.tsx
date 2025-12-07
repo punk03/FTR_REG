@@ -56,6 +56,7 @@ export const Accounting: React.FC = () => {
   const [sortBy, setSortBy] = useState<'createdAt' | 'amount'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [accountingData, setAccountingData] = useState<any>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -184,6 +185,16 @@ export const Accounting: React.FC = () => {
       console.error('Error deleting entry:', error);
       showError(error.response?.data?.error || 'Ошибка удаления');
     }
+  };
+
+  const toggleGroup = (groupId: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupId)) {
+      newExpanded.delete(groupId);
+    } else {
+      newExpanded.add(groupId);
+    }
+    setExpandedGroups(newExpanded);
   };
 
   const handleDiscountClick = (groupId: string) => {
@@ -317,30 +328,43 @@ export const Accounting: React.FC = () => {
   const grouped = accountingData?.grouped || {};
   const ungrouped = accountingData?.ungrouped || [];
 
-  // Объединить все платежи в один массив
-  const allEntries: any[] = [];
-  
-  // Добавить все записи из групп
-  Object.values(grouped).forEach((groupEntries: any) => {
-    if (Array.isArray(groupEntries)) {
-      allEntries.push(...groupEntries);
-    }
+  // Подготовить данные для отображения: группы и одиночные записи
+  const groupedArray = Object.entries(grouped).map(([groupId, entries]: [string, any]) => {
+    const groupEntries = Array.isArray(entries) ? entries : [];
+    const totalAmount = groupEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+    const performanceEntries = groupEntries.filter((e: any) => e.paidFor === 'PERFORMANCE');
+    const totalDiscount = performanceEntries.reduce((sum: number, e: any) => sum + Number(e.discountAmount), 0);
+    const firstEntry = groupEntries[0];
+    
+    return {
+      type: 'group' as const,
+      groupId,
+      paymentGroupName: firstEntry?.paymentGroupName || `Группа ${groupId.slice(0, 8)}`,
+      createdAt: firstEntry?.createdAt || new Date(),
+      totalAmount,
+      totalDiscount,
+      entries: groupEntries,
+      hasPerformance: performanceEntries.length > 0,
+    };
   });
-  
-  // Добавить одиночные записи
-  allEntries.push(...ungrouped);
 
-  // Сортировка
-  const sortedEntries = [...allEntries].sort((a: any, b: any) => {
+  // Одиночные записи
+  const ungroupedArray = ungrouped.map((entry: any) => ({
+    type: 'single' as const,
+    entry,
+  }));
+
+  // Объединить и отсортировать
+  const allItems = [...groupedArray, ...ungroupedArray].sort((a: any, b: any) => {
     let aValue: any;
     let bValue: any;
     
     if (sortBy === 'createdAt') {
-      aValue = new Date(a.createdAt).getTime();
-      bValue = new Date(b.createdAt).getTime();
+      aValue = new Date(a.type === 'group' ? a.createdAt : a.entry.createdAt).getTime();
+      bValue = new Date(b.type === 'group' ? b.createdAt : b.entry.createdAt).getTime();
     } else if (sortBy === 'amount') {
-      aValue = Number(a.amount);
-      bValue = Number(b.amount);
+      aValue = a.type === 'group' ? a.totalAmount : Number(a.entry.amount);
+      bValue = b.type === 'group' ? b.totalAmount : Number(b.entry.amount);
     } else {
       return 0;
     }
@@ -570,7 +594,7 @@ export const Accounting: React.FC = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                   <CircularProgress />
                 </Box>
-              ) : sortedEntries.length === 0 ? (
+              ) : allItems.length === 0 ? (
                 <Typography sx={{ p: 3 }}>Нет платежей</Typography>
               ) : (
                 <TableContainer>
@@ -605,74 +629,206 @@ export const Accounting: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {sortedEntries.map((entry: any) => {
-                        const paymentName = entry.paymentGroupName || entry.description || `Платеж #${entry.id}`;
-                        const paymentTime = formatTime(entry.createdAt);
-                        
-                        return (
-                          <TableRow key={entry.id}>
-                            <TableCell>
-                              <Box>
-                                <Typography variant="body2">{paymentName}</Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                  {paymentTime}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
-                            <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
-                            <TableCell>{entry.registration?.danceName || '-'}</TableCell>
-                            <TableCell>{formatCurrency(entry.amount)}</TableCell>
-                            <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
-                            <TableCell>
-                              {entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'}
-                            </TableCell>
-                            <TableCell>
-                              {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
-                            </TableCell>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                <IconButton
-                                  size="small"
-                                  onClick={async () => {
-                                    try {
-                                      const event = events.find((e) => e.id === selectedEventId);
-                                      await generatePaymentStatement(
-                                        [entry],
-                                        event?.name || 'Неизвестное мероприятие'
-                                      );
-                                      showSuccess('Выписка успешно сформирована');
-                                    } catch (error: any) {
-                                      console.error('Error generating payment statement:', error);
-                                      showError(error.message || 'Ошибка при создании выписки');
-                                    }
-                                  }}
-                                  title="Сформировать выписку"
-                                >
-                                  <ReceiptIcon fontSize="small" />
-                                </IconButton>
-                                {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                                  <>
-                                    <IconButton size="small" onClick={() => handleEdit(entry)}>
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                    {user?.role === 'ADMIN' && (
-                                      <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
-                                        <DeleteIcon fontSize="small" />
+                      {allItems
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                        .map((item: any) => {
+                          if (item.type === 'group') {
+                            const isExpanded = expandedGroups.has(item.groupId);
+                            const paymentTime = formatTime(item.createdAt);
+                            
+                            return (
+                              <React.Fragment key={item.groupId}>
+                                <TableRow>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => toggleGroup(item.groupId)}
+                                        sx={{ p: 0.5 }}
+                                      >
+                                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                       </IconButton>
+                                      <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                          {item.paymentGroupName}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                          {paymentTime}
+                                        </Typography>
+                                      </Box>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell colSpan={3}>
+                                    <Box sx={{ display: 'flex', gap: 2 }}>
+                                      <Typography variant="body2" color="text.secondary">
+                                        Сумма: {formatCurrency(item.totalAmount)}
+                                      </Typography>
+                                      {item.hasPerformance && (
+                                        <Typography variant="body2" color="text.secondary">
+                                          Откат: {formatCurrency(item.totalDiscount)}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell>{formatCurrency(item.totalAmount)}</TableCell>
+                                  <TableCell>{formatCurrency(item.totalDiscount)}</TableCell>
+                                  <TableCell>-</TableCell>
+                                  <TableCell>-</TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                      {user?.role === 'ADMIN' && (
+                                        <Button
+                                          variant="outlined"
+                                          size="small"
+                                          onClick={() => handleEditGroupNameClick(item.groupId)}
+                                          sx={{ minWidth: 'auto', px: 1 }}
+                                        >
+                                          Редактировать
+                                        </Button>
+                                      )}
+                                      {item.hasPerformance && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                        <Button
+                                          variant="outlined"
+                                          size="small"
+                                          color="secondary"
+                                          onClick={() => handleDiscountClick(item.groupId)}
+                                          sx={{ minWidth: 'auto', px: 1 }}
+                                        >
+                                          Откат
+                                        </Button>
+                                      )}
+                                      <IconButton
+                                        size="small"
+                                        onClick={async () => {
+                                          try {
+                                            const event = events.find((e) => e.id === selectedEventId);
+                                            await generatePaymentStatement(
+                                              item.entries,
+                                              event?.name || 'Неизвестное мероприятие',
+                                              item.paymentGroupName
+                                            );
+                                            showSuccess('Выписка успешно сформирована');
+                                          } catch (error: any) {
+                                            console.error('Error generating payment statement:', error);
+                                            showError(error.message || 'Ошибка при создании выписки');
+                                          }
+                                        }}
+                                        title="Сформировать выписку"
+                                      >
+                                        <ReceiptIcon fontSize="small" />
+                                      </IconButton>
+                                    </Box>
+                                  </TableCell>
+                                </TableRow>
+                                {isExpanded && item.entries.map((entry: any) => (
+                                  <TableRow key={entry.id} sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+                                    <TableCell sx={{ pl: 6 }}>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {entry.registration?.danceName || entry.description || '-'}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
+                                    <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
+                                    <TableCell>{entry.registration?.danceName || '-'}</TableCell>
+                                    <TableCell>{formatCurrency(entry.amount)}</TableCell>
+                                    <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
+                                    <TableCell>
+                                      {entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                        {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                          <>
+                                            <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                              <EditIcon fontSize="small" />
+                                            </IconButton>
+                                            {user?.role === 'ADMIN' && (
+                                              <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                                <DeleteIcon fontSize="small" />
+                                              </IconButton>
+                                            )}
+                                          </>
+                                        )}
+                                      </Box>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </React.Fragment>
+                            );
+                          } else {
+                            // Одиночная запись
+                            const entry = item.entry;
+                            const paymentName = entry.description || `Платеж #${entry.id}`;
+                            const paymentTime = formatTime(entry.createdAt);
+                            
+                            return (
+                              <TableRow key={entry.id}>
+                                <TableCell>
+                                  <Box>
+                                    <Typography variant="body2">{paymentName}</Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                      {paymentTime}
+                                    </Typography>
+                                  </Box>
+                                </TableCell>
+                                <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
+                                <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
+                                <TableCell>{entry.registration?.danceName || '-'}</TableCell>
+                                <TableCell>{formatCurrency(entry.amount)}</TableCell>
+                                <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
+                                <TableCell>
+                                  {entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'}
+                                </TableCell>
+                                <TableCell>
+                                  {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
+                                </TableCell>
+                                <TableCell>
+                                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                    <IconButton
+                                      size="small"
+                                      onClick={async () => {
+                                        try {
+                                          const event = events.find((e) => e.id === selectedEventId);
+                                          await generatePaymentStatement(
+                                            [entry],
+                                            event?.name || 'Неизвестное мероприятие'
+                                          );
+                                          showSuccess('Выписка успешно сформирована');
+                                        } catch (error: any) {
+                                          console.error('Error generating payment statement:', error);
+                                          showError(error.message || 'Ошибка при создании выписки');
+                                        }
+                                      }}
+                                      title="Сформировать выписку"
+                                    >
+                                      <ReceiptIcon fontSize="small" />
+                                    </IconButton>
+                                    {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                      <>
+                                        <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                          <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        {user?.role === 'ADMIN' && (
+                                          <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                            <DeleteIcon fontSize="small" />
+                                          </IconButton>
+                                        )}
+                                      </>
                                     )}
-                                  </>
-                                )}
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          }
+                        })}
                     </TableBody>
                   </Table>
                   <TablePagination
                     component="div"
-                    count={sortedEntries.length}
+                    count={allItems.length}
                     page={page}
                     onPageChange={(_, newPage) => setPage(newPage)}
                     rowsPerPage={rowsPerPage}
