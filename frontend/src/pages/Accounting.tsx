@@ -392,7 +392,7 @@ export const Accounting: React.FC = () => {
   };
 
   return (
-    <Box sx={{ px: { xs: 1, sm: 2 }, pb: 2 }}>
+    <Box sx={{ px: { xs: 0.5, sm: 2 }, pb: 2, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
       <Box sx={{ 
         display: 'flex', 
         flexDirection: { xs: 'column', sm: 'row' },
@@ -461,7 +461,7 @@ export const Accounting: React.FC = () => {
 
       {selectedEventId && (
         <>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 3, width: '100%' }}>
             <Grid item xs={6} sm={6} md={3}>
               <Card>
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
@@ -622,9 +622,9 @@ export const Accounting: React.FC = () => {
             </Grid>
           </Grid>
 
-          <Paper>
-            <Box sx={{ p: { xs: 1, sm: 2 } }}>
-              <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Все платежи</Typography>
+          <Paper sx={{ overflow: 'hidden' }}>
+            <Box sx={{ p: { xs: 1, sm: 2 }, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+              <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>Все платежи</Typography>
               
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -643,25 +643,32 @@ export const Accounting: React.FC = () => {
                         const paymentTime = formatTime(item.createdAt);
                         
                         return (
-                          <Card key={item.groupId} sx={{ mb: 2 }}>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                                <Box sx={{ flex: 1 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                    <IconButton
-                                      size="small"
-                                      onClick={() => toggleGroup(item.groupId)}
-                                      sx={{ p: 0.5 }}
+                          <Card key={item.groupId} sx={{ mb: 2, width: '100%', maxWidth: '100%' }}>
+                            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                              <Box sx={{ mb: 1, width: '100%' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 0.5 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => toggleGroup(item.groupId)}
+                                    sx={{ p: 0.5, flexShrink: 0 }}
+                                  >
+                                    {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                  </IconButton>
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography 
+                                      variant="body1" 
+                                      sx={{ 
+                                        fontWeight: 500, 
+                                        fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                                        wordBreak: 'break-word'
+                                      }}
                                     >
-                                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                                    </IconButton>
-                                    <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
                                       {item.paymentGroupName}
                                     </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
+                                      {paymentTime}
+                                    </Typography>
                                   </Box>
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', ml: 4 }}>
-                                    {paymentTime}
-                                  </Typography>
                                 </Box>
                               </Box>
                               
@@ -736,42 +743,50 @@ export const Accounting: React.FC = () => {
                               </Box>
                               
                               <Collapse in={isExpanded}>
-                                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider', width: '100%' }}>
                                   {item.entries.map((entry: any) => (
-                                    <Card key={entry.id} variant="outlined" sx={{ mb: 1, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
-                                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                                    <Card key={entry.id} variant="outlined" sx={{ mb: 1, backgroundColor: 'rgba(0, 0, 0, 0.02)', width: '100%' }}>
+                                      <CardContent sx={{ p: { xs: 1, sm: 1.5 }, '&:last-child': { pb: { xs: 1, sm: 1.5 } } }}>
+                                        <Typography 
+                                          variant="body2" 
+                                          sx={{ 
+                                            fontWeight: 500, 
+                                            mb: 0.5,
+                                            fontSize: { xs: '0.85rem', sm: '0.875rem' },
+                                            wordBreak: 'break-word'
+                                          }}
+                                        >
                                           {entry.registration?.danceName || entry.description || '-'}
                                         </Typography>
-                                        <Stack spacing={0.5}>
+                                        <Stack spacing={0.5} sx={{ width: '100%' }}>
                                           {entry.registrationId && (
                                             <>
-                                              <Typography variant="caption" color="text.secondary">
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                                 Номер: {formatRegistrationNumber(entry.registration || null)}
                                               </Typography>
-                                              <Typography variant="caption" color="text.secondary">
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                                 Коллектив: {entry.collective?.name || '-'}
                                               </Typography>
                                             </>
                                           )}
-                                          <Typography variant="caption" color="text.secondary">
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                                             Сумма: {formatCurrency(entry.amount)}
                                           </Typography>
                                           {entry.discountAmount > 0 && (
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                                               Откат: {formatCurrency(entry.discountAmount)}
                                             </Typography>
                                           )}
-                                          <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                                             <Chip 
                                               label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
                                               size="small" 
-                                              sx={{ height: 20, fontSize: '0.7rem' }}
+                                              sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
                                             />
                                             <Chip 
                                               label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
                                               size="small" 
-                                              sx={{ height: 20, fontSize: '0.7rem' }}
+                                              sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
                                             />
                                           </Stack>
                                           <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
@@ -806,49 +821,56 @@ export const Accounting: React.FC = () => {
                         const paymentTime = formatTime(entry.createdAt);
                         
                         return (
-                          <Card key={entry.id} sx={{ mb: 2 }}>
-                            <CardContent>
-                              <Box sx={{ mb: 0.5 }}>
-                                <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
+                          <Card key={entry.id} sx={{ mb: 2, width: '100%', maxWidth: '100%' }}>
+                            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                              <Box sx={{ mb: 0.5, width: '100%' }}>
+                                <Typography 
+                                  variant="body1" 
+                                  sx={{ 
+                                    fontWeight: 500, 
+                                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                                    wordBreak: 'break-word'
+                                  }}
+                                >
                                   {paymentName}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
                                   {paymentTime}
                                 </Typography>
                               </Box>
                               
-                              <Stack spacing={0.5} sx={{ mt: 1 }}>
+                              <Stack spacing={0.5} sx={{ mt: 1, width: '100%' }}>
                                 {entry.registrationId && (
                                   <>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                       Номер: {formatRegistrationNumber(entry.registration || null)}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                       Коллектив: {entry.collective?.name || '-'}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                       Танец: {entry.registration?.danceName || '-'}
                                     </Typography>
                                   </>
                                 )}
-                                <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
                                   Сумма: {formatCurrency(entry.amount)}
                                 </Typography>
                                 {entry.discountAmount > 0 && (
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
                                     Откат: {formatCurrency(entry.discountAmount)}
                                   </Typography>
                                 )}
-                                <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
                                   <Chip 
                                     label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
                                     size="small" 
-                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                    sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
                                   />
                                   <Chip 
                                     label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
                                     size="small" 
-                                    sx={{ height: 20, fontSize: '0.7rem' }}
+                                    sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
                                   />
                                 </Stack>
                                 <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
