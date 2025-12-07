@@ -937,8 +937,8 @@ export const Accounting: React.FC = () => {
                 </Box>
               ) : (
                 // Десктопная версия с таблицей
-                <TableContainer>
-                  <Table>
+                <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: 650 }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>
