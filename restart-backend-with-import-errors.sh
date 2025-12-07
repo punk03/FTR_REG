@@ -11,11 +11,19 @@ cd "$PROJECT_DIR"
 echo "[INFO] Restarting backend with import errors support..."
 
 # Check if backend process is running
-BACKEND_PID=$(pgrep -f "node.*dist/index.js" || echo "")
+BACKEND_PIDS=$(pgrep -f "node.*dist/index.js" || echo "")
 
-if [ -n "$BACKEND_PID" ]; then
-    echo "[INFO] Stopping existing backend process (PID: $BACKEND_PID)..."
-    kill "$BACKEND_PID" || true
+if [ -n "$BACKEND_PIDS" ]; then
+    echo "[INFO] Stopping existing backend processes..."
+    echo "$BACKEND_PIDS" | while read pid; do
+        if [ -n "$pid" ]; then
+            echo "[INFO] Killing process $pid..."
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
+    sleep 3
+    # Force kill if still running
+    pkill -9 -f "node.*dist/index.js" 2>/dev/null || true
     sleep 2
 fi
 
@@ -33,12 +41,23 @@ if [ -f .env ]; then
         # Check if table exists
         TABLE_EXISTS=$(psql "$DATABASE_URL" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ImportError');" 2>/dev/null || echo "f")
         if [ "$TABLE_EXISTS" = "f" ]; then
-            echo "[INFO] ImportError table does not exist. Applying migration..."
-            if [ -f "$PROJECT_DIR/backend/prisma/migrations/add_import_errors.sql" ]; then
-                psql "$DATABASE_URL" -f "$PROJECT_DIR/backend/prisma/migrations/add_import_errors.sql" || echo "[WARNING] Migration failed, continuing..."
-            else
-                echo "[WARNING] Migration file not found. Please apply migration manually."
-            fi
+            echo "[INFO] ImportError table does not exist. Creating table..."
+            # Create table directly
+            psql "$DATABASE_URL" <<EOF || echo "[WARNING] Migration failed, continuing..."
+CREATE TABLE IF NOT EXISTS "ImportError" (
+    "id" SERIAL NOT NULL,
+    "eventId" INTEGER NOT NULL,
+    "rowNumber" INTEGER NOT NULL,
+    "rowData" TEXT NOT NULL,
+    "errors" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ImportError_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "ImportError_eventId_idx" ON "ImportError"("eventId");
+ALTER TABLE "ImportError" ADD CONSTRAINT "ImportError_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EOF
+            echo "[SUCCESS] ImportError table created"
         else
             echo "[SUCCESS] ImportError table exists"
         fi

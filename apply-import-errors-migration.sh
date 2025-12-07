@@ -10,10 +10,39 @@ MIGRATION_FILE="$PROJECT_DIR/backend/prisma/migrations/add_import_errors.sql"
 
 echo "[INFO] Applying ImportError migration..."
 
-# Check if migration file exists
+# Create migration file if it doesn't exist
 if [ ! -f "$MIGRATION_FILE" ]; then
-    echo "[ERROR] Migration file not found: $MIGRATION_FILE"
-    exit 1
+    echo "[INFO] Creating migration file..."
+    mkdir -p "$PROJECT_DIR/backend/prisma/migrations"
+    cat > "$MIGRATION_FILE" <<'EOF'
+-- Migration: Add ImportError model
+CREATE TABLE IF NOT EXISTS "ImportError" (
+    "id" SERIAL NOT NULL,
+    "eventId" INTEGER NOT NULL,
+    "rowNumber" INTEGER NOT NULL,
+    "rowData" TEXT NOT NULL,
+    "errors" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ImportError_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX IF NOT EXISTS "ImportError_eventId_idx" ON "ImportError"("eventId");
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'ImportError_eventId_fkey'
+    ) THEN
+        ALTER TABLE "ImportError" 
+        ADD CONSTRAINT "ImportError_eventId_fkey" 
+        FOREIGN KEY ("eventId") 
+        REFERENCES "Event"("id") 
+        ON DELETE CASCADE 
+        ON UPDATE CASCADE;
+    END IF;
+END $$;
+EOF
+    echo "[SUCCESS] Migration file created"
 fi
 
 # Try to get database connection details from .env
