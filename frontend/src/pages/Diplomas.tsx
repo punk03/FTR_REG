@@ -8,7 +8,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   FormControl,
   InputLabel,
   Select,
@@ -38,17 +37,12 @@ import { formatRegistrationNumber } from '../utils/format';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 
-const ITEMS_PER_PAGE = 25;
-
 export const Diplomas: React.FC = () => {
   // const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
   const [registrations, setRegistrations] = useState<any[]>([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(ITEMS_PER_PAGE);
-  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [showPaid, setShowPaid] = useState(true);
@@ -91,15 +85,15 @@ export const Diplomas: React.FC = () => {
     if (selectedEventId) {
       fetchRegistrations();
     }
-  }, [selectedEventId, page, rowsPerPage, search, showPaid, showUnpaid, showPrinted, showDeleted]);
+  }, [selectedEventId, search, showPaid, showUnpaid, showPrinted, showDeleted]);
 
   const fetchRegistrations = async () => {
     setLoading(true);
     try {
       const params: any = {
         eventId: selectedEventId,
-        page: page + 1,
-        limit: rowsPerPage,
+        // Загружаем все записи для события за один запрос
+        limit: 100000,
         includeDeleted: showDeleted,
         deletedOnly: showDeleted && !showPaid && !showUnpaid,
       };
@@ -110,7 +104,6 @@ export const Diplomas: React.FC = () => {
 
       const response = await api.get('/api/diplomas', { params });
       setRegistrations(response.data.registrations || []);
-      setTotal(response.data.pagination?.total || 0);
     } catch (error) {
       console.error('Error fetching diplomas:', error);
     } finally {
@@ -255,7 +248,6 @@ export const Diplomas: React.FC = () => {
             label="Событие"
             onChange={(e) => {
               setSelectedEventId(e.target.value as number);
-              setPage(0);
             }}
           >
             {events.map((event) => (
@@ -460,19 +452,6 @@ export const Diplomas: React.FC = () => {
             })}
           </TableBody>
         </Table>
-        <TablePagination
-          component="div"
-          count={total}
-          page={page}
-          onPageChange={(_, newPage) => setPage(newPage)}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => {
-            setRowsPerPage(parseInt(e.target.value, 10));
-            setPage(0);
-          }}
-          rowsPerPageOptions={[10, 25, 50, 100]}
-          labelRowsPerPage="Записей на странице:"
-        />
       </TableContainer>
 
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
