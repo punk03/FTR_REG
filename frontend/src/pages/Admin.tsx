@@ -433,6 +433,7 @@ export const Admin: React.FC = () => {
   const [selectedEventForErrors, setSelectedEventForErrors] = useState<number | ''>('');
   const [editingError, setEditingError] = useState<any | null>(null);
   const [errorEditFormData, setErrorEditFormData] = useState<any>({});
+  const [importErrorsLoading, setImportErrorsLoading] = useState(false);
 
   useEffect(() => {
     if (tabValue === 0) {
@@ -698,12 +699,16 @@ export const Admin: React.FC = () => {
   };
 
   const fetchImportErrors = async (eventId: number) => {
+    setImportErrorsLoading(true);
     try {
       const response = await api.get(`/api/events/${eventId}/import-errors`);
-      setImportErrors(response.data);
+      setImportErrors(response.data || []);
     } catch (error: any) {
       console.error('Error fetching import errors:', error);
       showError(error.response?.data?.error || 'Ошибка загрузки ошибок импорта');
+      setImportErrors([]);
+    } finally {
+      setImportErrorsLoading(false);
     }
   };
 
