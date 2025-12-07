@@ -476,7 +476,7 @@ router.post('/:id/restore', authenticateToken, requireRole('ADMIN'), async (req:
 router.put(
   '/payment-group/:paymentGroupId/name',
   authenticateToken,
-  requireRole('ADMIN', 'ACCOUNTANT'),
+  requireRole('ADMIN', 'ACCOUNTANT'), // ADMIN and ACCOUNTANT can edit group names
   [body('name').notEmpty().withMessage('Name is required')],
   async (req: Request, res: Response): Promise<void> => {
     try {
