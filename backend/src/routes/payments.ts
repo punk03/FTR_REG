@@ -143,6 +143,7 @@ router.post(
 
         // Update registration if data provided
         // Обновляем регистрацию, если переданы данные, даже если некоторые поля пустые
+        // Это позволяет обновлять данные о дипломах/медалях даже без их оплаты
         if (regData) {
           const updateData: any = {
             participantsCount,
@@ -151,9 +152,13 @@ router.post(
             medalsCount,
           };
           
-          // Обновляем diplomasList только если он передан (может быть пустой строкой)
+          // Всегда обновляем diplomasList, если он передан в regData
+          // Может быть пустой строкой или null для очистки
           if (regData.diplomasList !== undefined) {
             updateData.diplomasList = regData.diplomasList || null;
+          } else {
+            // Если diplomasList не передан, но diplomasCount изменился, обновляем его
+            updateData.diplomasList = reg.diplomasList;
           }
           
           await prisma.registration.update({
