@@ -747,17 +747,22 @@ export const Admin: React.FC = () => {
   const handleSaveErrorEdit = async () => {
     if (!editingError || !selectedEventForErrors) return;
     try {
-      await api.put(`/api/events/${selectedEventForErrors}/import-errors/${editingError.id}`, {
+      const rowData = editingError.rowData;
+      const updatedRowData = {
+        ...rowData,
+        collective: errorEditFormData.collective,
+        danceName: errorEditFormData.danceName,
+        participantsCount: errorEditFormData.participantsCount,
         parsed: {
+          ...rowData.parsed,
           disciplineName: errorEditFormData.disciplineName,
           nominationName: errorEditFormData.nominationName,
           ageName: errorEditFormData.ageName,
           categoryName: errorEditFormData.categoryName,
         },
-        collective: errorEditFormData.collective,
-        danceName: errorEditFormData.danceName,
-        participantsCount: errorEditFormData.participantsCount,
-      });
+      };
+      
+      await api.put(`/api/events/${selectedEventForErrors}/import-errors/${editingError.id}`, updatedRowData);
       showSuccess('Запись обновлена');
       setEditingError(null);
       fetchImportErrors(selectedEventForErrors);
