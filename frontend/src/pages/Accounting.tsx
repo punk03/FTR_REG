@@ -55,7 +55,7 @@ export const Accounting: React.FC = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
   const [loading, setLoading] = useState(false);
@@ -665,20 +665,34 @@ export const Accounting: React.FC = () => {
                                 </Box>
                               </Box>
                               
-                              <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
-                                <Chip label={`Сумма: ${formatCurrency(item.totalAmount)}`} size="small" />
+                              <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                                <Chip 
+                                  label={`Сумма: ${formatCurrency(item.totalAmount)}`} 
+                                  size="small" 
+                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
+                                />
                                 {item.hasPerformance && (
-                                  <Chip label={`Откат: ${formatCurrency(item.totalDiscount)}`} size="small" color="secondary" />
+                                  <Chip 
+                                    label={`Откат: ${formatCurrency(item.totalDiscount)}`} 
+                                    size="small" 
+                                    color="secondary"
+                                    sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
+                                  />
                                 )}
                               </Stack>
                               
-                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1, width: '100%' }}>
                                 {user?.role === 'ADMIN' && (
                                   <Button
                                     variant="outlined"
                                     size="small"
                                     onClick={() => handleEditGroupNameClick(item.groupId)}
-                                    sx={{ fontSize: '0.75rem', px: 1 }}
+                                    sx={{ 
+                                      fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                      px: { xs: 0.75, sm: 1 },
+                                      py: { xs: 0.25, sm: 0.5 },
+                                      minWidth: 'auto'
+                                    }}
                                   >
                                     Редактировать
                                   </Button>
@@ -689,7 +703,12 @@ export const Accounting: React.FC = () => {
                                     size="small"
                                     color="secondary"
                                     onClick={() => handleDiscountClick(item.groupId)}
-                                    sx={{ fontSize: '0.75rem', px: 1 }}
+                                    sx={{ 
+                                      fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                      px: { xs: 0.75, sm: 1 },
+                                      py: { xs: 0.25, sm: 0.5 },
+                                      minWidth: 'auto'
+                                    }}
                                   >
                                     Откат
                                   </Button>
@@ -872,7 +891,7 @@ export const Accounting: React.FC = () => {
                         );
                       }
                     })}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, width: '100%', overflow: 'auto' }}>
                     <TablePagination
                       component="div"
                       count={allItems.length}
@@ -886,6 +905,11 @@ export const Accounting: React.FC = () => {
                       rowsPerPageOptions={[10, 25, 50, 100]}
                       labelRowsPerPage="На странице:"
                       labelDisplayedRows={({ from, to, count }) => `${from}-${to} из ${count}`}
+                      sx={{
+                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                        }
+                      }}
                     />
                   </Box>
                 </Box>
