@@ -46,6 +46,317 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
   }
 });
 
+// GET /api/events/:id/import-errors - должен быть ПЕРЕД /:id, чтобы Express правильно его обрабатывал
+router.get('/:id/import-errors', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = parseInt(req.params.id);
+    if (!eventId) {
+      res.status(400).json({ error: 'Invalid event ID' });
+      return;
+    }
+
+    const errors = await prisma.importError.findMany({
+      where: { eventId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(errors.map((err) => ({
+      id: err.id,
+      eventId: err.eventId,
+      rowNumber: err.rowNumber,
+      rowData: JSON.parse(err.rowData),
+      errors: JSON.parse(err.errors),
+      createdAt: err.createdAt,
+      updatedAt: err.updatedAt,
+    })));
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// POST /api/events/:id/import-errors/:errorId/import
+router.post('/:id/import-errors/:errorId/import', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const errorId = parseInt(req.params.errorId);
+    
+    if (!eventId || !errorId) {
+      res.status(400).json({ error: 'Invalid event ID or error ID' });
+      return;
+    }
+
+    const importError = await prisma.importError.findUnique({
+      where: { id: errorId },
+    });
+
+    if (!importError || importError.eventId !== eventId) {
+      res.status(404).json({ error: 'Import error not found' });
+      return;
+    }
+
+    const rowData = JSON.parse(importError.rowData);
+    const errors = JSON.parse(importError.errors);
+
+    // Проверяем, что ошибки исправлены
+    if (errors.length > 0 && !rowData.parsed?.disciplineId && !rowData.parsed?.disciplineName) {
+      res.status(400).json({ error: 'Please fix errors before importing' });
+      return;
+    }
+
+    // Загружаем справочники
+    const [disciplines, nominations, ages, categories] = await Promise.all([
+      prisma.discipline.findMany(),
+      prisma.nomination.findMany(),
+      prisma.age.findMany(),
+      prisma.category.findMany(),
+    ]);
+
+    // Находим ID для дисциплины, номинации, возраста, категории
+    let disciplineId: number | undefined;
+    if (rowData.parsed?.disciplineId) {
+      disciplineId = rowData.parsed.disciplineId;
+    } else if (rowData.parsed?.disciplineName) {
+      const discipline = disciplines.find((d) => d.name === rowData.parsed.disciplineName);
+      if (discipline) {
+        disciplineId = discipline.id;
+      } else {
+        res.status(400).json({ error: `Discipline "${rowData.parsed.disciplineName}" not found` });
+        return;
+      }
+    }
+
+    let nominationId: number | undefined;
+    if (rowData.parsed?.nominationId) {
+      nominationId = rowData.parsed.nominationId;
+    } else if (rowData.parsed?.nominationName) {
+      let nomination = nominations.find((n) => n.name === rowData.parsed.nominationName);
+      if (!nomination) {
+        nomination = await prisma.nomination.create({
+          data: { name: rowData.parsed.nominationName },
+        });
+      }
+      nominationId = nomination.id;
+    }
+
+    let ageId: number | undefined;
+    if (rowData.parsed?.ageId) {
+      ageId = rowData.parsed.ageId;
+    } else if (rowData.parsed?.ageName) {
+      const age = ages.find((a) => a.name === rowData.parsed.ageName);
+      if (age) {
+        ageId = age.id;
+      } else {
+        res.status(400).json({ error: `Age "${rowData.parsed.ageName}" not found` });
+        return;
+      }
+    }
+
+    let categoryId: number | undefined;
+    if (rowData.parsed?.categoryId) {
+      categoryId = rowData.parsed.categoryId;
+    } else if (rowData.parsed?.categoryName) {
+      const category = categories.find((c) => c.name === rowData.parsed.categoryName);
+      if (category) {
+        categoryId = category.id;
+      }
+    }
+
+    if (!disciplineId || !nominationId || !ageId) {
+      res.status(400).json({ error: 'Missing required fields: discipline, nomination, or age' });
+      return;
+    }
+
+    // Поиск или создание коллектива
+    let collective = await prisma.collective.findFirst({
+      where: { name: { equals: rowData.collective, mode: 'insensitive' } },
+    });
+
+    if (!collective) {
+      collective = await prisma.collective.create({
+        data: {
+          name: rowData.collective,
+          school: rowData.school,
+          contacts: rowData.contacts,
+          city: rowData.city,
+        },
+      });
+    }
+
+    // Парсинг участников из diplomasList
+    const { parseParticipants } = require('../services/registrationService');
+    const participantsResult = rowData.diplomasList ? parseParticipants(rowData.diplomasList) : { participants: [], count: 0 };
+
+    // Создание регистрации
+    const registration = await prisma.registration.create({
+      data: {
+        userId: (req as any).user.id,
+        eventId,
+        collectiveId: collective.id,
+        disciplineId,
+        nominationId,
+        ageId,
+        categoryId,
+        danceName: rowData.danceName || rowData.collective,
+        participantsCount: rowData.participantsCount || participantsResult.count || 0,
+        federationParticipantsCount: 0,
+        diplomasCount: participantsResult.count,
+        medalsCount: rowData.medalsCount || 0,
+        diplomasList: rowData.diplomasList,
+        duration: rowData.duration,
+        videoUrl: rowData.videoUrl,
+        blockNumber: rowData.parsed?.blockNumber,
+        agreement: true,
+        agreement2: true,
+        status: 'APPROVED',
+      },
+    });
+
+    // Добавление руководителей и тренеров
+    if (rowData.leaders) {
+      const leaderNames = rowData.leaders.split(',').map((n: string) => n.trim());
+      for (const name of leaderNames) {
+        if (name) {
+          let person = await prisma.person.findFirst({
+            where: { 
+              fullName: { equals: name, mode: 'insensitive' },
+              role: 'LEADER'
+            },
+          });
+
+          if (!person) {
+            person = await prisma.person.create({
+              data: { fullName: name, role: 'LEADER' },
+            });
+          }
+
+          await prisma.registrationLeader.upsert({
+            where: {
+              registrationId_personId: {
+                registrationId: registration.id,
+                personId: person.id,
+              },
+            },
+            update: {},
+            create: {
+              registrationId: registration.id,
+              personId: person.id,
+            },
+          });
+        }
+      }
+    }
+
+    if (rowData.trainers) {
+      const trainerNames = rowData.trainers.split(',').map((n: string) => n.trim());
+      for (const name of trainerNames) {
+        if (name) {
+          let person = await prisma.person.findFirst({
+            where: { 
+              fullName: { equals: name, mode: 'insensitive' },
+              role: 'TRAINER'
+            },
+          });
+
+          if (!person) {
+            person = await prisma.person.create({
+              data: { fullName: name, role: 'TRAINER' },
+            });
+          }
+
+          await prisma.registrationTrainer.upsert({
+            where: {
+              registrationId_personId: {
+                registrationId: registration.id,
+                personId: person.id,
+              },
+            },
+            update: {},
+            create: {
+              registrationId: registration.id,
+              personId: person.id,
+            },
+          });
+        }
+      }
+    }
+
+    // Удаляем запись с ошибкой после успешного импорта
+    await prisma.importError.delete({
+      where: { id: errorId },
+    });
+
+    res.json({ success: true, registration });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// PUT /api/events/:id/import-errors/:errorId
+router.put('/:id/import-errors/:errorId', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const errorId = parseInt(req.params.errorId);
+    
+    if (!eventId || !errorId) {
+      res.status(400).json({ error: 'Invalid event ID or error ID' });
+      return;
+    }
+
+    const importError = await prisma.importError.findUnique({
+      where: { id: errorId },
+    });
+
+    if (!importError || importError.eventId !== eventId) {
+      res.status(404).json({ error: 'Import error not found' });
+      return;
+    }
+
+    const rowData = JSON.parse(importError.rowData);
+    const updatedRowData = { ...rowData, ...req.body };
+
+    await prisma.importError.update({
+      where: { id: errorId },
+      data: {
+        rowData: JSON.stringify(updatedRowData),
+      },
+    });
+
+    res.json({ success: true, rowData: updatedRowData });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// DELETE /api/events/:id/import-errors/:errorId
+router.delete('/:id/import-errors/:errorId', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const errorId = parseInt(req.params.errorId);
+    
+    if (!eventId || !errorId) {
+      res.status(400).json({ error: 'Invalid event ID or error ID' });
+      return;
+    }
+
+    const importError = await prisma.importError.findUnique({
+      where: { id: errorId },
+    });
+
+    if (!importError || importError.eventId !== eventId) {
+      res.status(404).json({ error: 'Import error not found' });
+      return;
+    }
+
+    await prisma.importError.delete({
+      where: { id: errorId },
+    });
+
+    res.json({ success: true, message: 'Import error deleted' });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
 // GET /api/events/:id
 router.get('/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -401,36 +712,6 @@ router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: Reque
   }
 });
 
-// GET /api/events/:id/import-errors
-router.get('/:id/import-errors', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
-  try {
-    const eventId = parseInt(req.params.id);
-    if (!eventId) {
-      res.status(400).json({ error: 'Invalid event ID' });
-      return;
-    }
-
-    const errors = await prisma.importError.findMany({
-      where: { eventId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.json(errors.map((err) => ({
-      id: err.id,
-      eventId: err.eventId,
-      rowNumber: err.rowNumber,
-      rowData: JSON.parse(err.rowData),
-      errors: JSON.parse(err.errors),
-      createdAt: err.createdAt,
-      updatedAt: err.updatedAt,
-    })));
-  } catch (error) {
-    errorHandler(error as Error, req, res, () => {});
-  }
-});
-
-// POST /api/events/:id/import-errors/:errorId/import
-router.post('/:id/import-errors/:errorId/import', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
   try {
     const eventId = parseInt(req.params.id);
     const errorId = parseInt(req.params.errorId);

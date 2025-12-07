@@ -343,8 +343,8 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
               </TableContainer>
 
               {preview.some((r) => r.errors.length > 0) && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  Некоторые строки содержат ошибки. Они будут пропущены при импорте.
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Некоторые строки содержат ошибки. Они будут сохранены в разделе "Ошибки импорта" в настройках мероприятия для последующего исправления и импорта.
                 </Alert>
               )}
 
