@@ -468,7 +468,7 @@ export const Accounting: React.FC = () => {
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Итого получено
                   </Typography>
-                  <Typography variant="h6"h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                     {formatCurrency(summary.grandTotal + summary.totalDiscount)}
                   </Typography>
                 </CardContent>
