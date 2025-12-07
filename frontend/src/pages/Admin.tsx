@@ -701,11 +701,31 @@ export const Admin: React.FC = () => {
   const fetchImportErrors = async (eventId: number) => {
     setImportErrorsLoading(true);
     try {
+      console.log(`[Admin] Fetching import errors for eventId: ${eventId}`);
       const response = await api.get(`/api/events/${eventId}/import-errors`);
-      setImportErrors(response.data || []);
+      console.log(`[Admin] Received import errors:`, response.data);
+      
+      if (Array.isArray(response.data)) {
+        setImportErrors(response.data);
+        if (response.data.length === 0) {
+          console.log(`[Admin] No import errors found for eventId: ${eventId}`);
+        }
+      } else {
+        console.error('[Admin] Invalid response format:', response.data);
+        setImportErrors([]);
+        showError('Неверный формат ответа от сервера');
+      }
     } catch (error: any) {
-      console.error('Error fetching import errors:', error);
-      showError(error.response?.data?.error || 'Ошибка загрузки ошибок импорта');
+      console.error('[Admin] Error fetching import errors:', error);
+      console.error('[Admin] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+      });
+      
+      const errorMessage = error.response?.data?.error || error.message || 'Ошибка загрузки ошибок импорта';
+      showError(errorMessage);
       setImportErrors([]);
     } finally {
       setImportErrorsLoading(false);

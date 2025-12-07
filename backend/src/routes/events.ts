@@ -50,36 +50,73 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
 router.get('/:id/import-errors', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
   try {
     const eventId = parseInt(req.params.id);
-    if (!eventId) {
+    if (!eventId || isNaN(eventId)) {
       res.status(400).json({ error: 'Invalid event ID' });
       return;
     }
 
+    console.log(`[Import Errors] Fetching errors for eventId: ${eventId}`);
+
     try {
+      // Проверяем, существует ли модель в Prisma Client
+      if (!prisma.importError) {
+        console.error('[Import Errors] Prisma Client does not have importError model. Please run: npx prisma generate');
+        res.status(500).json({ error: 'ImportError model not available. Please regenerate Prisma Client.' });
+        return;
+      }
+
       const errors = await prisma.importError.findMany({
         where: { eventId },
         orderBy: { createdAt: 'desc' },
       });
 
-      res.json(errors.map((err) => ({
-        id: err.id,
-        eventId: err.eventId,
-        rowNumber: err.rowNumber,
-        rowData: JSON.parse(err.rowData),
-        errors: JSON.parse(err.errors),
-        createdAt: err.createdAt,
-        updatedAt: err.updatedAt,
-      })));
+      console.log(`[Import Errors] Found ${errors.length} errors for eventId: ${eventId}`);
+
+      res.json(errors.map((err) => {
+        try {
+          return {
+            id: err.id,
+            eventId: err.eventId,
+            rowNumber: err.rowNumber,
+            rowData: JSON.parse(err.rowData),
+            errors: JSON.parse(err.errors),
+            createdAt: err.createdAt,
+            updatedAt: err.updatedAt,
+          };
+        } catch (parseError) {
+          console.error(`[Import Errors] Error parsing error record ${err.id}:`, parseError);
+          return {
+            id: err.id,
+            eventId: err.eventId,
+            rowNumber: err.rowNumber,
+            rowData: {},
+            errors: ['Ошибка парсинга данных записи'],
+            createdAt: err.createdAt,
+            updatedAt: err.updatedAt,
+          };
+        }
+      }));
     } catch (dbError: any) {
+      console.error('[Import Errors] Database error:', dbError);
+      
       // Если таблица не существует, возвращаем пустой массив
-      if (dbError.code === '42P01' || dbError.message?.includes('does not exist')) {
+      if (dbError.code === '42P01' || dbError.message?.includes('does not exist') || dbError.message?.includes('relation') && dbError.message?.includes('does not exist')) {
         console.warn('[Import Errors] Table ImportError does not exist. Please run migration.');
         res.json([]);
         return;
       }
+      
+      // Если модель не найдена в Prisma
+      if (dbError.message?.includes('Unknown arg') || dbError.message?.includes('does not exist')) {
+        console.error('[Import Errors] Prisma model error:', dbError.message);
+        res.status(500).json({ error: 'ImportError model not found. Please run: npx prisma generate' });
+        return;
+      }
+      
       throw dbError;
     }
   } catch (error) {
+    console.error('[Import Errors] Unexpected error:', error);
     errorHandler(error as Error, req, res, () => {});
   }
 });
