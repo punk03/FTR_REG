@@ -55,20 +55,30 @@ router.get('/:id/import-errors', authenticateToken, requireRole('ADMIN'), async 
       return;
     }
 
-    const errors = await prisma.importError.findMany({
-      where: { eventId },
-      orderBy: { createdAt: 'desc' },
-    });
+    try {
+      const errors = await prisma.importError.findMany({
+        where: { eventId },
+        orderBy: { createdAt: 'desc' },
+      });
 
-    res.json(errors.map((err) => ({
-      id: err.id,
-      eventId: err.eventId,
-      rowNumber: err.rowNumber,
-      rowData: JSON.parse(err.rowData),
-      errors: JSON.parse(err.errors),
-      createdAt: err.createdAt,
-      updatedAt: err.updatedAt,
-    })));
+      res.json(errors.map((err) => ({
+        id: err.id,
+        eventId: err.eventId,
+        rowNumber: err.rowNumber,
+        rowData: JSON.parse(err.rowData),
+        errors: JSON.parse(err.errors),
+        createdAt: err.createdAt,
+        updatedAt: err.updatedAt,
+      })));
+    } catch (dbError: any) {
+      // Если таблица не существует, возвращаем пустой массив
+      if (dbError.code === '42P01' || dbError.message?.includes('does not exist')) {
+        console.warn('[Import Errors] Table ImportError does not exist. Please run migration.');
+        res.json([]);
+        return;
+      }
+      throw dbError;
+    }
   } catch (error) {
     errorHandler(error as Error, req, res, () => {});
   }
