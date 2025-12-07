@@ -455,16 +455,13 @@ export const Admin: React.FC = () => {
     }
   }, [tabValue]);
 
-  // Отдельный useEffect для автоматической загрузки ошибок при открытии вкладки
+  // Отдельный useEffect для автоматической загрузки ошибок при открытии вкладки "Ошибки импорта"
   useEffect(() => {
-    if (tabValue === 2 && selectedEventForErrors && events.length > 0) {
-      // Небольшая задержка, чтобы убедиться, что события загружены
-      const timer = setTimeout(() => {
-        fetchImportErrors(selectedEventForErrors);
-      }, 100);
-      return () => clearTimeout(timer);
+    if (tabValue === 2 && selectedEventForErrors) {
+      // Загружаем ошибки при открытии вкладки, если мероприятие уже выбрано
+      fetchImportErrors(selectedEventForErrors);
     }
-  }, [tabValue, selectedEventForErrors, events.length]);
+  }, [tabValue]);
 
   const fetchUsers = async () => {
     setLoading(true);
