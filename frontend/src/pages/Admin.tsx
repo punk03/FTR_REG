@@ -1238,7 +1238,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Дисциплина</InputLabel>
+                    <InputLabel shrink={!!errorEditFormData.disciplineId}>Дисциплина</InputLabel>
                     <Select
                       value={errorEditFormData.disciplineId || ''}
                       label="Дисциплина"
@@ -1266,7 +1266,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Номинация</InputLabel>
+                    <InputLabel shrink={!!errorEditFormData.nominationId}>Номинация</InputLabel>
                     <Select
                       value={errorEditFormData.nominationId || ''}
                       label="Номинация"
@@ -1294,7 +1294,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Возраст</InputLabel>
+                    <InputLabel shrink={!!errorEditFormData.ageId}>Возраст</InputLabel>
                     <Select
                       value={errorEditFormData.ageId || ''}
                       label="Возраст"
@@ -1322,7 +1322,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Категория</InputLabel>
+                    <InputLabel shrink={!!errorEditFormData.categoryId}>Категория</InputLabel>
                     <Select
                       value={errorEditFormData.categoryId || ''}
                       label="Категория"
