@@ -86,32 +86,177 @@ wait_for_key() {
 }
 
 update_repository() {
-    print_info "Обновление репозитория..."
+    # Тихая версия для автоматического вызова в других функциях
+    cd "$PROJECT_DIR" 2>/dev/null || return 0
+    
+    if [ ! -d ".git" ]; then
+        return 0
+    fi
+    
+    git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+    
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+        git stash save "Auto-stash before update $(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+    fi
+    
+    git pull origin "$BRANCH" 2>&1 >/dev/null || true
+}
+
+update_and_apply() {
+    print_section "Обновление репозитория и применение правок"
+    
+    if [ ! -d "$PROJECT_DIR" ]; then
+        print_error "Проект не найден. Выполните установку сначала."
+        wait_for_key
+        return 1
+    fi
+    
     cd "$PROJECT_DIR"
     
     # Проверяем, что это git репозиторий
     if [ ! -d ".git" ]; then
-        print_warning "Директория не является git репозиторием, пропускаем обновление"
-        return 0
+        print_error "Директория не является git репозиторием"
+        wait_for_key
+        return 1
     fi
     
-    # Исправляем проблему с Git ownership если нужно
+    print_info "Шаг 1: Исправление проблем с Git ownership..."
     git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
     
-    # Сохраняем изменения если есть
+    print_info "Шаг 2: Проверка текущего статуса..."
     if [ -n "$(git status --porcelain)" ]; then
-        print_info "Обнаружены незакоммиченные изменения, сохраняем в stash..."
-        git stash save "Auto-stash before update $(date +%Y%m%d_%H%M%S)" || true
+        print_warning "Обнаружены незакоммиченные изменения"
+        echo -e "${YELLOW}Что делать с незакоммиченными изменениями?${NC}"
+        echo -e "  ${CYAN}1)${NC} Сохранить в stash и продолжить"
+        echo -e "  ${CYAN}2)${NC} Отменить изменения (git reset --hard)"
+        echo -e "  ${CYAN}3)${NC} Отменить обновление"
+        echo -e "\n${YELLOW}Выберите действие (1-3): ${NC}"
+        read -r stash_choice
+        
+        case $stash_choice in
+            1)
+                print_info "Сохранение изменений в stash..."
+                git stash save "Auto-stash before update $(date +%Y%m%d_%H%M%S)" || {
+                    print_error "Не удалось сохранить изменения в stash"
+                    wait_for_key
+                    return 1
+                }
+                print_success "Изменения сохранены в stash"
+                ;;
+            2)
+                print_warning "Отмена всех незакоммиченных изменений..."
+                git reset --hard HEAD || {
+                    print_error "Не удалось отменить изменения"
+                    wait_for_key
+                    return 1
+                }
+                print_success "Изменения отменены"
+                ;;
+            3)
+                print_info "Обновление отменено"
+                wait_for_key
+                return 0
+                ;;
+            *)
+                print_error "Неверный выбор"
+                wait_for_key
+                return 1
+                ;;
+        esac
     fi
     
-    # Получаем обновления
+    print_info "Шаг 3: Получение обновлений из репозитория..."
+    if git fetch origin "$BRANCH" 2>&1; then
+        print_success "Обновления получены"
+    else
+        print_error "Не удалось получить обновления"
+        wait_for_key
+        return 1
+    fi
+    
+    print_info "Шаг 4: Применение обновлений..."
     if git pull origin "$BRANCH" 2>&1; then
         print_success "Репозиторий обновлен"
-        return 0
     else
-        print_warning "Не удалось обновить репозиторий (возможно, нет изменений или проблемы с сетью)"
-        return 0  # Продолжаем работу даже если обновление не удалось
+        print_error "Не удалось применить обновления"
+        print_info "Возможны конфликты. Проверьте статус: git status"
+        wait_for_key
+        return 1
     fi
+    
+    print_info "Шаг 5: Обновление зависимостей backend..."
+    cd "$PROJECT_DIR/backend"
+    if npm install 2>&1; then
+        print_success "Зависимости backend обновлены"
+    else
+        print_warning "Ошибка обновления зависимостей backend (продолжаем)"
+    fi
+    
+    print_info "Шаг 6: Обновление зависимостей frontend..."
+    cd "$PROJECT_DIR/frontend"
+    if npm install 2>&1; then
+        print_success "Зависимости frontend обновлены"
+    else
+        print_warning "Ошибка обновления зависимостей frontend (продолжаем)"
+    fi
+    
+    print_info "Шаг 7: Генерация Prisma Client..."
+    cd "$PROJECT_DIR/backend"
+    if npx prisma generate 2>&1; then
+        print_success "Prisma Client сгенерирован"
+    else
+        print_warning "Ошибка генерации Prisma Client (продолжаем)"
+    fi
+    
+    print_info "Шаг 8: Применение миграций базы данных..."
+    if [ -f .env ]; then
+        source .env
+        if [ -n "${DATABASE_URL:-}" ]; then
+            if npx prisma migrate deploy 2>&1; then
+                print_success "Миграции применены"
+            else
+                print_warning "Ошибка применения миграций (продолжаем)"
+            fi
+        else
+            print_warning "DATABASE_URL не установлен, пропускаем миграции"
+        fi
+    else
+        print_warning "Файл .env не найден, пропускаем миграции"
+    fi
+    
+    print_success "Обновление и применение правок завершено!"
+    echo -e "\n${YELLOW}Хотите перезапустить сервисы? (y/n): ${NC}"
+    read -r restart_choice
+    if [[ "$restart_choice" =~ ^[Yy]$ ]]; then
+        print_info "Перезапуск backend и frontend..."
+        cd "$PROJECT_DIR"
+        
+        # Остановка
+        pkill -9 -f "node.*dist/index.js" 2>/dev/null || true
+        pkill -9 -f "serve.*frontend" 2>/dev/null || true
+        sleep 2
+        
+        # Сборка и запуск backend
+        cd backend
+        if npm run build 2>&1; then
+            nohup node dist/index.js > backend.log 2>&1 &
+            print_success "Backend перезапущен"
+        else
+            print_error "Ошибка сборки backend"
+        fi
+        
+        # Сборка и запуск frontend
+        cd ../frontend
+        if npm run build 2>&1; then
+            cd dist
+            nohup npx serve -s . -l 3000 --listen tcp://0.0.0.0:3000 > ../frontend.log 2>&1 &
+            print_success "Frontend перезапущен"
+        else
+            print_error "Ошибка сборки frontend"
+        fi
+    fi
+    
+    wait_for_key
 }
 
 ###############################################################################
@@ -952,12 +1097,13 @@ show_main_menu() {
     
     echo -e "${WHITE}${BOLD}Главное меню:${NC}\n"
     
-    echo -e "  ${CYAN}1)${NC} Установка и обновление"
-    echo -e "  ${CYAN}2)${NC} Управление базой данных"
-    echo -e "  ${CYAN}3)${NC} Управление Backend"
-    echo -e "  ${CYAN}4)${NC} Управление Frontend"
-    echo -e "  ${CYAN}5)${NC} Диагностика"
-    echo -e "  ${CYAN}6)${NC} Быстрые исправления"
+    echo -e "  ${CYAN}1)${NC} Обновить репозиторий и применить правки"
+    echo -e "  ${CYAN}2)${NC} Установка и обновление"
+    echo -e "  ${CYAN}3)${NC} Управление базой данных"
+    echo -e "  ${CYAN}4)${NC} Управление Backend"
+    echo -e "  ${CYAN}5)${NC} Управление Frontend"
+    echo -e "  ${CYAN}6)${NC} Диагностика"
+    echo -e "  ${CYAN}7)${NC} Быстрые исправления"
     echo -e "  ${CYAN}0)${NC} Выход"
     
     echo -e "\n${YELLOW}Выберите пункт меню: ${NC}"
@@ -1059,6 +1205,9 @@ main() {
         
         case $choice in
             1)
+                update_and_apply
+                ;;
+            2)
                 while true; do
                     show_install_menu
                     read -r sub_choice
@@ -1071,7 +1220,7 @@ main() {
                     esac
                 done
                 ;;
-            2)
+            3)
                 while true; do
                     show_database_menu
                     read -r sub_choice
@@ -1084,7 +1233,7 @@ main() {
                     esac
                 done
                 ;;
-            3)
+            4)
                 while true; do
                     show_backend_menu
                     read -r sub_choice
@@ -1099,7 +1248,7 @@ main() {
                     esac
                 done
                 ;;
-            4)
+            5)
                 while true; do
                     show_frontend_menu
                     read -r sub_choice
@@ -1114,7 +1263,7 @@ main() {
                     esac
                 done
                 ;;
-            5)
+            6)
                 while true; do
                     show_diagnostics_menu
                     read -r sub_choice
@@ -1128,7 +1277,7 @@ main() {
                     esac
                 done
                 ;;
-            6)
+            7)
                 while true; do
                     show_fixes_menu
                     read -r sub_choice
