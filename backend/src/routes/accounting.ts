@@ -203,11 +203,8 @@ router.post(
         return;
       }
 
-      // Generate payment group ID for manual payments
-      const { v4: uuidv4 } = require('uuid');
-      const paymentGroupId = uuidv4();
-      const paymentGroupName = description;
-
+      // Manual payments should NOT have paymentGroupId - they are individual entries
+      // Each payment method creates a separate independent entry
       const entries = [];
 
       // Create entry for cash payment
@@ -221,8 +218,8 @@ router.post(
           discountPercent: 0,
           method: 'CASH' as const,
           paidFor: paidFor as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
-          paymentGroupId,
-          paymentGroupName,
+          paymentGroupId: null,
+          paymentGroupName: null,
           description,
         });
       }
@@ -238,8 +235,8 @@ router.post(
           discountPercent: 0,
           method: 'CARD' as const,
           paidFor: paidFor as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
-          paymentGroupId,
-          paymentGroupName,
+          paymentGroupId: null,
+          paymentGroupName: null,
           description,
         });
       }
@@ -255,8 +252,8 @@ router.post(
           discountPercent: 0,
           method: 'TRANSFER' as const,
           paidFor: paidFor as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
-          paymentGroupId,
-          paymentGroupName,
+          paymentGroupId: null,
+          paymentGroupName: null,
           description,
         });
       }
@@ -272,7 +269,6 @@ router.post(
       res.json({
         message: 'Manual payment entries created successfully',
         entries: createdEntries,
-        paymentGroupId,
         totalAmount,
       });
     } catch (error) {
