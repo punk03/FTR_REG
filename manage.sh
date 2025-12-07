@@ -676,6 +676,137 @@ fix_frontend_env() {
     restart_frontend
 }
 
+fix_frontend() {
+    print_section "Исправление проблем Frontend"
+    
+    print_info "Остановка всех процессов frontend..."
+    pkill -9 -f "serve.*frontend" 2>/dev/null || true
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    sleep 2
+    
+    print_info "Проверка файла serve.json..."
+    cd "$PROJECT_DIR/frontend"
+    if [ ! -f serve.json ]; then
+        print_info "Создание serve.json для SPA routing..."
+        cat > serve.json <<'EOF'
+{
+  "rewrites": [
+    { "source": "**", "destination": "/index.html" }
+  ]
+}
+EOF
+        print_success "serve.json создан"
+    fi
+    
+    print_info "Проверка переменных окружения..."
+    if [ ! -f .env ]; then
+        print_info "Создание .env..."
+        echo "VITE_API_URL=http://95.71.125.8:3001" > .env
+    fi
+    
+    print_info "Пересборка frontend..."
+    build_frontend
+    
+    print_info "Запуск frontend..."
+    start_frontend
+}
+
+fix_accounting_route() {
+    print_section "Исправление роута Accounting"
+    
+    print_info "Обновление кода из репозитория..."
+    cd "$PROJECT_DIR"
+    git pull origin main || print_warning "Не удалось обновить код"
+    
+    print_info "Пересборка backend..."
+    build_backend
+    
+    print_info "Перезапуск backend..."
+    restart_backend
+}
+
+diagnose_frontend() {
+    print_section "Диагностика Frontend"
+    
+    echo -e "${BOLD}Процессы:${NC}"
+    FRONTEND_PIDS=$(pgrep -f "serve.*frontend" || echo "")
+    if [ -n "$FRONTEND_PIDS" ]; then
+        echo "$FRONTEND_PIDS" | while read -r pid; do
+            print_success "Frontend процесс найден (PID: $pid)"
+            ps -p "$pid" -o pid,ppid,cmd --no-headers | sed 's/^/   /'
+        done
+    else
+        print_error "Frontend процесс не найден"
+    fi
+    
+    echo -e "\n${BOLD}Порты:${NC}"
+    if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+        print_success "Порт 3000 открыт"
+        lsof -i :3000 | grep LISTEN
+    else
+        print_error "Порт 3000 не слушается"
+    fi
+    
+    echo -e "\n${BOLD}Файлы:${NC}"
+    cd "$PROJECT_DIR/frontend"
+    if [ -d "dist" ]; then
+        print_success "Директория dist существует"
+        echo "   Размер: $(du -sh dist | cut -f1)"
+    else
+        print_error "Директория dist не найдена (нужна сборка)"
+    fi
+    
+    if [ -f "serve.json" ]; then
+        print_success "serve.json существует"
+    else
+        print_warning "serve.json не найден (может потребоваться для SPA routing)"
+    fi
+    
+    if [ -f ".env" ]; then
+        print_success ".env существует"
+        echo "   VITE_API_URL=$(grep VITE_API_URL .env | cut -d'=' -f2 || echo 'не установлен')"
+    else
+        print_warning ".env не найден"
+    fi
+    
+    echo -e "\n${BOLD}Доступность:${NC}"
+    if curl -s http://localhost:3000 > /dev/null 2>&1; then
+        print_success "Frontend отвечает на localhost:3000"
+    else
+        print_error "Frontend не отвечает на localhost:3000"
+    fi
+    
+    if curl -s http://95.71.125.8:3000 > /dev/null 2>&1; then
+        print_success "Frontend отвечает на 95.71.125.8:3000"
+    else
+        print_warning "Frontend не отвечает на 95.71.125.8:3000 (может быть проблема с сетью/файрволом)"
+    fi
+    
+    wait_for_key
+}
+
+test_frontend_connection() {
+    print_section "Тест подключения к Frontend"
+    
+    print_info "Проверка доступности frontend..."
+    if curl -s http://localhost:3000 > /dev/null 2>&1; then
+        print_success "Frontend доступен на localhost:3000"
+        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)
+        echo "   HTTP код: $HTTP_CODE"
+    else
+        print_error "Frontend недоступен на localhost:3000"
+    fi
+    
+    print_info "Проверка внешней доступности..."
+    if curl -s http://95.71.125.8:3000 > /dev/null 2>&1; then
+        print_success "Frontend доступен на 95.71.125.8:3000"
+    else
+        print_warning "Frontend недоступен на 95.71.125.8:3000"
+    fi
+    
+    wait_for_key
+}
+
 ###############################################################################
 # Main Menu
 ###############################################################################
@@ -759,6 +890,8 @@ show_diagnostics_menu() {
     
     echo -e "  ${CYAN}1)${NC} Проверить статус системы"
     echo -e "  ${CYAN}2)${NC} Тест подключения к Backend"
+    echo -e "  ${CYAN}3)${NC} Диагностика Frontend"
+    echo -e "  ${CYAN}4)${NC} Тест подключения к Frontend"
     echo -e "  ${CYAN}0)${NC} Назад"
     
     echo -e "\n${YELLOW}Выберите пункт меню: ${NC}"
@@ -772,6 +905,8 @@ show_fixes_menu() {
     echo -e "  ${CYAN}1)${NC} Исправить CORS"
     echo -e "  ${CYAN}2)${NC} Исправить Import Errors"
     echo -e "  ${CYAN}3)${NC} Исправить переменные окружения Frontend"
+    echo -e "  ${CYAN}4)${NC} Исправить проблемы Frontend"
+    echo -e "  ${CYAN}5)${NC} Исправить роут Accounting"
     echo -e "  ${CYAN}0)${NC} Назад"
     
     echo -e "\n${YELLOW}Выберите пункт меню: ${NC}"
@@ -850,6 +985,8 @@ main() {
                     case $sub_choice in
                         1) check_status ;;
                         2) test_backend_connection ;;
+                        3) diagnose_frontend ;;
+                        4) test_frontend_connection ;;
                         0) break ;;
                         *) print_error "Неверный выбор" ; sleep 1 ;;
                     esac
@@ -863,6 +1000,8 @@ main() {
                         1) fix_cors ;;
                         2) fix_import_errors ;;
                         3) fix_frontend_env ;;
+                        4) fix_frontend ;;
+                        5) fix_accounting_route ;;
                         0) break ;;
                         *) print_error "Неверный выбор" ; sleep 1 ;;
                     esac
