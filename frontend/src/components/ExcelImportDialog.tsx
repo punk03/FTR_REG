@@ -166,7 +166,37 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
       }
     } catch (error: any) {
       console.error('Error importing file:', error);
-      showError(error.response?.data?.error || 'Ошибка импорта файла');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+      });
+      
+      // Более детальное сообщение об ошибке
+      let errorMessage = 'Ошибка импорта файла';
+      
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+        if (error.response.data.details) {
+          errorMessage += ` (${error.response.data.details})`;
+        }
+        if (error.response.data.message) {
+          errorMessage += `. ${error.response.data.message}`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.status === 413) {
+        errorMessage = 'Файл слишком большой. Максимальный размер: 100 МБ';
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Неверный формат файла или отсутствуют обязательные параметры';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Внутренняя ошибка сервера. Проверьте логи сервера';
+      } else if (!error.response) {
+        errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение к интернету';
+      }
+      
+      showError(errorMessage);
     } finally {
       setImporting(false);
     }
