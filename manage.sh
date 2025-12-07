@@ -85,11 +85,41 @@ wait_for_key() {
     read -r
 }
 
+update_repository() {
+    print_info "Обновление репозитория..."
+    cd "$PROJECT_DIR"
+    
+    # Проверяем, что это git репозиторий
+    if [ ! -d ".git" ]; then
+        print_warning "Директория не является git репозиторием, пропускаем обновление"
+        return 0
+    fi
+    
+    # Исправляем проблему с Git ownership если нужно
+    git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+    
+    # Сохраняем изменения если есть
+    if [ -n "$(git status --porcelain)" ]; then
+        print_info "Обнаружены незакоммиченные изменения, сохраняем в stash..."
+        git stash save "Auto-stash before update $(date +%Y%m%d_%H%M%S)" || true
+    fi
+    
+    # Получаем обновления
+    if git pull origin "$BRANCH" 2>&1; then
+        print_success "Репозиторий обновлен"
+        return 0
+    else
+        print_warning "Не удалось обновить репозиторий (возможно, нет изменений или проблемы с сетью)"
+        return 0  # Продолжаем работу даже если обновление не удалось
+    fi
+}
+
 ###############################################################################
 # Installation Functions
 ###############################################################################
 
 check_dependencies() {
+    update_repository
     print_section "Проверка зависимостей"
     
     local missing=0
@@ -131,6 +161,7 @@ check_dependencies() {
 }
 
 install_system() {
+    update_repository
     print_section "Установка системы"
     
     if [ -d "$PROJECT_DIR" ]; then
@@ -187,6 +218,7 @@ install_system() {
 }
 
 update_system() {
+    update_repository
     print_section "Обновление системы"
     
     if [ ! -d "$PROJECT_DIR" ]; then
@@ -229,6 +261,7 @@ update_system() {
 ###############################################################################
 
 apply_migrations() {
+    update_repository
     print_section "Применение миграций базы данных"
     
     cd "$PROJECT_DIR/backend"
@@ -259,6 +292,7 @@ apply_migrations() {
 }
 
 apply_import_errors_migration() {
+    update_repository
     print_section "Применение миграции ImportError"
     
     cd "$PROJECT_DIR/backend"
@@ -324,6 +358,7 @@ SQL
 }
 
 generate_prisma_client() {
+    update_repository
     print_section "Генерация Prisma Client"
     
     cd "$PROJECT_DIR/backend"
@@ -344,6 +379,7 @@ generate_prisma_client() {
 ###############################################################################
 
 stop_backend() {
+    update_repository
     print_section "Остановка Backend"
     
     print_info "Поиск процессов backend..."
@@ -374,6 +410,7 @@ stop_backend() {
 }
 
 build_backend() {
+    update_repository
     print_section "Сборка Backend"
     
     cd "$PROJECT_DIR/backend"
@@ -390,6 +427,7 @@ build_backend() {
 }
 
 start_backend() {
+    update_repository
     print_section "Запуск Backend"
     
     cd "$PROJECT_DIR/backend"
@@ -429,6 +467,7 @@ start_backend() {
 }
 
 restart_backend() {
+    update_repository
     print_section "Перезапуск Backend"
     
     stop_backend
@@ -439,6 +478,7 @@ restart_backend() {
 }
 
 view_backend_logs() {
+    update_repository
     print_section "Логи Backend"
     
     if [ -f "$PROJECT_DIR/backend/backend.log" ]; then
@@ -455,6 +495,7 @@ view_backend_logs() {
 ###############################################################################
 
 stop_frontend() {
+    update_repository
     print_section "Остановка Frontend"
     
     print_info "Поиск процессов frontend..."
@@ -481,6 +522,7 @@ stop_frontend() {
 }
 
 build_frontend() {
+    update_repository
     print_section "Сборка Frontend"
     
     cd "$PROJECT_DIR/frontend"
@@ -497,6 +539,7 @@ build_frontend() {
 }
 
 start_frontend() {
+    update_repository
     print_section "Запуск Frontend"
     
     cd "$PROJECT_DIR/frontend"
@@ -537,6 +580,7 @@ start_frontend() {
 }
 
 restart_frontend() {
+    update_repository
     print_section "Перезапуск Frontend"
     
     stop_frontend
@@ -547,6 +591,7 @@ restart_frontend() {
 }
 
 view_frontend_logs() {
+    update_repository
     print_section "Логи Frontend"
     
     if [ -f "$PROJECT_DIR/frontend/frontend.log" ]; then
@@ -563,6 +608,7 @@ view_frontend_logs() {
 ###############################################################################
 
 check_status() {
+    update_repository
     print_section "Статус системы"
     
     echo -e "${BOLD}Backend:${NC}"
@@ -616,6 +662,7 @@ check_status() {
 }
 
 test_backend_connection() {
+    update_repository
     print_section "Тест подключения к Backend"
     
     print_info "Проверка health endpoint..."
@@ -634,6 +681,7 @@ test_backend_connection() {
 ###############################################################################
 
 fix_cors() {
+    update_repository
     print_section "Исправление CORS"
     
     print_info "Проверка конфигурации CORS в backend..."
@@ -650,6 +698,7 @@ fix_cors() {
 }
 
 fix_import_errors() {
+    update_repository
     print_section "Исправление функционала Import Errors"
     
     print_info "Шаг 1: Применение миграции базы данных..."
@@ -666,6 +715,7 @@ fix_import_errors() {
 }
 
 fix_frontend_env() {
+    update_repository
     print_section "Исправление переменных окружения Frontend"
     
     cd "$PROJECT_DIR/frontend"
@@ -686,6 +736,7 @@ fix_frontend_env() {
 }
 
 fix_frontend() {
+    update_repository
     print_section "Исправление проблем Frontend"
     
     print_info "Остановка всех процессов frontend..."
@@ -721,11 +772,10 @@ EOF
 }
 
 fix_accounting_route() {
+    update_repository
     print_section "Исправление роута Accounting"
     
-    print_info "Обновление кода из репозитория..."
-    cd "$PROJECT_DIR"
-    git pull origin main || print_warning "Не удалось обновить код"
+    print_info "Пересборка backend..."
     
     print_info "Пересборка backend..."
     build_backend
@@ -735,6 +785,7 @@ fix_accounting_route() {
 }
 
 diagnose_frontend() {
+    update_repository
     print_section "Диагностика Frontend"
     
     echo -e "${BOLD}Процессы:${NC}"
@@ -795,6 +846,7 @@ diagnose_frontend() {
 }
 
 test_frontend_connection() {
+    update_repository
     print_section "Тест подключения к Frontend"
     
     print_info "Проверка доступности frontend..."
