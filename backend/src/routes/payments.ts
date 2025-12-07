@@ -142,16 +142,23 @@ router.post(
         const medalsCount = regData?.medalsCount ?? reg.medalsCount;
 
         // Update registration if data provided
+        // Обновляем регистрацию, если переданы данные, даже если некоторые поля пустые
         if (regData) {
+          const updateData: any = {
+            participantsCount,
+            federationParticipantsCount,
+            diplomasCount,
+            medalsCount,
+          };
+          
+          // Обновляем diplomasList только если он передан (может быть пустой строкой)
+          if (regData.diplomasList !== undefined) {
+            updateData.diplomasList = regData.diplomasList || null;
+          }
+          
           await prisma.registration.update({
             where: { id: reg.id },
-            data: {
-              participantsCount,
-              federationParticipantsCount,
-              diplomasCount,
-              medalsCount,
-              diplomasList: regData.diplomasList,
-            },
+            data: updateData,
           });
         }
 

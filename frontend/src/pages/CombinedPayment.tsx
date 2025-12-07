@@ -410,7 +410,7 @@ export const CombinedPayment: React.FC = () => {
           federationParticipantsCount: parseInt(data.federationParticipantsCount || reg?.federationParticipantsCount || 0),
           medalsCount: parseInt(data.medalsCount || reg?.medalsCount || 0),
           diplomasCount,
-          diplomasList,
+          diplomasList: diplomasList || '', // Всегда передаём diplomasList, даже если пустой
         };
       });
 
