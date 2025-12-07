@@ -759,9 +759,12 @@ export const Accounting: React.FC = () => {
                               </React.Fragment>
                             );
                           } else {
-                            // Одиночная запись
+                            // Одиночная запись (включая ручные платежи)
                             const entry = item.entry;
-                            const paymentName = entry.description || `Платеж #${entry.id}`;
+                            // Для ручных платежей используем description, для остальных - paymentGroupName или номер
+                            const paymentName = entry.registrationId 
+                              ? (entry.paymentGroupName || `Платеж #${entry.id}`)
+                              : (entry.description || `Платеж #${entry.id}`);
                             const paymentTime = formatTime(entry.createdAt);
                             
                             return (
@@ -775,8 +778,18 @@ export const Accounting: React.FC = () => {
                                   </Box>
                                 </TableCell>
                                 <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
-                                <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
-                                <TableCell>{entry.registration?.danceName || '-'}</TableCell>
+                                <TableCell>
+                                  {entry.registrationId 
+                                    ? (entry.collective?.name || '-')
+                                    : (entry.description ? '-' : '-')
+                                  }
+                                </TableCell>
+                                <TableCell>
+                                  {entry.registrationId 
+                                    ? (entry.registration?.danceName || '-')
+                                    : '-'
+                                  }
+                                </TableCell>
                                 <TableCell>{formatCurrency(entry.amount)}</TableCell>
                                 <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
                                 <TableCell>
