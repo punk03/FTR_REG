@@ -1218,16 +1218,22 @@ export const Admin: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Коллектив"
-                    value={errorEditFormData.collective}
+                    value={errorEditFormData.collective || ''}
                     onChange={(e) => setErrorEditFormData({ ...errorEditFormData, collective: e.target.value })}
+                    InputLabelProps={{
+                      shrink: !!errorEditFormData.collective,
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Название танца"
-                    value={errorEditFormData.danceName}
+                    value={errorEditFormData.danceName || ''}
                     onChange={(e) => setErrorEditFormData({ ...errorEditFormData, danceName: e.target.value })}
+                    InputLabelProps={{
+                      shrink: !!errorEditFormData.danceName,
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
