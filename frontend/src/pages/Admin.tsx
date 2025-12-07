@@ -1228,36 +1228,99 @@ export const Admin: React.FC = () => {
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Дисциплина"
-                    value={errorEditFormData.disciplineName}
-                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, disciplineName: e.target.value })}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Дисциплина</InputLabel>
+                    <Select
+                      value={errorEditFormData.disciplineId || ''}
+                      label="Дисциплина"
+                      onChange={(e) => {
+                        const discipline = errorEditDisciplines.find((d: any) => String(d.id) === e.target.value);
+                        setErrorEditFormData({
+                          ...errorEditFormData,
+                          disciplineId: e.target.value,
+                          disciplineName: discipline ? discipline.name : '',
+                        });
+                      }}
+                    >
+                      {errorEditDisciplines.map((discipline: any) => (
+                        <MenuItem key={discipline.id} value={String(discipline.id)}>
+                          {discipline.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Номинация"
-                    value={errorEditFormData.nominationName}
-                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, nominationName: e.target.value })}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Номинация</InputLabel>
+                    <Select
+                      value={errorEditFormData.nominationId || ''}
+                      label="Номинация"
+                      onChange={(e) => {
+                        const nomination = errorEditNominations.find((n: any) => String(n.id) === e.target.value);
+                        setErrorEditFormData({
+                          ...errorEditFormData,
+                          nominationId: e.target.value,
+                          nominationName: nomination ? nomination.name : '',
+                        });
+                      }}
+                    >
+                      {errorEditNominations.map((nomination: any) => (
+                        <MenuItem key={nomination.id} value={String(nomination.id)}>
+                          {nomination.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Возраст"
-                    value={errorEditFormData.ageName}
-                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, ageName: e.target.value })}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Возраст</InputLabel>
+                    <Select
+                      value={errorEditFormData.ageId || ''}
+                      label="Возраст"
+                      onChange={(e) => {
+                        const age = errorEditAges.find((a: any) => String(a.id) === e.target.value);
+                        setErrorEditFormData({
+                          ...errorEditFormData,
+                          ageId: e.target.value,
+                          ageName: age ? age.name : '',
+                        });
+                      }}
+                    >
+                      {errorEditAges.map((age: any) => (
+                        <MenuItem key={age.id} value={String(age.id)}>
+                          {age.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Категория"
-                    value={errorEditFormData.categoryName}
-                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, categoryName: e.target.value })}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Категория</InputLabel>
+                    <Select
+                      value={errorEditFormData.categoryId || ''}
+                      label="Категория"
+                      onChange={(e) => {
+                        const category = errorEditCategories.find((c: any) => String(c.id) === e.target.value);
+                        setErrorEditFormData({
+                          ...errorEditFormData,
+                          categoryId: e.target.value,
+                          categoryName: category ? category.name : '',
+                        });
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>Не выбрано</em>
+                      </MenuItem>
+                      {errorEditCategories.map((category: any) => (
+                        <MenuItem key={category.id} value={String(category.id)}>
+                          {category.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
