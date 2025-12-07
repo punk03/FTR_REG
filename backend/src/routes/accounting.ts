@@ -64,12 +64,15 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
       throw error;
     });
 
-    // Group by paymentGroupId
+    // Group by paymentGroupId, but only for payments with registrationId (not manual payments)
+    // Manual payments (without registrationId) should always be ungrouped
     const grouped: Record<string, typeof entries> = {};
     const ungrouped: typeof entries = [];
 
     for (const entry of entries) {
-      if (entry.paymentGroupId) {
+      // Only group payments that have registrationId (i.e., are linked to registrations)
+      // Manual payments (without registrationId) should be displayed as individual entries
+      if (entry.paymentGroupId && entry.registrationId) {
         if (!grouped[entry.paymentGroupId]) {
           grouped[entry.paymentGroupId] = [];
         }
