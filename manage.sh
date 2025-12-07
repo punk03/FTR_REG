@@ -311,50 +311,125 @@ apply_import_errors_migration() {
         return 1
     fi
     
-    # Check if table exists
-    TABLE_EXISTS=$(psql "$DATABASE_URL" -tAc "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ImportError');" 2>/dev/null || echo "f")
+    print_info "Проверка существования таблицы ImportError..."
     
-    if [ "$TABLE_EXISTS" = "t" ]; then
-        print_success "Таблица ImportError уже существует"
-        wait_for_key
-        return 0
-    fi
+    # Используем Prisma для проверки и создания таблицы
+    # Создаем временный скрипт для выполнения через Prisma
+    TEMP_SCRIPT=$(mktemp)
+    cat > "$TEMP_SCRIPT" <<'NODEJS'
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function checkAndCreateTable() {
+  try {
+    // Проверяем существование таблицы
+    const result = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'ImportError'
+      ) as exists;
+    `;
     
-    print_info "Создание таблицы ImportError..."
-    if ! psql "$DATABASE_URL" <<'SQL'; then
-CREATE TABLE IF NOT EXISTS "ImportError" (
-    "id" SERIAL NOT NULL,
-    "eventId" INTEGER NOT NULL,
-    "rowNumber" INTEGER NOT NULL,
-    "rowData" TEXT NOT NULL,
-    "errors" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "ImportError_pkey" PRIMARY KEY ("id")
-);
-CREATE INDEX IF NOT EXISTS "ImportError_eventId_idx" ON "ImportError"("eventId");
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
+    if (result[0].exists) {
+      console.log('EXISTS');
+      return;
+    }
+    
+    // Создаем таблицу
+    await prisma.$executeRaw`
+      CREATE TABLE IF NOT EXISTS "ImportError" (
+        "id" SERIAL NOT NULL,
+        "eventId" INTEGER NOT NULL,
+        "rowNumber" INTEGER NOT NULL,
+        "rowData" TEXT NOT NULL,
+        "errors" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "ImportError_pkey" PRIMARY KEY ("id")
+      );
+    `;
+    
+    await prisma.$executeRaw`
+      CREATE INDEX IF NOT EXISTS "ImportError_eventId_idx" ON "ImportError"("eventId");
+    `;
+    
+    // Проверяем существование constraint перед созданием
+    const constraintExists = await prisma.$queryRaw`
+      SELECT EXISTS (
         SELECT 1 FROM pg_constraint 
         WHERE conname = 'ImportError_eventId_fkey'
-    ) THEN
+      ) as exists;
+    `;
+    
+    if (!constraintExists[0].exists) {
+      await prisma.$executeRaw`
         ALTER TABLE "ImportError" 
         ADD CONSTRAINT "ImportError_eventId_fkey" 
         FOREIGN KEY ("eventId") 
         REFERENCES "Event"("id") 
         ON DELETE CASCADE 
         ON UPDATE CASCADE;
-    END IF;
-END $$;
-SQL
-        print_error "Ошибка создания таблицы"
+      `;
+    }
+    
+    console.log('CREATED');
+  } catch (error) {
+    console.error('ERROR:', error.message);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+checkAndCreateTable();
+NODEJS
+    
+    # Выполняем скрипт через Node.js
+    if command -v node &> /dev/null; then
+        RESULT=$(node "$TEMP_SCRIPT" 2>&1)
+        rm -f "$TEMP_SCRIPT"
+        
+        if echo "$RESULT" | grep -q "EXISTS"; then
+            print_success "Таблица ImportError уже существует"
+            wait_for_key
+            return 0
+        elif echo "$RESULT" | grep -q "CREATED"; then
+            print_success "Таблица ImportError создана успешно"
+            wait_for_key
+            return 0
+        elif echo "$RESULT" | grep -q "ERROR"; then
+            print_error "Ошибка создания таблицы:"
+            echo "$RESULT" | grep "ERROR" | sed 's/ERROR: //'
+            
+            # Пробуем альтернативный способ через Prisma migrate
+            print_info "Пробуем альтернативный способ через Prisma migrate..."
+            if [ -f "prisma/migrations/add_import_errors.sql" ]; then
+                # Используем Prisma для выполнения SQL
+                npx prisma db execute --file prisma/migrations/add_import_errors.sql --schema prisma/schema.prisma 2>&1 || {
+                    print_error "Не удалось применить миграцию через Prisma"
+                    print_info "Попробуйте выполнить миграцию вручную через Prisma Studio или напрямую в базе данных"
+                    wait_for_key
+                    return 1
+                }
+                print_success "Миграция применена через Prisma"
+                wait_for_key
+                return 0
+            else
+                wait_for_key
+                return 1
+            fi
+        else
+            print_error "Неизвестная ошибка: $RESULT"
+            wait_for_key
+            return 1
+        fi
+    else
+        print_error "Node.js не найден. Необходим для применения миграции."
+        rm -f "$TEMP_SCRIPT"
         wait_for_key
         return 1
     fi
-    
-    print_success "Миграция применена!"
-    wait_for_key
 }
 
 generate_prisma_client() {
