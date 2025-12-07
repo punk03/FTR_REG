@@ -20,6 +20,14 @@ export const formatDateTime = (date: Date | string): string => {
 };
 
 /**
+ * Format time to HH:mm (Moscow timezone)
+ */
+export const formatTime = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return formatInTimeZone(dateObj, MOSCOW_TIMEZONE, 'HH:mm');
+};
+
+/**
  * Format currency (rubles, no decimals)
  */
 export const formatCurrency = (amount: number): string => {
