@@ -1106,15 +1106,15 @@ export const Admin: React.FC = () => {
                     importErrors.map((error) => (
                       <TableRow key={error.id}>
                         <TableCell>{error.rowNumber}</TableCell>
-                        <TableCell>{error.rowData.collective || '-'}</TableCell>
-                        <TableCell>{error.rowData.danceName || '-'}</TableCell>
-                        <TableCell>{error.rowData.parsed?.disciplineName || '-'}</TableCell>
-                        <TableCell>{error.rowData.parsed?.nominationName || '-'}</TableCell>
-                        <TableCell>{error.rowData.parsed?.ageName || '-'}</TableCell>
-                        <TableCell>{error.rowData.parsed?.categoryName || '-'}</TableCell>
+                        <TableCell>{error.rowData?.collective || '-'}</TableCell>
+                        <TableCell>{error.rowData?.danceName || '-'}</TableCell>
+                        <TableCell>{error.rowData?.parsed?.disciplineName || '-'}</TableCell>
+                        <TableCell>{error.rowData?.parsed?.nominationName || '-'}</TableCell>
+                        <TableCell>{error.rowData?.parsed?.ageName || '-'}</TableCell>
+                        <TableCell>{error.rowData?.parsed?.categoryName || '-'}</TableCell>
                         <TableCell>
                           <Box>
-                            {error.errors.map((err: string, idx: number) => (
+                            {(error.errors || []).map((err: string, idx: number) => (
                               <Typography key={idx} variant="caption" color="error" display="block">
                                 {err}
                               </Typography>
