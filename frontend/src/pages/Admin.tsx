@@ -1125,9 +1125,8 @@ export const Admin: React.FC = () => {
                   setSelectedEventForErrors(eventId);
                   if (eventId) {
                     fetchImportErrors(eventId);
-                  } else {
-                    setImportErrors([]);
                   }
+                  // Не очищаем ошибки при сбросе выбора, чтобы они оставались видимыми
                 }}
               >
                 {events.map((event) => (
@@ -1245,12 +1244,17 @@ export const Admin: React.FC = () => {
                           disciplineName: discipline ? discipline.name : '',
                         });
                       }}
+                      disabled={errorEditDisciplines.length === 0}
                     >
-                      {errorEditDisciplines.map((discipline: any) => (
-                        <MenuItem key={discipline.id} value={String(discipline.id)}>
-                          {discipline.name}
-                        </MenuItem>
-                      ))}
+                      {errorEditDisciplines.length === 0 ? (
+                        <MenuItem disabled>Загрузка...</MenuItem>
+                      ) : (
+                        errorEditDisciplines.map((discipline: any) => (
+                          <MenuItem key={discipline.id} value={String(discipline.id)}>
+                            {discipline.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -1268,12 +1272,17 @@ export const Admin: React.FC = () => {
                           nominationName: nomination ? nomination.name : '',
                         });
                       }}
+                      disabled={errorEditNominations.length === 0}
                     >
-                      {errorEditNominations.map((nomination: any) => (
-                        <MenuItem key={nomination.id} value={String(nomination.id)}>
-                          {nomination.name}
-                        </MenuItem>
-                      ))}
+                      {errorEditNominations.length === 0 ? (
+                        <MenuItem disabled>Загрузка...</MenuItem>
+                      ) : (
+                        errorEditNominations.map((nomination: any) => (
+                          <MenuItem key={nomination.id} value={String(nomination.id)}>
+                            {nomination.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -1291,12 +1300,17 @@ export const Admin: React.FC = () => {
                           ageName: age ? age.name : '',
                         });
                       }}
+                      disabled={errorEditAges.length === 0}
                     >
-                      {errorEditAges.map((age: any) => (
-                        <MenuItem key={age.id} value={String(age.id)}>
-                          {age.name}
-                        </MenuItem>
-                      ))}
+                      {errorEditAges.length === 0 ? (
+                        <MenuItem disabled>Загрузка...</MenuItem>
+                      ) : (
+                        errorEditAges.map((age: any) => (
+                          <MenuItem key={age.id} value={String(age.id)}>
+                            {age.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -1314,15 +1328,20 @@ export const Admin: React.FC = () => {
                           categoryName: category ? category.name : '',
                         });
                       }}
+                      disabled={errorEditCategories.length === 0}
                     >
                       <MenuItem value="">
                         <em>Не выбрано</em>
                       </MenuItem>
-                      {errorEditCategories.map((category: any) => (
-                        <MenuItem key={category.id} value={String(category.id)}>
-                          {category.name}
-                        </MenuItem>
-                      ))}
+                      {errorEditCategories.length === 0 ? (
+                        <MenuItem disabled>Загрузка...</MenuItem>
+                      ) : (
+                        errorEditCategories.map((category: any) => (
+                          <MenuItem key={category.id} value={String(category.id)}>
+                            {category.name}
+                          </MenuItem>
+                        ))
+                      )}
                     </Select>
                   </FormControl>
                 </Grid>
