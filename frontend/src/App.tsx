@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { AuthProvider } from './context/AuthContext';
@@ -18,9 +18,34 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationProvider } from './context/NotificationContext';
 import { createAppTheme } from './theme';
 
+const THEME_STORAGE_KEY = 'ftr_theme_mode';
+
+// Загрузить тему из localStorage
+const loadThemeMode = (): boolean => {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved !== null) {
+      return saved === 'dark';
+    }
+  } catch (error) {
+    console.error('Error loading theme from localStorage:', error);
+  }
+  // По умолчанию светлая тема
+  return false;
+};
+
 const AppRoutes: React.FC = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(loadThemeMode);
   const theme = createAppTheme(darkMode);
+
+  // Сохранить тему в localStorage при изменении
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, darkMode ? 'dark' : 'light');
+    } catch (error) {
+      console.error('Error saving theme to localStorage:', error);
+    }
+  }, [darkMode]);
 
   console.log('AppRoutes rendering');
 
@@ -34,7 +59,12 @@ const AppRoutes: React.FC = () => {
             path="/"
             element={
               <ProtectedRoute>
-                <Layout darkMode={darkMode} toggleDarkMode={() => setDarkMode(!darkMode)} />
+                <Layout 
+                  darkMode={darkMode} 
+                  toggleDarkMode={() => {
+                    setDarkMode((prev) => !prev);
+                  }} 
+                />
               </ProtectedRoute>
             }
           >
