@@ -874,8 +874,24 @@ router.post(
         errors: importErrors,
         totalRows: parsedRows.length,
       });
-    } catch (error) {
-      errorHandler(error as Error, req, res, () => {});
+    } catch (error: any) {
+      console.error('[Excel Import] Unexpected error:', error);
+      console.error('[Excel Import] Error stack:', error.stack);
+      console.error('[Excel Import] Error details:', {
+        message: error.message,
+        code: error.code,
+        name: error.name,
+      });
+      
+      // Более детальное сообщение об ошибке
+      const errorMessage = error.message || 'Неизвестная ошибка при импорте';
+      const errorDetails = error.code || error.name || '';
+      
+      res.status(500).json({
+        error: errorMessage,
+        details: errorDetails,
+        message: 'Произошла ошибка при импорте файла. Проверьте логи сервера для получения подробной информации.',
+      });
     }
   }
 );
