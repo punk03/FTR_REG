@@ -317,6 +317,50 @@ export const Accounting: React.FC = () => {
   const grouped = accountingData?.grouped || {};
   const ungrouped = accountingData?.ungrouped || [];
 
+  // Объединить все платежи в один массив
+  const allEntries: any[] = [];
+  
+  // Добавить все записи из групп
+  Object.values(grouped).forEach((groupEntries: any) => {
+    if (Array.isArray(groupEntries)) {
+      allEntries.push(...groupEntries);
+    }
+  });
+  
+  // Добавить одиночные записи
+  allEntries.push(...ungrouped);
+
+  // Сортировка
+  const sortedEntries = [...allEntries].sort((a: any, b: any) => {
+    let aValue: any;
+    let bValue: any;
+    
+    if (sortBy === 'createdAt') {
+      aValue = new Date(a.createdAt).getTime();
+      bValue = new Date(b.createdAt).getTime();
+    } else if (sortBy === 'amount') {
+      aValue = Number(a.amount);
+      bValue = Number(b.amount);
+    } else {
+      return 0;
+    }
+    
+    if (sortOrder === 'asc') {
+      return aValue - bValue;
+    } else {
+      return bValue - aValue;
+    }
+  });
+
+  const handleSort = (field: 'createdAt' | 'amount') => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
