@@ -626,21 +626,19 @@ export const Accounting: React.FC = () => {
                       })}
                     </TableBody>
                   </Table>
-                  {accountingData?.pagination && (
-                    <TablePagination
-                      component="div"
-                      count={sortedEntries.length}
-                      page={page}
-                      onPageChange={(_, newPage) => setPage(newPage)}
-                      rowsPerPage={rowsPerPage}
-                      onRowsPerPageChange={(e) => {
-                        setRowsPerPage(parseInt(e.target.value, 10));
-                        setPage(0);
-                      }}
-                      rowsPerPageOptions={[10, 25, 50, 100]}
-                      labelRowsPerPage="Записей на странице:"
-                    />
-                  )}
+                  <TablePagination
+                    component="div"
+                    count={sortedEntries.length}
+                    page={page}
+                    onPageChange={(_, newPage) => setPage(newPage)}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={(e) => {
+                      setRowsPerPage(parseInt(e.target.value, 10));
+                      setPage(0);
+                    }}
+                    rowsPerPageOptions={[10, 25, 50, 100]}
+                    labelRowsPerPage="Записей на странице:"
+                  />
                 </TableContainer>
               )}
             </Box>
