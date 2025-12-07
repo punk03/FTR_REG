@@ -1667,6 +1667,10 @@ export const Admin: React.FC = () => {
         onImportComplete={() => {
           fetchEvents();
           setExcelImportOpen(false);
+          // После импорта обновляем список ошибок, если открыта вкладка ошибок импорта
+          if (tabValue === 2 && selectedEventForErrors) {
+            fetchImportErrors(selectedEventForErrors);
+          }
         }}
       />
 
