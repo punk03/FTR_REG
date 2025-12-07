@@ -680,6 +680,36 @@ router.post(
             row: row.rowNumber,
             error: row.errors.join('; '),
           });
+          
+          // Сохраняем запись с ошибкой в БД
+          try {
+            await prisma.importError.create({
+              data: {
+                eventId,
+                rowNumber: row.rowNumber,
+                rowData: JSON.stringify({
+                  categoryString: row.categoryString,
+                  collective: row.collective,
+                  danceName: row.danceName,
+                  participantsCount: row.participantsCount,
+                  leaders: row.leaders,
+                  trainers: row.trainers,
+                  school: row.school,
+                  contacts: row.contacts,
+                  city: row.city,
+                  duration: row.duration,
+                  videoUrl: row.videoUrl,
+                  diplomasList: row.diplomasList,
+                  medalsCount: row.medalsCount,
+                  parsed: row.parsed,
+                }),
+                errors: JSON.stringify(row.errors),
+              },
+            });
+          } catch (error: any) {
+            console.error(`[Excel Import] Ошибка сохранения записи с ошибкой (строка ${row.rowNumber}):`, error.message);
+          }
+          
           continue;
         }
 

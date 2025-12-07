@@ -30,8 +30,8 @@ const loadThemeMode = (): boolean => {
   } catch (error) {
     console.error('Error loading theme from localStorage:', error);
   }
-  // По умолчанию светлая тема
-  return false;
+  // По умолчанию тёмная тема
+  return true;
 };
 
 const AppRoutes: React.FC = () => {

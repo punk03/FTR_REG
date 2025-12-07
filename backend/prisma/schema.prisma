@@ -97,6 +97,7 @@ model Event {
   registrations     Registration[]
   eventPrices       EventPrice[]
   accountingEntries AccountingEntry[]
+  importErrors      ImportError[]
 
   @@index([status])
 }
@@ -442,4 +443,19 @@ model RegistrationTemplate {
 
   @@unique([userId, name])
   @@index([userId])
+}
+
+model ImportError {
+  id          Int      @id @default(autoincrement())
+  eventId     Int
+  rowNumber   Int
+  rowData     String   @db.Text // JSON string with row data
+  errors      String   @db.Text // JSON array of error messages
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([createdAt])
 }

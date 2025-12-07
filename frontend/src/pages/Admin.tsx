@@ -837,6 +837,7 @@ export const Admin: React.FC = () => {
         <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
           <Tab label="Пользователи" />
           <Tab label="Мероприятия" />
+          <Tab label="Ошибки импорта" />
           <Tab label="Системные настройки" />
         </Tabs>
 
@@ -956,6 +957,166 @@ export const Admin: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={tabValue} index={2}>
+          <Box sx={{ mb: 3 }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Мероприятие</InputLabel>
+              <Select
+                value={selectedEventForErrors}
+                label="Мероприятие"
+                onChange={(e) => {
+                  const eventId = e.target.value as number;
+                  setSelectedEventForErrors(eventId);
+                  if (eventId) {
+                    fetchImportErrors(eventId);
+                  } else {
+                    setImportErrors([]);
+                  }
+                }}
+              >
+                {events.map((event) => (
+                  <MenuItem key={event.id} value={event.id}>
+                    {event.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+
+          {selectedEventForErrors && (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Строка</TableCell>
+                    <TableCell>Коллектив</TableCell>
+                    <TableCell>Название</TableCell>
+                    <TableCell>Дисциплина</TableCell>
+                    <TableCell>Номинация</TableCell>
+                    <TableCell>Возраст</TableCell>
+                    <TableCell>Категория</TableCell>
+                    <TableCell>Ошибки</TableCell>
+                    <TableCell>Действия</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {importErrors.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center">
+                        Нет записей с ошибками импорта
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    importErrors.map((error) => (
+                      <TableRow key={error.id}>
+                        <TableCell>{error.rowNumber}</TableCell>
+                        <TableCell>{error.rowData.collective || '-'}</TableCell>
+                        <TableCell>{error.rowData.danceName || '-'}</TableCell>
+                        <TableCell>{error.rowData.parsed?.disciplineName || '-'}</TableCell>
+                        <TableCell>{error.rowData.parsed?.nominationName || '-'}</TableCell>
+                        <TableCell>{error.rowData.parsed?.ageName || '-'}</TableCell>
+                        <TableCell>{error.rowData.parsed?.categoryName || '-'}</TableCell>
+                        <TableCell>
+                          <Box>
+                            {error.errors.map((err: string, idx: number) => (
+                              <Typography key={idx} variant="caption" color="error" display="block">
+                                {err}
+                              </Typography>
+                            ))}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <IconButton size="small" onClick={() => handleEditImportError(error)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleImportError(error.id)} color="primary">
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" onClick={() => handleDeleteImportError(error.id)} color="error">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Диалог редактирования ошибки импорта */}
+          <Dialog open={!!editingError} onClose={() => setEditingError(null)} maxWidth="md" fullWidth>
+            <DialogTitle>Редактирование записи с ошибкой</DialogTitle>
+            <DialogContent>
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Коллектив"
+                    value={errorEditFormData.collective}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, collective: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Название танца"
+                    value={errorEditFormData.danceName}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, danceName: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Дисциплина"
+                    value={errorEditFormData.disciplineName}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, disciplineName: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Номинация"
+                    value={errorEditFormData.nominationName}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, nominationName: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Возраст"
+                    value={errorEditFormData.ageName}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, ageName: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Категория"
+                    value={errorEditFormData.categoryName}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, categoryName: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Количество участников"
+                    type="number"
+                    value={errorEditFormData.participantsCount}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, participantsCount: parseInt(e.target.value) || 0 })}
+                  />
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setEditingError(null)}>Отмена</Button>
+              <Button variant="contained" onClick={handleSaveErrorEdit}>
+                Сохранить
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
           <Box sx={{ mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Системные настройки
