@@ -445,6 +445,10 @@ export const Admin: React.FC = () => {
     } else if (tabValue === 1) {
       fetchEvents();
     } else if (tabValue === 2) {
+      // Загружаем события, если они еще не загружены
+      if (events.length === 0) {
+        fetchEvents();
+      }
       // Ошибки импорта загружаются при выборе события
       // Если уже выбрано мероприятие, загружаем ошибки снова
       if (selectedEventForErrors) {
