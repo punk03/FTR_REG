@@ -455,6 +455,17 @@ export const Admin: React.FC = () => {
     }
   }, [tabValue]);
 
+  // Отдельный useEffect для автоматической загрузки ошибок при открытии вкладки
+  useEffect(() => {
+    if (tabValue === 2 && selectedEventForErrors && events.length > 0) {
+      // Небольшая задержка, чтобы убедиться, что события загружены
+      const timer = setTimeout(() => {
+        fetchImportErrors(selectedEventForErrors);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [tabValue, selectedEventForErrors, events.length]);
+
   const fetchUsers = async () => {
     setLoading(true);
     try {

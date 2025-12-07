@@ -670,6 +670,19 @@ router.post(
         await prisma.registration.deleteMany({
           where: { eventId },
         });
+        
+        // Также удаляем ошибочные записи импорта для этого мероприятия
+        try {
+          if (prisma.importError) {
+            await prisma.importError.deleteMany({
+              where: { eventId },
+            });
+            console.log(`[Excel Import] Deleted existing import errors for event ${eventId}`);
+          }
+        } catch (error: any) {
+          console.warn('[Excel Import] Could not delete import errors:', error.message);
+          // Продолжаем импорт даже если не удалось удалить ошибки
+        }
       }
 
       // Импорт регистраций
