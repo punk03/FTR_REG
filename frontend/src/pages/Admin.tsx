@@ -760,17 +760,59 @@ export const Admin: React.FC = () => {
     }
   };
 
-  const handleEditImportError = (error: any) => {
+  const handleEditImportError = async (error: any) => {
     setEditingError(error);
-    setErrorEditFormData({
-      collective: error.rowData.collective || '',
-      danceName: error.rowData.danceName || '',
-      participantsCount: error.rowData.participantsCount || 0,
-      disciplineName: error.rowData.parsed?.disciplineName || '',
-      nominationName: error.rowData.parsed?.nominationName || '',
-      ageName: error.rowData.parsed?.ageName || '',
-      categoryName: error.rowData.parsed?.categoryName || '',
-    });
+    
+    // Загружаем справочники для выпадающих списков
+    try {
+      const [disciplinesRes, nominationsRes, agesRes, categoriesRes] = await Promise.all([
+        api.get('/api/reference/disciplines'),
+        api.get('/api/reference/nominations'),
+        api.get('/api/reference/ages'),
+        api.get('/api/reference/categories'),
+      ]);
+      
+      setErrorEditDisciplines(disciplinesRes.data);
+      setErrorEditNominations(nominationsRes.data);
+      setErrorEditAges(agesRes.data);
+      setErrorEditCategories(categoriesRes.data);
+      
+      // Находим ID по именам для предзаполнения
+      const discipline = disciplinesRes.data.find((d: any) => d.name === error.rowData?.parsed?.disciplineName);
+      const nomination = nominationsRes.data.find((n: any) => n.name === error.rowData?.parsed?.nominationName);
+      const age = agesRes.data.find((a: any) => a.name === error.rowData?.parsed?.ageName);
+      const category = categoriesRes.data.find((c: any) => c.name === error.rowData?.parsed?.categoryName);
+      
+      setErrorEditFormData({
+        collective: error.rowData?.collective || '',
+        danceName: error.rowData?.danceName || '',
+        participantsCount: error.rowData?.participantsCount || '',
+        disciplineId: discipline ? String(discipline.id) : '',
+        disciplineName: error.rowData?.parsed?.disciplineName || '',
+        nominationId: nomination ? String(nomination.id) : '',
+        nominationName: error.rowData?.parsed?.nominationName || '',
+        ageId: age ? String(age.id) : '',
+        ageName: error.rowData?.parsed?.ageName || '',
+        categoryId: category ? String(category.id) : '',
+        categoryName: error.rowData?.parsed?.categoryName || '',
+      });
+    } catch (error: any) {
+      console.error('Error loading reference data:', error);
+      // Устанавливаем данные без справочников
+      setErrorEditFormData({
+        collective: error.rowData?.collective || '',
+        danceName: error.rowData?.danceName || '',
+        participantsCount: error.rowData?.participantsCount || '',
+        disciplineId: '',
+        disciplineName: error.rowData?.parsed?.disciplineName || '',
+        nominationId: '',
+        nominationName: error.rowData?.parsed?.nominationName || '',
+        ageId: '',
+        ageName: error.rowData?.parsed?.ageName || '',
+        categoryId: '',
+        categoryName: error.rowData?.parsed?.categoryName || '',
+      });
+    }
   };
 
   const handleSaveErrorEdit = async () => {
