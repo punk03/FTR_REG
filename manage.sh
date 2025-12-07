@@ -287,11 +287,7 @@ apply_import_errors_migration() {
     fi
     
     print_info "Создание таблицы ImportError..."
-    psql "$DATABASE_URL" <<'SQL' || {
-        print_error "Ошибка создания таблицы"
-        wait_for_key
-        return 1
-    }
+    if ! psql "$DATABASE_URL" <<'SQL'; then
 CREATE TABLE IF NOT EXISTS "ImportError" (
     "id" SERIAL NOT NULL,
     "eventId" INTEGER NOT NULL,
@@ -318,6 +314,10 @@ BEGIN
     END IF;
 END $$;
 SQL
+        print_error "Ошибка создания таблицы"
+        wait_for_key
+        return 1
+    fi
     
     print_success "Миграция применена!"
     wait_for_key
