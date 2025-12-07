@@ -652,8 +652,17 @@ fix_cors() {
 fix_import_errors() {
     print_section "Исправление функционала Import Errors"
     
+    print_info "Шаг 1: Применение миграции базы данных..."
     apply_import_errors_migration
+    
+    print_info "Шаг 2: Генерация Prisma Client..."
+    generate_prisma_client
+    
+    print_info "Шаг 3: Перезапуск backend..."
     restart_backend
+    
+    print_success "Исправление завершено!"
+    print_info "Проверьте логи backend для подтверждения работы роута"
 }
 
 fix_frontend_env() {
