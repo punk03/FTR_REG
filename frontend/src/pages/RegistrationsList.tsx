@@ -178,12 +178,23 @@ export const RegistrationsList: React.FC = () => {
     setSearch(value);
     if (searchDebounce) {
       clearTimeout(searchDebounce);
+      setSearchDebounce(null);
     }
-    const timeout = setTimeout(() => {
-      // перезагрузка с новыми параметрами поиска
-      fetchRegistrations();
-    }, 300);
-    setSearchDebounce(timeout);
+    
+    // Если поиск очищен, сразу загружаем данные без debounce
+    if (value === '') {
+      // Используем setTimeout с 0, чтобы дать React обновить состояние
+      setTimeout(() => {
+        fetchRegistrations();
+      }, 0);
+    } else {
+      // Для непустого поиска используем debounce
+      const timeout = setTimeout(() => {
+        fetchRegistrations();
+        setSearchDebounce(null);
+      }, 300);
+      setSearchDebounce(timeout);
+    }
   };
 
   const getPaymentStatusColor = (status: string) => {
