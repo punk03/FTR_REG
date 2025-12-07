@@ -32,7 +32,9 @@ export const formatCurrency = (amount: number): string => {
  *   показываем в виде \"blockNumber.index\" (например, 29.1, 29.2).
  * - В остальных случаях показываем обычный номер или \"-\".
  */
-export const formatRegistrationNumber = (reg: Partial<Registration> | any): string => {
+export const formatRegistrationNumber = (reg: Partial<Registration> | any | null | undefined): string => {
+  if (!reg || reg === null || reg === undefined) return '-';
+  
   if (reg.blockNumber && reg.number) {
     const block = reg.blockNumber;
     const index = reg.number % 1000 || 0;
