@@ -723,8 +723,8 @@ export const Accounting: React.FC = () => {
                       .map((entry: any) => (
                         <TableRow key={entry.id}>
                           <TableCell>{formatDate(entry.createdAt)}</TableCell>
-                          <TableCell>{formatRegistrationNumber(entry.registration)}</TableCell>
-                          <TableCell>{entry.collective?.name}</TableCell>
+                          <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
+                          <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
                           <TableCell>{entry.registration?.danceName || '-'}</TableCell>
                           <TableCell>{formatCurrency(entry.amount)}</TableCell>
                           <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
@@ -810,8 +810,8 @@ export const Accounting: React.FC = () => {
                       .map((entry: any) => (
                         <TableRow key={entry.id}>
                           <TableCell>{formatDate(entry.createdAt)}</TableCell>
-                          <TableCell>{formatRegistrationNumber(entry.registration)}</TableCell>
-                          <TableCell>{entry.collective?.name}</TableCell>
+                          <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
+                          <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
                           <TableCell>{entry.registration?.danceName || '-'}</TableCell>
                           <TableCell>{formatCurrency(entry.amount)}</TableCell>
                           <TableCell>
