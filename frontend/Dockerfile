@@ -10,7 +10,8 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 # Copy source code and build
 COPY . .
 # Build with environment variable support
-ARG VITE_API_URL=http://localhost:3001
+# Use empty string or relative path to use nginx proxy, or set to external URL
+ARG VITE_API_URL=http://95.71.125.8:3000
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
