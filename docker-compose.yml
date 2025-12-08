@@ -56,7 +56,6 @@ services:
       EMAIL_PASS: ${EMAIL_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
       PRISMA_ENGINES_MIRROR: https://binaries.prisma.sh
-      OPENSSL_CONF: /dev/null
     ports:
       - "${BACKEND_PORT:-3001}:3001"
     depends_on:
@@ -74,8 +73,11 @@ services:
       sh -c "
         echo 'Waiting for database...' &&
         sleep 5 &&
-        npx prisma migrate deploy || echo 'Migration failed or already applied' &&
+        echo 'Running Prisma migrations...' &&
+        npx prisma migrate deploy || (echo 'Migration failed, continuing...' && true) &&
+        echo 'Generating Prisma Client...' &&
         npx prisma generate &&
+        echo 'Starting backend server...' &&
         npm start
       "
 
