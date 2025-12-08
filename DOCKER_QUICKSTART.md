@@ -226,20 +226,52 @@ docker-compose up -d --build frontend
 
 ### Проблема: Порты заняты
 
-Если порты 3000, 3001, 5432 или 6379 уже заняты, измените их в `.env`:
+**Ошибка:** `failed to bind host port 0.0.0.0:3001/tcp: address already in use`
 
-```env
-FRONTEND_PORT=3002
-BACKEND_PORT=3003
-POSTGRES_PORT=5433
-REDIS_PORT=6380
-```
+Это означает, что порт 3001 уже занят другим процессом. Есть два решения:
 
-Затем перезапустите:
+#### Решение 1: Найти и остановить процесс на порту 3001
+
 ```bash
-docker-compose down
+# Найти процесс, использующий порт 3001
+sudo lsof -i :3001
+# или
+sudo ss -tlnp | grep :3001
+# или
+sudo netstat -tlnp | grep :3001
+
+# Остановить процесс (замените PID на реальный ID процесса)
+sudo kill -9 <PID>
+
+# Или если это старый backend процесс
+pkill -f "node.*backend"
+# или
+pkill -f "npm.*start"
+
+# Затем снова запустите Docker
 docker-compose up -d
 ```
+
+#### Решение 2: Изменить порт в `.env`
+
+Если вы не можете остановить процесс на порту 3001, измените порт в `.env`:
+
+```env
+BACKEND_PORT=3002
+```
+
+И обновите `VITE_API_URL` в `.env`:
+```env
+VITE_API_URL=http://95.71.125.8:3002
+```
+
+Затем пересоберите и перезапустите:
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+**Примечание:** Если вы изменили порт backend, не забудьте также обновить `CORS_ORIGIN` в `.env`, чтобы включить новый порт frontend (если он тоже изменился).
 
 ### Полная очистка и перезапуск
 
