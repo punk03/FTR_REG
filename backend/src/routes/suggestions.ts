@@ -107,7 +107,10 @@ router.get(
         ) as Array<{ id: number; fullName: string; role: string; phone: string | null; sim: number }>;
         
         // Remove similarity score from results
-        persons = results.map(({ sim, ...rest }: { sim: number; [key: string]: any }) => rest);
+        persons = results.map((result: { id: number; fullName: string; role: string; phone: string | null; sim: number }) => {
+          const { sim, ...rest } = result;
+          return rest as { id: number; fullName: string; role: string; phone: string | null };
+        });
       } catch (error) {
         // Fallback to Prisma contains if trigram is not available
         console.warn('pg_trgm extension not available, using contains fallback');
