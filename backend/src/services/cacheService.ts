@@ -12,14 +12,23 @@ class CacheService {
 
   private connect(): void {
     try {
-      this.client = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD || undefined,
+      // Use REDIS_URL if provided, otherwise fall back to host/port
+      const redisUrl = process.env.REDIS_URL;
+      const redisConfig = redisUrl
+        ? redisUrl
+        : {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+            password: process.env.REDIS_PASSWORD || undefined,
+          };
+
+      this.client = new Redis(redisConfig as any, {
         retryStrategy: (times) => {
           const delay = Math.min(times * 50, 2000);
           return delay;
         },
+        enableReadyCheck: true,
+        maxRetriesPerRequest: 3,
       });
 
       this.client.on('error', (err) => {
