@@ -2,8 +2,10 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Install OpenSSL 1.1 compatibility library for Prisma
-RUN apk add --no-cache openssl1.1-compat libc6-compat
+# Install OpenSSL and create compatibility symlink for Prisma
+RUN apk add --no-cache openssl libc6-compat && \
+    ln -s /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 2>/dev/null || true && \
+    ln -s /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1 2>/dev/null || true
 
 # Install dependencies
 COPY package*.json ./
@@ -19,8 +21,10 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install OpenSSL 1.1 compatibility library for Prisma
-RUN apk add --no-cache openssl1.1-compat libc6-compat
+# Install OpenSSL and create compatibility symlink for Prisma
+RUN apk add --no-cache openssl libc6-compat && \
+    ln -s /usr/lib/libssl.so.3 /usr/lib/libssl.so.1.1 2>/dev/null || true && \
+    ln -s /usr/lib/libcrypto.so.3 /usr/lib/libcrypto.so.1.1 2>/dev/null || true
 
 # Install production dependencies
 COPY package*.json ./
