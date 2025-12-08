@@ -1,9 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-// API URL - use environment variable or default to localhost:3001
-// In production build, VITE_API_URL should be set in .env file
+// API URL - use environment variable or default to relative path (nginx proxy)
+// If VITE_API_URL is empty, use relative paths so nginx proxy handles /api requests
 // @ts-ignore - Vite environment variable
-const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env?.VITE_API_URL || '';
 
 console.log('API URL:', API_URL);
 

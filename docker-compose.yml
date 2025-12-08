@@ -92,7 +92,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://95.71.125.8:3000}
+        VITE_API_URL: ${VITE_API_URL:-}
     container_name: ftr_frontend
     ports:
       - "${FRONTEND_PORT:-3000}:80"
@@ -103,7 +103,7 @@ services:
       - ftr_network
     restart: unless-stopped
     environment:
-      - VITE_API_URL=${VITE_API_URL:-http://95.71.125.8:3000}
+      - VITE_API_URL=${VITE_API_URL:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
