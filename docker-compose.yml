@@ -5,28 +5,30 @@ services:
     image: postgres:14-alpine
     container_name: ftr_postgres
     environment:
-      POSTGRES_USER: ftr_user
-      POSTGRES_PASSWORD: ftr_password
-      POSTGRES_DB: ftr_db
+      POSTGRES_USER: ${POSTGRES_USER:-ftr_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ftr_password}
+      POSTGRES_DB: ${POSTGRES_DB:-ftr_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ftr_user -d ftr_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ftr_user} -d ${POSTGRES_DB:-ftr_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - ftr_network
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: ftr_redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -34,13 +36,67 @@ services:
       retries: 5
     networks:
       - ftr_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ftr_backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ftr_user}:${POSTGRES_PASSWORD:-ftr_password}@postgres:5432/${POSTGRES_DB:-ftr_db}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret-in-production}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:5173}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/prisma:/app/prisma
+      - backend_uploads:/app/uploads
+    networks:
+      - ftr_network
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        npx prisma migrate deploy &&
+        npx prisma generate &&
+        npm start
+      "
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ftr_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - backend
+    networks:
+      - ftr_network
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:3001}
 
 volumes:
   postgres_data:
   redis_data:
+  backend_uploads:
 
 networks:
   ftr_network:
     driver: bridge
-
-
