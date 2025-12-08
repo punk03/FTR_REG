@@ -52,6 +52,27 @@ sudo ./update.sh
 
 ## Быстрый старт / Quick Start
 
+### 🐳 Запуск в Docker (Рекомендуется)
+
+**Самая быстрая и простая установка:**
+
+```bash
+# 1. Клонируйте репозиторий
+git clone https://github.com/punk03/FTR_REG.git
+cd FTR_REG
+
+# 2. Создайте файл .env
+cp .env.example .env
+# Отредактируйте .env и измените JWT_SECRET, JWT_REFRESH_SECRET и POSTGRES_PASSWORD!
+
+# 3. Запустите проект
+docker-compose up -d --build
+
+# 4. Откройте http://localhost:3000
+```
+
+📖 **Подробная инструкция по Docker:** [DOCKER_QUICKSTART.md](DOCKER_QUICKSTART.md)
+
 📖 **Подробная инструкция по установке:** [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 
 ### Требования / Requirements
