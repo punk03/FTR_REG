@@ -101,7 +101,7 @@ update_repository() {
     
     echo ""
     echo -e "${GREEN}Последние коммиты:${NC}"
-    git log --oneline -5
+    git --no-pager log --oneline -5
     
     echo ""
     read -p "Нажмите Enter для продолжения..."
