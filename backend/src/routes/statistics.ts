@@ -311,10 +311,10 @@ router.get(
 
       // Overview statistics
       const totalRegistrations = registrations.length;
-      const totalCollectives = new Set(registrations.map((r) => r.collectiveId)).size;
-      const totalParticipants = registrations.reduce((sum, r) => sum + r.participantsCount, 0);
-      const totalDiplomas = registrations.reduce((sum, r) => sum + r.diplomasCount, 0);
-      const totalMedals = registrations.reduce((sum, r) => sum + r.medalsCount, 0);
+      const totalCollectives = new Set(registrations.map((r: any) => r.collectiveId)).size;
+      const totalParticipants = registrations.reduce((sum: number, r: any) => sum + r.participantsCount, 0);
+      const totalDiplomas = registrations.reduce((sum: number, r: any) => sum + r.diplomasCount, 0);
+      const totalMedals = registrations.reduce((sum: number, r: any) => sum + r.medalsCount, 0);
 
       doc.fontSize(14).text('Общая статистика', { underline: true });
       doc.moveDown();
