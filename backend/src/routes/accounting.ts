@@ -83,29 +83,29 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
     }
 
     // Calculate summary
-    const performanceEntries = entries.filter((e) => e.paidFor === 'PERFORMANCE' && !e.deletedAt);
-    const diplomasEntries = entries.filter((e) => e.paidFor === 'DIPLOMAS_MEDALS' && !e.deletedAt);
+    const performanceEntries = entries.filter((e: any) => e.paidFor === 'PERFORMANCE' && !e.deletedAt);
+    const diplomasEntries = entries.filter((e: any) => e.paidFor === 'DIPLOMAS_MEDALS' && !e.deletedAt);
 
     const summary = {
       performance: {
-        cash: performanceEntries.filter((e) => e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
-        card: performanceEntries.filter((e) => e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
-        transfer: performanceEntries.filter((e) => e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
-        total: performanceEntries.reduce((sum, e) => sum + Number(e.amount), 0),
+        cash: performanceEntries.filter((e: any) => e.method === 'CASH').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        card: performanceEntries.filter((e: any) => e.method === 'CARD').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        transfer: performanceEntries.filter((e: any) => e.method === 'TRANSFER').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        total: performanceEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0),
       },
       diplomasAndMedals: {
-        cash: diplomasEntries.filter((e) => e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
-        card: diplomasEntries.filter((e) => e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
-        transfer: diplomasEntries.filter((e) => e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
-        total: diplomasEntries.reduce((sum, e) => sum + Number(e.amount), 0),
+        cash: diplomasEntries.filter((e: any) => e.method === 'CASH').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        card: diplomasEntries.filter((e: any) => e.method === 'CARD').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        transfer: diplomasEntries.filter((e: any) => e.method === 'TRANSFER').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        total: diplomasEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0),
       },
       totalByMethod: {
-        cash: entries.filter((e) => !e.deletedAt && e.method === 'CASH').reduce((sum, e) => sum + Number(e.amount), 0),
-        card: entries.filter((e) => !e.deletedAt && e.method === 'CARD').reduce((sum, e) => sum + Number(e.amount), 0),
-        transfer: entries.filter((e) => !e.deletedAt && e.method === 'TRANSFER').reduce((sum, e) => sum + Number(e.amount), 0),
+        cash: entries.filter((e: any) => !e.deletedAt && e.method === 'CASH').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        card: entries.filter((e: any) => !e.deletedAt && e.method === 'CARD').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+        transfer: entries.filter((e: any) => !e.deletedAt && e.method === 'TRANSFER').reduce((sum: number, e: any) => sum + Number(e.amount), 0),
       },
-      grandTotal: entries.filter((e) => !e.deletedAt).reduce((sum, e) => sum + Number(e.amount), 0),
-      totalDiscount: performanceEntries.reduce((sum, e) => sum + Number(e.discountAmount), 0),
+      grandTotal: entries.filter((e: any) => !e.deletedAt).reduce((sum: number, e: any) => sum + Number(e.amount), 0),
+      totalDiscount: performanceEntries.reduce((sum: number, e: any) => sum + Number(e.discountAmount), 0),
     };
 
     res.json({

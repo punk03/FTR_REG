@@ -38,10 +38,10 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'STATISTICIAN', 'ACCOUNT
 
     const overview = {
       totalRegistrations: registrations.length,
-      totalCollectives: new Set(registrations.map((r) => r.collectiveId)).size,
-      totalParticipants: registrations.reduce((sum, r) => sum + r.participantsCount, 0),
-      totalDiplomas: registrations.reduce((sum, r) => sum + r.diplomasCount, 0),
-      totalMedals: registrations.reduce((sum, r) => sum + r.medalsCount, 0),
+      totalCollectives: new Set(registrations.map((r: any) => r.collectiveId)).size,
+      totalParticipants: registrations.reduce((sum: number, r: any) => sum + r.participantsCount, 0),
+      totalDiplomas: registrations.reduce((sum: number, r: any) => sum + r.diplomasCount, 0),
+      totalMedals: registrations.reduce((sum: number, r: any) => sum + r.medalsCount, 0),
     };
 
     const byNomination: Record<string, number> = {};
@@ -55,11 +55,11 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'STATISTICIAN', 'ACCOUNT
     }
 
     const payments = {
-      paid: registrations.filter((r) => r.paymentStatus === 'PAID').length,
-      performancePaid: registrations.filter((r) => r.paymentStatus === 'PERFORMANCE_PAID').length,
-      diplomasPaid: registrations.filter((r) => r.paymentStatus === 'DIPLOMAS_PAID').length,
-      unpaid: registrations.filter((r) => r.paymentStatus === 'UNPAID').length,
-      totalAmount: registrations.reduce((sum, r) => sum + Number(r.paidAmount || 0), 0),
+      paid: registrations.filter((r: any) => r.paymentStatus === 'PAID').length,
+      performancePaid: registrations.filter((r: any) => r.paymentStatus === 'PERFORMANCE_PAID').length,
+      diplomasPaid: registrations.filter((r: any) => r.paymentStatus === 'DIPLOMAS_PAID').length,
+      unpaid: registrations.filter((r: any) => r.paymentStatus === 'UNPAID').length,
+      totalAmount: registrations.reduce((sum: number, r: any) => sum + Number(r.paidAmount || 0), 0),
     };
 
     const statistics = {
@@ -327,11 +327,11 @@ router.get(
       doc.moveDown(2);
 
       // Payment statistics
-      const paid = registrations.filter((r) => r.paymentStatus === 'PAID').length;
-      const performancePaid = registrations.filter((r) => r.paymentStatus === 'PERFORMANCE_PAID').length;
-      const diplomasPaid = registrations.filter((r) => r.paymentStatus === 'DIPLOMAS_PAID').length;
-      const unpaid = registrations.filter((r) => r.paymentStatus === 'UNPAID').length;
-      const totalAmount = registrations.reduce((sum, r) => sum + Number(r.paidAmount || 0), 0);
+      const paid = registrations.filter((r: any) => r.paymentStatus === 'PAID').length;
+      const performancePaid = registrations.filter((r: any) => r.paymentStatus === 'PERFORMANCE_PAID').length;
+      const diplomasPaid = registrations.filter((r: any) => r.paymentStatus === 'DIPLOMAS_PAID').length;
+      const unpaid = registrations.filter((r: any) => r.paymentStatus === 'UNPAID').length;
+      const totalAmount = registrations.reduce((sum: number, r: any) => sum + Number(r.paidAmount || 0), 0);
 
       doc.fontSize(14).text('Статистика по оплатам', { underline: true });
       doc.moveDown();
@@ -345,7 +345,7 @@ router.get(
 
       // Statistics by nomination
       const byNomination: Record<string, number> = {};
-      registrations.forEach((r) => {
+      registrations.forEach((r: any) => {
         byNomination[r.nomination.name] = (byNomination[r.nomination.name] || 0) + 1;
       });
 
@@ -361,7 +361,7 @@ router.get(
 
       // Statistics by discipline
       const byDiscipline: Record<string, number> = {};
-      registrations.forEach((r) => {
+      registrations.forEach((r: any) => {
         byDiscipline[r.discipline.name] = (byDiscipline[r.discipline.name] || 0) + 1;
       });
 
@@ -377,7 +377,7 @@ router.get(
 
       // Statistics by age
       const byAge: Record<string, number> = {};
-      registrations.forEach((r) => {
+      registrations.forEach((r: any) => {
         byAge[r.age.name] = (byAge[r.age.name] || 0) + 1;
       });
 

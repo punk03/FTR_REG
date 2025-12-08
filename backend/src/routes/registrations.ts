@@ -751,7 +751,7 @@ router.get('/:id/history', authenticateToken, async (req: Request, res: Response
     });
 
     // Parse JSON fields
-    const formattedHistory = history.map((entry) => ({
+    const formattedHistory = history.map((entry: any) => ({
       ...entry,
       changedFields: entry.changedFields ? JSON.parse(entry.changedFields) : null,
       oldValues: entry.oldValues ? JSON.parse(entry.oldValues) : null,

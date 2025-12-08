@@ -1,5 +1,8 @@
-import { PrismaClient, PaymentStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
+
+// PaymentStatus enum from Prisma schema
+type PaymentStatus = 'UNPAID' | 'PERFORMANCE_PAID' | 'DIPLOMAS_PAID' | 'PAID';
 
 const prisma = new PrismaClient();
 

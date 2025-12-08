@@ -362,7 +362,7 @@ router.get(
       doc.pipe(res);
 
       // Process each registration
-      registrations.forEach((reg, index) => {
+      registrations.forEach((reg: any, index: number) => {
         if (index > 0) {
           doc.addPage();
         }
@@ -403,8 +403,8 @@ router.get(
           doc.fontSize(14).text('Список дипломов:', { underline: true });
           doc.moveDown();
           doc.fontSize(11);
-          const diplomas = reg.diplomasList.split('\n').filter((name) => name.trim());
-          diplomas.forEach((name, i) => {
+          const diplomas = reg.diplomasList.split('\n').filter((name: string) => name.trim());
+          diplomas.forEach((name: string, i: number) => {
             doc.text(`${i + 1}. ${name.trim()}`);
           });
           doc.moveDown();

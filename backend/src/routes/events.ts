@@ -72,7 +72,7 @@ router.get('/:id/import-errors', authenticateToken, requireRole('ADMIN'), async 
 
       console.log(`[Import Errors] Found ${errors.length} errors for eventId: ${eventId}`);
 
-      res.json(errors.map((err) => {
+      res.json(errors.map((err: any) => {
         try {
           return {
             id: err.id,
@@ -163,7 +163,7 @@ router.post('/:id/import-errors/:errorId/import', authenticateToken, requireRole
     if (rowData.parsed?.disciplineId) {
       disciplineId = rowData.parsed.disciplineId;
     } else if (rowData.parsed?.disciplineName) {
-      const discipline = disciplines.find((d) => d.name === rowData.parsed.disciplineName);
+      const discipline = disciplines.find((d: any) => d.name === rowData.parsed.disciplineName);
       if (discipline) {
         disciplineId = discipline.id;
       } else {
@@ -176,7 +176,7 @@ router.post('/:id/import-errors/:errorId/import', authenticateToken, requireRole
     if (rowData.parsed?.nominationId) {
       nominationId = rowData.parsed.nominationId;
     } else if (rowData.parsed?.nominationName) {
-      let nomination = nominations.find((n) => n.name === rowData.parsed.nominationName);
+      let nomination = nominations.find((n: any) => n.name === rowData.parsed.nominationName);
       if (!nomination) {
         nomination = await prisma.nomination.create({
           data: { name: rowData.parsed.nominationName },
@@ -189,7 +189,7 @@ router.post('/:id/import-errors/:errorId/import', authenticateToken, requireRole
     if (rowData.parsed?.ageId) {
       ageId = rowData.parsed.ageId;
     } else if (rowData.parsed?.ageName) {
-      const age = ages.find((a) => a.name === rowData.parsed.ageName);
+      const age = ages.find((a: any) => a.name === rowData.parsed.ageName);
       if (age) {
         ageId = age.id;
       } else {
@@ -202,7 +202,7 @@ router.post('/:id/import-errors/:errorId/import', authenticateToken, requireRole
     if (rowData.parsed?.categoryId) {
       categoryId = rowData.parsed.categoryId;
     } else if (rowData.parsed?.categoryName) {
-      const category = categories.find((c) => c.name === rowData.parsed.categoryName);
+      const category = categories.find((c: any) => c.name === rowData.parsed.categoryName);
       if (category) {
         categoryId = category.id;
       }
@@ -637,7 +637,7 @@ router.post('/:id/duplicate', authenticateToken, requireRole('ADMIN'), async (re
     // Copy event prices
     if (originalEvent.eventPrices.length > 0) {
       await prisma.eventPrice.createMany({
-        data: originalEvent.eventPrices.map((price) => ({
+        data: originalEvent.eventPrices.map((price: any) => ({
           eventId: newEvent.id,
           nominationId: price.nominationId,
           pricePerParticipant: price.pricePerParticipant,
@@ -682,7 +682,7 @@ router.delete('/:id/registrations', authenticateToken, requireRole('ADMIN'), asy
     }
 
     // Delete related data
-    const registrationIds = event.registrations.map((r) => r.id);
+    const registrationIds = event.registrations.map((r: any) => r.id);
 
     // Delete accounting entries and payments will be cascade deleted
     await prisma.accountingEntry.deleteMany({
@@ -708,8 +708,8 @@ router.delete('/:id/registrations', authenticateToken, requireRole('ADMIN'), asy
       message: 'All registrations deleted',
       deleted: {
         registrations: event.registrations.length,
-        payments: event.registrations.reduce((sum, r) => sum + r.payments.length, 0),
-        accountingEntries: event.registrations.reduce((sum, r) => sum + r.accountingEntries.length, 0),
+        payments: event.registrations.reduce((sum: number, r: any) => sum + r.payments.length, 0),
+        accountingEntries: event.registrations.reduce((sum: number, r: any) => sum + r.accountingEntries.length, 0),
       },
     });
   } catch (error) {
