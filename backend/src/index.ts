@@ -27,10 +27,12 @@ const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-// CORS configuration - always include production IP
+// CORS configuration - always include production IPs and domains
 const productionOrigins = [
   'http://95.71.125.8:3000',
   'http://95.71.125.8',
+  'http://ftr.lil-fil.netcraze.pro:8080',
+  'http://ftr.lil-fil.netcraze.pro',
 ];
 
 const developmentOrigins = [
