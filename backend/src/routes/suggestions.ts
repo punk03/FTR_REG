@@ -101,10 +101,10 @@ router.get(
         
         queryRaw += ` ORDER BY sim DESC, "fullName" ASC LIMIT 10`;
         
-        const results = await prisma.$queryRawUnsafe<Array<{ id: number; fullName: string; role: string; phone: string | null; sim: number }>>(
+        const results = await prisma.$queryRawUnsafe(
           queryRaw,
           ...params
-        );
+        ) as Array<{ id: number; fullName: string; role: string; phone: string | null; sim: number }>;
         
         // Remove similarity score from results
         persons = results.map(({ sim, ...rest }: { sim: number; [key: string]: any }) => rest);
