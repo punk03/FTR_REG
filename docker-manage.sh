@@ -147,43 +147,97 @@ install_updates() {
 
 # Функция для просмотра логов
 view_logs() {
-    show_header
-    echo -e "${GREEN}=== Просмотр логов ===${NC}"
-    echo ""
-    echo "Выберите сервис для просмотра логов:"
-    echo "1) Backend"
-    echo "2) Frontend"
-    echo "3) PostgreSQL"
-    echo "4) Redis"
-    echo "5) Все сервисы"
-    echo "6) Назад"
-    echo ""
-    read -p "Ваш выбор: " log_choice
-    
-    case $log_choice in
-        1)
-            docker-compose logs -f backend 2>/dev/null || docker compose logs -f backend
-            ;;
-        2)
-            docker-compose logs -f frontend 2>/dev/null || docker compose logs -f frontend
-            ;;
-        3)
-            docker-compose logs -f postgres 2>/dev/null || docker compose logs -f postgres
-            ;;
-        4)
-            docker-compose logs -f redis 2>/dev/null || docker compose logs -f redis
-            ;;
-        5)
-            docker-compose logs -f 2>/dev/null || docker compose logs -f
-            ;;
-        6)
-            return
-            ;;
-        *)
-            echo -e "${RED}Неверный выбор!${NC}"
-            sleep 1
-            ;;
-    esac
+    while true; do
+        show_header
+        echo -e "${GREEN}=== Просмотр логов ===${NC}"
+        echo ""
+        echo "Выберите сервис для просмотра логов:"
+        echo "1) Backend (последние 50 строк)"
+        echo "2) Frontend (последние 50 строк)"
+        echo "3) PostgreSQL (последние 50 строк)"
+        echo "4) Redis (последние 50 строк)"
+        echo "5) Все сервисы (последние 50 строк)"
+        echo "6) Backend (следить в реальном времени, Ctrl+C для выхода)"
+        echo "7) Frontend (следить в реальном времени, Ctrl+C для выхода)"
+        echo "8) Все сервисы (следить в реальном времени, Ctrl+C для выхода)"
+        echo "9) Назад"
+        echo ""
+        read -p "Ваш выбор: " log_choice
+        
+        case $log_choice in
+            1)
+                show_header
+                echo -e "${GREEN}=== Логи Backend (последние 50 строк) ===${NC}"
+                echo ""
+                docker-compose logs --tail=50 backend 2>/dev/null || docker compose logs --tail=50 backend
+                echo ""
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            2)
+                show_header
+                echo -e "${GREEN}=== Логи Frontend (последние 50 строк) ===${NC}"
+                echo ""
+                docker-compose logs --tail=50 frontend 2>/dev/null || docker compose logs --tail=50 frontend
+                echo ""
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            3)
+                show_header
+                echo -e "${GREEN}=== Логи PostgreSQL (последние 50 строк) ===${NC}"
+                echo ""
+                docker-compose logs --tail=50 postgres 2>/dev/null || docker compose logs --tail=50 postgres
+                echo ""
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            4)
+                show_header
+                echo -e "${GREEN}=== Логи Redis (последние 50 строк) ===${NC}"
+                echo ""
+                docker-compose logs --tail=50 redis 2>/dev/null || docker compose logs --tail=50 redis
+                echo ""
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            5)
+                show_header
+                echo -e "${GREEN}=== Логи всех сервисов (последние 50 строк) ===${NC}"
+                echo ""
+                docker-compose logs --tail=50 2>/dev/null || docker compose logs --tail=50
+                echo ""
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            6)
+                show_header
+                echo -e "${GREEN}=== Логи Backend (реальное время) ===${NC}"
+                echo -e "${YELLOW}Нажмите Ctrl+C для выхода${NC}"
+                echo ""
+                docker-compose logs -f backend 2>/dev/null || docker compose logs -f backend
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            7)
+                show_header
+                echo -e "${GREEN}=== Логи Frontend (реальное время) ===${NC}"
+                echo -e "${YELLOW}Нажмите Ctrl+C для выхода${NC}"
+                echo ""
+                docker-compose logs -f frontend 2>/dev/null || docker compose logs -f frontend
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            8)
+                show_header
+                echo -e "${GREEN}=== Логи всех сервисов (реальное время) ===${NC}"
+                echo -e "${YELLOW}Нажмите Ctrl+C для выхода${NC}"
+                echo ""
+                docker-compose logs -f 2>/dev/null || docker compose logs -f
+                read -p "Нажмите Enter для продолжения..."
+                ;;
+            9)
+                return
+                ;;
+            *)
+                echo -e "${RED}Неверный выбор!${NC}"
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 # Функция для быстрого обновления (обновить репозиторий + установить обновления)
