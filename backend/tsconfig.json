@@ -20,7 +20,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "prisma"]
+  "exclude": ["node_modules", "dist", "prisma", "**/__tests__/**", "**/*.test.ts"]
 }
 
 
