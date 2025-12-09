@@ -723,8 +723,8 @@ router.get(
         const diplomasList = entry.registration?.diplomasList || '';
 
         // Format diplomas list (split by newlines and join with semicolon for Excel)
-        // Показываем ФИО на дипломы только если они заказаны (diplomasCount > 0) и есть список
-        const formattedDiplomasList = (diplomasCount > 0 && diplomasList)
+        // Показываем ФИО на дипломы, если есть список (независимо от количества)
+        const formattedDiplomasList = diplomasList && diplomasList.trim()
           ? diplomasList.split('\n').filter((line: string) => line.trim()).join('; ')
           : '';
 
@@ -862,11 +862,11 @@ router.get(
         // Get diploma and medal information
         const diplomasCount = entry.registration?.diplomasCount || 0;
         const medalsCount = entry.registration?.medalsCount || 0;
-        const diplomasList = entry.registration?.diplomasList || '';
+        const diplomasList = entry.registration?.diplomasList || null;
 
         // Format diplomas list (replace commas and newlines for CSV)
-        // Показываем ФИО на дипломы только если они заказаны (diplomasCount > 0) и есть список
-        const formattedDiplomasList = (diplomasCount > 0 && diplomasList)
+        // Показываем ФИО на дипломы, если есть список (независимо от количества)
+        const formattedDiplomasList = diplomasList && typeof diplomasList === 'string' && diplomasList.trim()
           ? diplomasList.replace(/,/g, ';').replace(/\n/g, '; ')
           : '';
 
