@@ -42,7 +42,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
           age: true,
         },
         orderBy: [
-          { blockNumber: { sort: 'asc', nulls: 'last' } },
+          { blockNumber: 'asc' },
           { number: 'asc' },
         ],
         skip,
