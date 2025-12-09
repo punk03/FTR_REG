@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
+import ExcelJS from 'exceljs';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { errorHandler } from '../middleware/errorHandler';
@@ -585,6 +586,306 @@ router.put(
         finalAmount: totalOriginalAmount - totalDiscountAmount,
         affectedEntries: updatedEntries.length,
       });
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
+// GET /api/accounting/export/excel
+router.get(
+  '/export/excel',
+  authenticateToken,
+  requireRole('ADMIN', 'ACCOUNTANT'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const eventId = parseInt(req.query.eventId as string);
+      if (!eventId) {
+        res.status(400).json({ error: 'eventId is required' });
+        return;
+      }
+
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+
+      if (!event) {
+        res.status(404).json({ error: 'Event not found' });
+        return;
+      }
+
+      // Get all accounting entries for this event
+      const entries = await prisma.accountingEntry.findMany({
+        where: {
+          OR: [
+            { registration: { eventId } },
+            { eventId: eventId, registrationId: null },
+          ],
+          deletedAt: null,
+        },
+        include: {
+          registration: {
+            include: {
+              collective: true,
+              discipline: true,
+              nomination: true,
+              age: true,
+              category: true,
+            },
+          },
+          collective: true,
+        },
+        orderBy: [
+          { createdAt: 'desc' },
+        ],
+      });
+
+      // Create Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Выписка по оплате');
+
+      // Set column widths
+      worksheet.columns = [
+        { width: 12 }, // Дата оплаты
+        { width: 25 }, // Коллектив
+        { width: 30 }, // Название номера
+        { width: 10 }, // Блок
+        { width: 15 }, // Дисциплина
+        { width: 15 }, // Номинация
+        { width: 12 }, // Возраст
+        { width: 12 }, // Категория
+        { width: 15 }, // За что оплачено
+        { width: 12 }, // Сумма
+        { width: 12 }, // Откат
+        { width: 12 }, // Способ оплаты
+        { width: 10 }, // Дипломы (кол-во)
+        { width: 10 }, // Медали (кол-во)
+        { width: 50 }, // ФИО на дипломы
+      ];
+
+      // Header row
+      const headerRow = worksheet.addRow([
+        'Дата оплаты',
+        'Коллектив',
+        'Название номера',
+        'Блок',
+        'Дисциплина',
+        'Номинация',
+        'Возраст',
+        'Категория',
+        'За что оплачено',
+        'Сумма',
+        'Откат',
+        'Способ оплаты',
+        'Дипломы',
+        'Медали',
+        'ФИО на дипломы',
+      ]);
+
+      // Style header
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+      // Add data rows
+      for (const entry of entries) {
+        const paymentDate = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }) : '';
+
+        const collectiveName = entry.registration?.collective?.name || entry.collective?.name || entry.description || '-';
+        const danceName = entry.registration?.danceName || '-';
+        const blockNumber = entry.registration?.blockNumber || '-';
+        const discipline = entry.registration?.discipline?.name || '-';
+        const nomination = entry.registration?.nomination?.name || '-';
+        const age = entry.registration?.age?.name || '-';
+        const category = entry.registration?.category?.name || '-';
+
+        const paidFor = entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы/Медали';
+        const amount = Number(entry.amount).toFixed(2);
+        const discount = entry.discountAmount ? Number(entry.discountAmount).toFixed(2) : '0.00';
+        
+        const method = entry.method === 'CASH' ? 'Наличные' : 
+                      entry.method === 'CARD' ? 'Карта' : 
+                      entry.method === 'TRANSFER' ? 'Перевод' : '-';
+
+        // Get diploma and medal information
+        const diplomasCount = entry.registration?.diplomasCount || 0;
+        const medalsCount = entry.registration?.medalsCount || 0;
+        const diplomasList = entry.registration?.diplomasList || '';
+
+        // Format diplomas list (split by newlines and join with semicolon for Excel)
+        const formattedDiplomasList = diplomasList
+          ? diplomasList.split('\n').filter(line => line.trim()).join('; ')
+          : '';
+
+        const row = worksheet.addRow([
+          paymentDate,
+          collectiveName,
+          danceName,
+          blockNumber,
+          discipline,
+          nomination,
+          age,
+          category,
+          paidFor,
+          amount,
+          discount,
+          method,
+          diplomasCount > 0 ? diplomasCount : '',
+          medalsCount > 0 ? medalsCount : '',
+          formattedDiplomasList || '',
+        ]);
+
+        // Style amount and discount columns as numbers
+        row.getCell(10).numFmt = '#,##0.00';
+        row.getCell(11).numFmt = '#,##0.00';
+        
+        // Wrap text for diplomas list column
+        row.getCell(15).alignment = { wrapText: true };
+      }
+
+      // Add summary row
+      const totalRow = worksheet.addRow([]);
+      totalRow.addCell(9).value = 'ИТОГО:';
+      totalRow.addCell(9).font = { bold: true };
+      
+      const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalDiscount = entries.filter(e => e.paidFor === 'PERFORMANCE').reduce((sum, e) => sum + Number(e.discountAmount), 0);
+      
+      totalRow.addCell(10).value = totalAmount;
+      totalRow.addCell(10).numFmt = '#,##0.00';
+      totalRow.addCell(10).font = { bold: true };
+      
+      totalRow.addCell(11).value = totalDiscount;
+      totalRow.addCell(11).numFmt = '#,##0.00';
+      totalRow.addCell(11).font = { bold: true };
+
+      // Set response headers
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=accounting_${eventId}_${Date.now()}.xlsx`);
+
+      // Write to response
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
+// GET /api/accounting/export/csv
+router.get(
+  '/export/csv',
+  authenticateToken,
+  requireRole('ADMIN', 'ACCOUNTANT'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const eventId = parseInt(req.query.eventId as string);
+      if (!eventId) {
+        res.status(400).json({ error: 'eventId is required' });
+        return;
+      }
+
+      // Get all accounting entries for this event
+      const entries = await prisma.accountingEntry.findMany({
+        where: {
+          OR: [
+            { registration: { eventId } },
+            { eventId: eventId, registrationId: null },
+          ],
+          deletedAt: null,
+        },
+        include: {
+          registration: {
+            include: {
+              collective: true,
+              discipline: true,
+              nomination: true,
+              age: true,
+              category: true,
+            },
+          },
+          collective: true,
+        },
+        orderBy: [
+          { createdAt: 'desc' },
+        ],
+      });
+
+      // CSV header
+      const csvRows: string[] = [];
+      csvRows.push('Дата оплаты,Коллектив,Название номера,Блок,Дисциплина,Номинация,Возраст,Категория,За что оплачено,Сумма,Откат,Способ оплаты,Дипломы,Медали,ФИО на дипломы');
+
+      // Add data rows
+      for (const entry of entries) {
+        const paymentDate = entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }) : '';
+
+        const collectiveName = (entry.registration?.collective?.name || entry.collective?.name || entry.description || '-').replace(/,/g, ';');
+        const danceName = (entry.registration?.danceName || '-').replace(/,/g, ';');
+        const blockNumber = entry.registration?.blockNumber || '-';
+        const discipline = (entry.registration?.discipline?.name || '-').replace(/,/g, ';');
+        const nomination = (entry.registration?.nomination?.name || '-').replace(/,/g, ';');
+        const age = (entry.registration?.age?.name || '-').replace(/,/g, ';');
+        const category = (entry.registration?.category?.name || '-').replace(/,/g, ';');
+
+        const paidFor = entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы/Медали';
+        const amount = Number(entry.amount).toFixed(2);
+        const discount = entry.discountAmount ? Number(entry.discountAmount).toFixed(2) : '0.00';
+        
+        const method = entry.method === 'CASH' ? 'Наличные' : 
+                      entry.method === 'CARD' ? 'Карта' : 
+                      entry.method === 'TRANSFER' ? 'Перевод' : '-';
+
+        // Get diploma and medal information
+        const diplomasCount = entry.registration?.diplomasCount || 0;
+        const medalsCount = entry.registration?.medalsCount || 0;
+        const diplomasList = entry.registration?.diplomasList || '';
+
+        // Format diplomas list (replace commas and newlines for CSV)
+        const formattedDiplomasList = diplomasList
+          ? diplomasList.replace(/,/g, ';').replace(/\n/g, '; ')
+          : '';
+
+        csvRows.push([
+          paymentDate,
+          collectiveName,
+          danceName,
+          blockNumber,
+          discipline,
+          nomination,
+          age,
+          category,
+          paidFor,
+          amount,
+          discount,
+          method,
+          diplomasCount > 0 ? diplomasCount : '',
+          medalsCount > 0 ? medalsCount : '',
+          formattedDiplomasList || '',
+        ].join(','));
+      }
+
+      const csvContent = csvRows.join('\n');
+      const csvBuffer = Buffer.from('\ufeff' + csvContent, 'utf8'); // BOM for Excel UTF-8 support
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename=accounting_${eventId}_${Date.now()}.csv`);
+      res.send(csvBuffer);
     } catch (error) {
       errorHandler(error as Error, req, res, () => {});
     }
