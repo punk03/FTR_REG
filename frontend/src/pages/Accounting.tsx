@@ -1469,7 +1469,7 @@ export const Accounting: React.FC = () => {
         message="Вы уверены, что хотите восстановить эту группу платежей? Все записи в группе будут восстановлены."
         confirmText="Восстановить"
         cancelText="Отмена"
-        severity="success"
+        severity="info"
         onConfirm={handleRestoreGroupConfirm}
         onCancel={() => {
           setRestoreGroupConfirmOpen(false);
