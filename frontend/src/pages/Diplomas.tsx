@@ -142,7 +142,9 @@ export const Diplomas: React.FC = () => {
         diplomasList: editFormData.diplomasList,
         diplomasCount: parseInt(editFormData.diplomasCount),
         medalsCount: parseInt(editFormData.medalsCount),
-        blockNumber: editFormData.blockNumber ? parseInt(editFormData.blockNumber) : null,
+        blockNumber: editFormData.blockNumber && editFormData.blockNumber.trim() 
+          ? parseInt(editFormData.blockNumber) 
+          : null,
       });
       setEditDialogOpen(false);
       fetchRegistrations();
