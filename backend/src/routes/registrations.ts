@@ -373,6 +373,9 @@ router.patch(
         }
       }
       if (req.body.nominationId !== undefined) updateData.nominationId = req.body.nominationId;
+      if (req.body.blockNumber !== undefined) {
+        updateData.blockNumber = req.body.blockNumber === null || req.body.blockNumber === '' ? null : parseInt(String(req.body.blockNumber));
+      }
       if (req.body.diplomasDataDeletedAt !== undefined) updateData.diplomasDataDeletedAt = req.body.diplomasDataDeletedAt ? new Date() : null;
 
       // Only allow other fields if no payments
