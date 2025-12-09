@@ -49,6 +49,7 @@ export const Diplomas: React.FC = () => {
   const [showUnpaid, setShowUnpaid] = useState(true);
   const [showPrinted, setShowPrinted] = useState(true);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [showOnlyWithDiplomasOrMedals, setShowOnlyWithDiplomasOrMedals] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
@@ -85,7 +86,7 @@ export const Diplomas: React.FC = () => {
     if (selectedEventId) {
       fetchRegistrations();
     }
-  }, [selectedEventId, search, showPaid, showUnpaid, showPrinted, showDeleted]);
+  }, [selectedEventId, search, showPaid, showUnpaid, showPrinted, showDeleted, showOnlyWithDiplomasOrMedals]);
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -235,6 +236,12 @@ export const Diplomas: React.FC = () => {
     if (!showPaid && reg.diplomasAndMedalsPaid) return false;
     if (!showUnpaid && !reg.diplomasAndMedalsPaid) return false;
     if (!showPrinted && reg.diplomasPrinted) return false;
+    // Фильтр: показывать только те, где заказаны дипломы или медали
+    if (showOnlyWithDiplomasOrMedals) {
+      const hasDiplomas = (reg.diplomasCount || 0) > 0;
+      const hasMedals = (reg.medalsCount || 0) > 0;
+      if (!hasDiplomas && !hasMedals) return false;
+    }
     return true;
   });
 
@@ -284,6 +291,10 @@ export const Diplomas: React.FC = () => {
           <FormControlLabel
             control={<Checkbox checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} />}
             label="Удаленные"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={showOnlyWithDiplomasOrMedals} onChange={(e) => setShowOnlyWithDiplomasOrMedals(e.target.checked)} />}
+            label="Только с дипломами/медалями"
           />
         </Box>
 
