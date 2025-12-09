@@ -39,7 +39,7 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
       where.deletedAt = null;
     }
 
-    const [entries, total] = await Promise.all([
+      const [entries, total] = await Promise.all([
       prisma.accountingEntry.findMany({
         where,
         include: {
@@ -49,6 +49,20 @@ router.get('/', authenticateToken, requireRole('ADMIN', 'ACCOUNTANT'), async (re
               discipline: true,
               nomination: true,
               age: true,
+              category: true,
+            },
+            select: {
+              id: true,
+              collective: true,
+              discipline: true,
+              nomination: true,
+              age: true,
+              category: true,
+              danceName: true,
+              blockNumber: true,
+              diplomasCount: true,
+              medalsCount: true,
+              diplomasList: true,
             },
           },
           collective: true,
@@ -661,6 +675,7 @@ router.get(
         { width: 10 }, // Дипломы (кол-во)
         { width: 10 }, // Медали (кол-во)
         { width: 50 }, // ФИО на дипломы
+        { width: 50 }, // ФИО на медали
       ];
 
       // Header row
@@ -677,9 +692,10 @@ router.get(
         'Сумма',
         'Откат',
         'Способ оплаты',
-        'Дипломы',
-        'Медали',
+        'Дипломы (кол-во)',
+        'Медали (кол-во)',
         'ФИО на дипломы',
+        'ФИО на медали',
       ]);
 
       // Style header
@@ -826,7 +842,7 @@ router.get(
 
       // CSV header
       const csvRows: string[] = [];
-      csvRows.push('Дата оплаты,Коллектив,Название номера,Блок,Дисциплина,Номинация,Возраст,Категория,За что оплачено,Сумма,Откат,Способ оплаты,Дипломы,Медали,ФИО на дипломы');
+      csvRows.push('Дата оплаты,Коллектив,Название номера,Блок,Дисциплина,Номинация,Возраст,Категория,За что оплачено,Сумма,Откат,Способ оплаты,Дипломы (кол-во),Медали (кол-во),ФИО на дипломы,ФИО на медали');
 
       // Add data rows
       for (const entry of entries) {
