@@ -663,7 +663,6 @@ router.get(
         { width: 12 }, // Дата оплаты
         { width: 25 }, // Коллектив
         { width: 30 }, // Название номера
-        { width: 10 }, // Блок
         { width: 15 }, // Дисциплина
         { width: 15 }, // Номинация
         { width: 12 }, // Возраст
@@ -683,7 +682,6 @@ router.get(
         'Дата оплаты',
         'Коллектив',
         'Название номера',
-        'Блок',
         'Дисциплина',
         'Номинация',
         'Возраст',
@@ -719,7 +717,6 @@ router.get(
 
         const collectiveName = entry.registration?.collective?.name || entry.collective?.name || entry.description || '-';
         const danceName = entry.registration?.danceName || '-';
-        const blockNumber = entry.registration?.blockNumber || '-';
         const discipline = entry.registration?.discipline?.name || '-';
         const nomination = entry.registration?.nomination?.name || '-';
         const age = entry.registration?.age?.name || '-';
@@ -752,7 +749,6 @@ router.get(
           paymentDate,
           collectiveName,
           danceName,
-          blockNumber,
           discipline,
           nomination,
           age,
@@ -768,12 +764,12 @@ router.get(
         ]);
 
         // Style amount and discount columns as numbers
+        row.getCell(9).numFmt = '#,##0.00';
         row.getCell(10).numFmt = '#,##0.00';
-        row.getCell(11).numFmt = '#,##0.00';
         
         // Wrap text for diplomas and medals list columns
+        row.getCell(14).alignment = { wrapText: true };
         row.getCell(15).alignment = { wrapText: true };
-        row.getCell(16).alignment = { wrapText: true };
       }
 
       // Add summary row
@@ -781,7 +777,7 @@ router.get(
       const totalDiscount = entries.filter((e: any) => e.paidFor === 'PERFORMANCE').reduce((sum: number, e: any) => sum + Number(e.discountAmount), 0);
       
       const totalRow = worksheet.addRow([
-        '', '', '', '', '', '', '', '', // Empty cells for first 8 columns
+        '', '', '', '', '', '', '', // Empty cells for first 7 columns
         'ИТОГО:',
         totalAmount,
         totalDiscount,
@@ -849,7 +845,7 @@ router.get(
 
       // CSV header
       const csvRows: string[] = [];
-      csvRows.push('Дата оплаты,Коллектив,Название номера,Блок,Дисциплина,Номинация,Возраст,Категория,За что оплачено,Сумма,Откат,Способ оплаты,Дипломы (кол-во),Медали (кол-во),ФИО на дипломы,ФИО на медали');
+      csvRows.push('Дата оплаты,Коллектив,Название номера,Дисциплина,Номинация,Возраст,Категория,За что оплачено,Сумма,Откат,Способ оплаты,Дипломы (кол-во),Медали (кол-во),ФИО на дипломы,ФИО на медали');
 
       // Add data rows
       for (const entry of entries) {
@@ -863,7 +859,6 @@ router.get(
 
         const collectiveName = (entry.registration?.collective?.name || entry.collective?.name || entry.description || '-').replace(/,/g, ';');
         const danceName = (entry.registration?.danceName || '-').replace(/,/g, ';');
-        const blockNumber = entry.registration?.blockNumber || '-';
         const discipline = (entry.registration?.discipline?.name || '-').replace(/,/g, ';');
         const nomination = (entry.registration?.nomination?.name || '-').replace(/,/g, ';');
         const age = (entry.registration?.age?.name || '-').replace(/,/g, ';');
@@ -895,7 +890,6 @@ router.get(
           paymentDate,
           collectiveName,
           danceName,
-          blockNumber,
           discipline,
           nomination,
           age,
