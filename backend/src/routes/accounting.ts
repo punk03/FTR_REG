@@ -739,9 +739,14 @@ router.get(
         const diplomasList = entry.registration?.diplomasList || '';
 
         // Format diplomas list (split by newlines and join with semicolon for Excel)
-        const formattedDiplomasList = diplomasList
+        // Показываем ФИО на дипломы только если они заказаны (diplomasCount > 0) и есть список
+        const formattedDiplomasList = (diplomasCount > 0 && diplomasList)
           ? diplomasList.split('\n').filter((line: string) => line.trim()).join('; ')
           : '';
+
+        // Для медалей отдельного списка ФИО нет в базе данных (нет поля medalsList)
+        // Если нужно будет добавить, потребуется новое поле medalsList в схеме
+        const formattedMedalsList = ''; // Пока пусто, так как нет поля medalsList в базе
 
         const row = worksheet.addRow([
           paymentDate,
@@ -759,14 +764,16 @@ router.get(
           diplomasCount > 0 ? diplomasCount : '',
           medalsCount > 0 ? medalsCount : '',
           formattedDiplomasList || '',
+          formattedMedalsList || '',
         ]);
 
         // Style amount and discount columns as numbers
         row.getCell(10).numFmt = '#,##0.00';
         row.getCell(11).numFmt = '#,##0.00';
         
-        // Wrap text for diplomas list column
+        // Wrap text for diplomas and medals list columns
         row.getCell(15).alignment = { wrapText: true };
+        row.getCell(16).alignment = { wrapText: true };
       }
 
       // Add summary row
@@ -778,7 +785,7 @@ router.get(
         'ИТОГО:',
         totalAmount,
         totalDiscount,
-        '', '', '', '', // Empty cells for remaining columns
+        '', '', '', '', '', // Empty cells for remaining columns (including diplomas/medals counts and FIO columns)
       ]);
       
       // Style summary row
@@ -876,9 +883,13 @@ router.get(
         const diplomasList = entry.registration?.diplomasList || '';
 
         // Format diplomas list (replace commas and newlines for CSV)
-        const formattedDiplomasList = diplomasList
+        // Показываем ФИО на дипломы только если они заказаны (diplomasCount > 0) и есть список
+        const formattedDiplomasList = (diplomasCount > 0 && diplomasList)
           ? diplomasList.replace(/,/g, ';').replace(/\n/g, '; ')
           : '';
+
+        // Для медалей отдельного списка ФИО нет в базе данных (нет поля medalsList)
+        const formattedMedalsList = ''; // Пока пусто, так как нет поля medalsList в базе
 
         csvRows.push([
           paymentDate,
@@ -896,6 +907,7 @@ router.get(
           diplomasCount > 0 ? diplomasCount : '',
           medalsCount > 0 ? medalsCount : '',
           formattedDiplomasList || '',
+          formattedMedalsList || '',
         ].join(','));
       }
 
