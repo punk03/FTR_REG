@@ -529,7 +529,7 @@ router.delete(
 
       // Пересчитать статусы оплаты для всех регистраций в группе
       const registrationIds = new Set<number>();
-      entries.forEach((entry) => {
+      entries.forEach((entry: AccountingEntry) => {
         if (entry.registrationId) {
           registrationIds.add(entry.registrationId);
         }
@@ -602,7 +602,7 @@ router.post(
 
       // Пересчитать статусы оплаты для всех регистраций в группе
       const registrationIds = new Set<number>();
-      entries.forEach((entry) => {
+      entries.forEach((entry: AccountingEntry) => {
         if (entry.registrationId) {
           registrationIds.add(entry.registrationId);
         }
