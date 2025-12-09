@@ -78,6 +78,11 @@ export const CombinedPayment: React.FC = () => {
   const [priceCalculation, setPriceCalculation] = useState<any>(null);
   const [registrationPrices, setRegistrationPrices] = useState<Record<number, any>>({});
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [nominations, setNominations] = useState<any[]>([]);
+  const [ages, setAges] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [collectives, setCollectives] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchEvents = async () => {
