@@ -724,7 +724,7 @@ router.get(
 
         // Format diplomas list (split by newlines and join with semicolon for Excel)
         const formattedDiplomasList = diplomasList
-          ? diplomasList.split('\n').filter(line => line.trim()).join('; ')
+          ? diplomasList.split('\n').filter((line: string) => line.trim()).join('; ')
           : '';
 
         const row = worksheet.addRow([
@@ -754,20 +754,23 @@ router.get(
       }
 
       // Add summary row
-      const totalRow = worksheet.addRow([]);
-      totalRow.addCell(9).value = 'ИТОГО:';
-      totalRow.addCell(9).font = { bold: true };
+      const totalAmount = entries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+      const totalDiscount = entries.filter((e: any) => e.paidFor === 'PERFORMANCE').reduce((sum: number, e: any) => sum + Number(e.discountAmount), 0);
       
-      const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
-      const totalDiscount = entries.filter(e => e.paidFor === 'PERFORMANCE').reduce((sum, e) => sum + Number(e.discountAmount), 0);
+      const totalRow = worksheet.addRow([
+        '', '', '', '', '', '', '', '', // Empty cells for first 8 columns
+        'ИТОГО:',
+        totalAmount,
+        totalDiscount,
+        '', '', '', '', // Empty cells for remaining columns
+      ]);
       
-      totalRow.addCell(10).value = totalAmount;
-      totalRow.addCell(10).numFmt = '#,##0.00';
-      totalRow.addCell(10).font = { bold: true };
-      
-      totalRow.addCell(11).value = totalDiscount;
-      totalRow.addCell(11).numFmt = '#,##0.00';
-      totalRow.addCell(11).font = { bold: true };
+      // Style summary row
+      totalRow.getCell(9).font = { bold: true };
+      totalRow.getCell(10).numFmt = '#,##0.00';
+      totalRow.getCell(10).font = { bold: true };
+      totalRow.getCell(11).numFmt = '#,##0.00';
+      totalRow.getCell(11).font = { bold: true };
 
       // Set response headers
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
