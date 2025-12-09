@@ -65,6 +65,7 @@ export const Diplomas: React.FC = () => {
     diplomasList: '',
     diplomasCount: '',
     medalsCount: '',
+    blockNumber: '',
   });
 
   useEffect(() => {
@@ -128,6 +129,7 @@ export const Diplomas: React.FC = () => {
       diplomasList: reg.diplomasList || '',
       diplomasCount: String(reg.diplomasCount || 0),
       medalsCount: String(reg.medalsCount || 0),
+      blockNumber: String(reg.blockNumber || ''),
     });
     setEditDialogOpen(true);
   };
@@ -140,6 +142,7 @@ export const Diplomas: React.FC = () => {
         diplomasList: editFormData.diplomasList,
         diplomasCount: parseInt(editFormData.diplomasCount),
         medalsCount: parseInt(editFormData.medalsCount),
+        blockNumber: editFormData.blockNumber ? parseInt(editFormData.blockNumber) : null,
       });
       setEditDialogOpen(false);
       fetchRegistrations();
@@ -375,7 +378,6 @@ export const Diplomas: React.FC = () => {
               </TableCell>
               <TableCell />
               <TableCell>Блок</TableCell>
-              <TableCell>№</TableCell>
               <TableCell>Коллектив</TableCell>
               <TableCell>Дисциплина</TableCell>
               <TableCell>Номинация</TableCell>
@@ -408,7 +410,6 @@ export const Diplomas: React.FC = () => {
                       </IconButton>
                     </TableCell>
                     <TableCell>{reg.blockNumber || '-'}</TableCell>
-                    <TableCell>{formatRegistrationNumber(reg)}</TableCell>
                     <TableCell>{reg.collective?.name || '-'}</TableCell>
                     <TableCell>{reg.discipline?.name || '-'}</TableCell>
                     <TableCell>{reg.nomination?.name || '-'}</TableCell>
@@ -437,7 +438,7 @@ export const Diplomas: React.FC = () => {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell colSpan={13} sx={{ py: 0 }}>
+                    <TableCell colSpan={12} sx={{ py: 0 }}>
                       <Collapse in={isExpanded}>
                         <Box sx={{ p: 2, bgcolor: 'background.default' }}>
                           <Typography variant="subtitle2" gutterBottom>
