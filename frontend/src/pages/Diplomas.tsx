@@ -510,6 +510,17 @@ export const Diplomas: React.FC = () => {
                 inputProps={{ min: 0 }}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Блок"
+                type="number"
+                value={editFormData.blockNumber}
+                onChange={(e) => setEditFormData({ ...editFormData, blockNumber: e.target.value })}
+                inputProps={{ min: 1 }}
+                helperText="Номер блока для танца"
+              />
+            </Grid>
             {selectedRegistration && (
               <Grid item xs={12}>
                 <Typography variant="body2" color="text.secondary">
