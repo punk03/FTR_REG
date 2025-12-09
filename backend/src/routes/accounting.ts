@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AccountingEntry } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
