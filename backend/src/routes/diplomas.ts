@@ -41,7 +41,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
           nomination: true,
           age: true,
         },
-        orderBy: { blockNumber: 'asc' },
+        orderBy: [
+          { blockNumber: { sort: 'asc', nulls: 'last' } },
+          { number: 'asc' },
+        ],
         skip,
         take: limit,
       }),

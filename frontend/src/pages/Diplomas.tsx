@@ -235,18 +235,31 @@ export const Diplomas: React.FC = () => {
     }
   };
 
-  const filteredRegistrations = registrations.filter((reg: any) => {
-    if (!showPaid && reg.diplomasAndMedalsPaid) return false;
-    if (!showUnpaid && !reg.diplomasAndMedalsPaid) return false;
-    if (!showPrinted && reg.diplomasPrinted) return false;
-    // Фильтр: показывать только те, где заказаны дипломы или медали
-    if (showOnlyWithDiplomasOrMedals) {
-      const hasDiplomas = (reg.diplomasCount || 0) > 0;
-      const hasMedals = (reg.medalsCount || 0) > 0;
-      if (!hasDiplomas && !hasMedals) return false;
-    }
-    return true;
-  });
+  const filteredRegistrations = registrations
+    .filter((reg: any) => {
+      if (!showPaid && reg.diplomasAndMedalsPaid) return false;
+      if (!showUnpaid && !reg.diplomasAndMedalsPaid) return false;
+      if (!showPrinted && reg.diplomasPrinted) return false;
+      // Фильтр: показывать только те, где заказаны дипломы или медали
+      if (showOnlyWithDiplomasOrMedals) {
+        const hasDiplomas = (reg.diplomasCount || 0) > 0;
+        const hasMedals = (reg.medalsCount || 0) > 0;
+        if (!hasDiplomas && !hasMedals) return false;
+      }
+      return true;
+    })
+    .sort((a: any, b: any) => {
+      // Сортировка по блоку (null значения в конец)
+      const blockA = a.blockNumber ?? 999999;
+      const blockB = b.blockNumber ?? 999999;
+      if (blockA !== blockB) {
+        return blockA - blockB;
+      }
+      // Если блоки одинаковые, сортируем по номеру регистрации
+      const numA = a.number ?? 999999;
+      const numB = b.number ?? 999999;
+      return numA - numB;
+    });
 
   return (
     <Box>
