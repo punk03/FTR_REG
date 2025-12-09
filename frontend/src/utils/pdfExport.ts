@@ -76,6 +76,9 @@ interface AccountingEntry {
     danceName?: string;
     blockNumber?: number;
     number?: number;
+    diplomasCount?: number;
+    medalsCount?: number;
+    diplomasList?: string | null;
   };
   paymentGroupName?: string;
 }
@@ -761,7 +764,6 @@ export const generatePaymentStatement = async (
     const tableBody: any[] = [
       performanceHasDiscount ? [
         { text: 'Дата', style: 'tableHeader' },
-        { text: 'Номер', style: 'tableHeader' },
         { text: 'Коллектив', style: 'tableHeader' },
         { text: 'Название', style: 'tableHeader' },
         { text: 'Сумма', style: 'tableHeader' },
@@ -769,7 +771,6 @@ export const generatePaymentStatement = async (
         { text: 'Способ', style: 'tableHeader' },
       ] : [
         { text: 'Дата', style: 'tableHeader' },
-        { text: 'Номер', style: 'tableHeader' },
         { text: 'Коллектив', style: 'tableHeader' },
         { text: 'Название', style: 'tableHeader' },
         { text: 'Сумма', style: 'tableHeader' },
@@ -779,14 +780,12 @@ export const generatePaymentStatement = async (
 
     performanceEntries.forEach((entry) => {
       const reg = entry.registration as any;
-      const regNumber = formatRegistrationNumber(reg || {});
       const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
       const discountAmount = typeof entry.discountAmount === 'number' ? entry.discountAmount : parseFloat(String(entry.discountAmount || 0));
       
       if (performanceHasDiscount) {
         tableBody.push([
           formatDate(entry.createdAt),
-          regNumber,
           entry.collective?.name || '-',
           reg?.danceName || '-',
           formatCurrency(amount),
@@ -796,7 +795,6 @@ export const generatePaymentStatement = async (
       } else {
         tableBody.push([
           formatDate(entry.createdAt),
-          regNumber,
           entry.collective?.name || '-',
           reg?.danceName || '-',
           formatCurrency(amount),
@@ -805,10 +803,10 @@ export const generatePaymentStatement = async (
       }
     });
 
-    docDefinition.content.push({
+      docDefinition.content.push({
       table: {
         headerRows: 1,
-        widths: performanceHasDiscount ? ['auto', 'auto', '*', '*', 'auto', 'auto', 'auto'] : ['auto', 'auto', '*', '*', 'auto', 'auto'],
+        widths: performanceHasDiscount ? ['auto', '*', '*', 'auto', 'auto', 'auto'] : ['auto', '*', '*', 'auto', 'auto'],
         body: tableBody,
       },
       margin: [0, 0, 0, 10],
@@ -832,9 +830,11 @@ export const generatePaymentStatement = async (
     const tableBody: any[] = [
       [
         { text: 'Дата', style: 'tableHeader' },
-        { text: 'Номер', style: 'tableHeader' },
         { text: 'Коллектив', style: 'tableHeader' },
         { text: 'Название', style: 'tableHeader' },
+        { text: 'Дипломы (кол-во)', style: 'tableHeader' },
+        { text: 'Медали (кол-во)', style: 'tableHeader' },
+        { text: 'ФИО на дипломы', style: 'tableHeader' },
         { text: 'Сумма', style: 'tableHeader' },
         { text: 'Способ', style: 'tableHeader' },
       ],
@@ -842,14 +842,23 @@ export const generatePaymentStatement = async (
 
     diplomasEntries.forEach((entry) => {
       const reg = entry.registration as any;
-      const regNumber = formatRegistrationNumber(reg || {});
       const amount = typeof entry.amount === 'number' ? entry.amount : parseFloat(String(entry.amount || 0));
+      const diplomasCount = reg?.diplomasCount || 0;
+      const medalsCount = reg?.medalsCount || 0;
+      const diplomasList = reg?.diplomasList || null;
+      
+      // Форматируем ФИО на дипломы (разделяем переносами строк и объединяем через точку с запятой)
+      const formattedDiplomasList = diplomasList && typeof diplomasList === 'string' && diplomasList.trim()
+        ? diplomasList.split('\n').filter((line: string) => line.trim()).join('; ')
+        : '';
       
       tableBody.push([
         formatDate(entry.createdAt),
-        regNumber,
         entry.collective?.name || '-',
         reg?.danceName || '-',
+        diplomasCount > 0 ? String(diplomasCount) : '',
+        medalsCount > 0 ? String(medalsCount) : '',
+        formattedDiplomasList || '',
         formatCurrency(amount),
         getMethodName(entry.method),
       ]);
@@ -858,7 +867,7 @@ export const generatePaymentStatement = async (
     docDefinition.content.push({
       table: {
         headerRows: 1,
-        widths: ['auto', 'auto', '*', '*', 'auto', 'auto'],
+        widths: ['auto', '*', '*', 'auto', 'auto', '*', 'auto', 'auto'],
         body: tableBody,
       },
       margin: [0, 0, 0, 10],
