@@ -1098,7 +1098,10 @@ export const Accounting: React.FC = () => {
                             
                             return (
                               <React.Fragment key={item.groupId}>
-                                <TableRow>
+                                <TableRow sx={{ 
+                                  backgroundColor: item.isDeleted ? 'error.light' : 'inherit',
+                                  opacity: item.isDeleted ? 0.7 : 1
+                                }}>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                       <IconButton
@@ -1136,47 +1139,74 @@ export const Accounting: React.FC = () => {
                                   <TableCell>-</TableCell>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                      {user?.role === 'ADMIN' && (
-                                        <Button
-                                          variant="outlined"
-                                          size="small"
-                                          onClick={() => handleEditGroupNameClick(item.groupId)}
-                                          sx={{ minWidth: 'auto', px: 1 }}
-                                        >
-                                          Редактировать
-                                        </Button>
+                                      {item.isDeleted ? (
+                                        user?.role === 'ADMIN' && (
+                                          <Button
+                                            variant="outlined"
+                                            size="small"
+                                            color="success"
+                                            onClick={() => handleRestoreGroupClick(item.groupId)}
+                                            sx={{ minWidth: 'auto', px: 1 }}
+                                          >
+                                            Восстановить
+                                          </Button>
+                                        )
+                                      ) : (
+                                        <>
+                                          {user?.role === 'ADMIN' && (
+                                            <>
+                                              <Button
+                                                variant="outlined"
+                                                size="small"
+                                                onClick={() => handleEditGroupNameClick(item.groupId)}
+                                                sx={{ minWidth: 'auto', px: 1 }}
+                                              >
+                                                Редактировать
+                                              </Button>
+                                              <Button
+                                                variant="outlined"
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDeleteGroupClick(item.groupId)}
+                                                sx={{ minWidth: 'auto', px: 1 }}
+                                              >
+                                                Удалить
+                                              </Button>
+                                            </>
+                                          )}
+                                          {item.hasPerformance && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                            <Button
+                                              variant="outlined"
+                                              size="small"
+                                              color="secondary"
+                                              onClick={() => handleDiscountClick(item.groupId)}
+                                              sx={{ minWidth: 'auto', px: 1 }}
+                                            >
+                                              Откат
+                                            </Button>
+                                          )}
+                                          <IconButton
+                                            size="small"
+                                            onClick={async () => {
+                                              try {
+                                                const event = events.find((e) => e.id === selectedEventId);
+                                                await generatePaymentStatement(
+                                                  item.entries,
+                                                  event?.name || 'Неизвестное мероприятие',
+                                                  item.paymentGroupName
+                                                );
+                                                showSuccess('Выписка успешно сформирована');
+                                              } catch (error: any) {
+                                                console.error('Error generating payment statement:', error);
+                                                showError(error.message || 'Ошибка при создании выписки');
+                                              }
+                                            }}
+                                            title="Сформировать выписку"
+                                          >
+                                            <ReceiptIcon fontSize="small" />
+                                          </IconButton>
+                                        </>
                                       )}
-                                      {item.hasPerformance && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                                        <Button
-                                          variant="outlined"
-                                          size="small"
-                                          color="secondary"
-                                          onClick={() => handleDiscountClick(item.groupId)}
-                                          sx={{ minWidth: 'auto', px: 1 }}
-                                        >
-                                          Откат
-                                        </Button>
-                                      )}
-                                      <IconButton
-                                        size="small"
-                                        onClick={async () => {
-                                          try {
-                                            const event = events.find((e) => e.id === selectedEventId);
-                                            await generatePaymentStatement(
-                                              item.entries,
-                                              event?.name || 'Неизвестное мероприятие',
-                                              item.paymentGroupName
-                                            );
-                                            showSuccess('Выписка успешно сформирована');
-                                          } catch (error: any) {
-                                            console.error('Error generating payment statement:', error);
-                                            showError(error.message || 'Ошибка при создании выписки');
-                                          }
-                                        }}
-                                        title="Сформировать выписку"
-                                      >
-                                        <ReceiptIcon fontSize="small" />
-                                      </IconButton>
                                     </Box>
                                   </TableCell>
                                 </TableRow>
@@ -1416,6 +1446,34 @@ export const Accounting: React.FC = () => {
         onCancel={() => {
           setDeleteConfirmOpen(false);
           setEntryToDelete(null);
+        }}
+      />
+      
+      <ConfirmDialog
+        open={deleteGroupConfirmOpen}
+        title="Удалить группу платежей"
+        message="Вы уверены, что хотите удалить эту группу платежей? Все записи в группе будут помечены как удалённые. Это действие можно отменить через восстановление."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        severity="error"
+        onConfirm={handleDeleteGroupConfirm}
+        onCancel={() => {
+          setDeleteGroupConfirmOpen(false);
+          setGroupToDelete(null);
+        }}
+      />
+      
+      <ConfirmDialog
+        open={restoreGroupConfirmOpen}
+        title="Восстановить группу платежей"
+        message="Вы уверены, что хотите восстановить эту группу платежей? Все записи в группе будут восстановлены."
+        confirmText="Восстановить"
+        cancelText="Отмена"
+        severity="success"
+        onConfirm={handleRestoreGroupConfirm}
+        onCancel={() => {
+          setRestoreGroupConfirmOpen(false);
+          setGroupToRestore(null);
         }}
       />
 
