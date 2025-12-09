@@ -138,16 +138,31 @@ export const Diplomas: React.FC = () => {
     if (!selectedRegistration) return;
 
     try {
+      const blockNumberValue = editFormData.blockNumber && editFormData.blockNumber.trim() 
+        ? parseInt(editFormData.blockNumber) 
+        : null;
+      
       await api.patch(`/api/registrations/${selectedRegistration.id}`, {
         diplomasList: editFormData.diplomasList,
         diplomasCount: parseInt(editFormData.diplomasCount),
         medalsCount: parseInt(editFormData.medalsCount),
-        blockNumber: editFormData.blockNumber && editFormData.blockNumber.trim() 
-          ? parseInt(editFormData.blockNumber) 
-          : null,
+        blockNumber: blockNumberValue,
       });
+      
       setEditDialogOpen(false);
-      fetchRegistrations();
+      setSelectedRegistration(null);
+      
+      // Обновляем данные регистрации в локальном состоянии перед перезагрузкой
+      setRegistrations((prevRegs) => 
+        prevRegs.map((reg: any) => 
+          reg.id === selectedRegistration.id
+            ? { ...reg, blockNumber: blockNumberValue, diplomasList: editFormData.diplomasList, diplomasCount: parseInt(editFormData.diplomasCount), medalsCount: parseInt(editFormData.medalsCount) }
+            : reg
+        )
+      );
+      
+      // Перезагружаем данные с сервера для получения актуальной сортировки
+      await fetchRegistrations();
       showSuccess('Дипломы успешно обновлены');
     } catch (error: any) {
       console.error('Error updating diplomas:', error);
