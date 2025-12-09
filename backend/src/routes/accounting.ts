@@ -502,6 +502,146 @@ router.put(
   }
 );
 
+// DELETE /api/accounting/payment-group/:paymentGroupId
+router.delete(
+  '/payment-group/:paymentGroupId',
+  authenticateToken,
+  requireRole('ADMIN'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { paymentGroupId } = req.params;
+
+      // Найти все записи группы
+      const entries = await prisma.accountingEntry.findMany({
+        where: { paymentGroupId, deletedAt: null },
+      });
+
+      if (entries.length === 0) {
+        res.status(404).json({ error: 'Payment group not found' });
+        return;
+      }
+
+      // Мягкое удаление всех записей группы
+      const result = await prisma.accountingEntry.updateMany({
+        where: { paymentGroupId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+
+      // Пересчитать статусы оплаты для всех регистраций в группе
+      const registrationIds = new Set<number>();
+      entries.forEach((entry) => {
+        if (entry.registrationId) {
+          registrationIds.add(entry.registrationId);
+        }
+      });
+
+      for (const registrationId of registrationIds) {
+        await recalculateRegistrationPaymentStatus(registrationId);
+      }
+
+      // Инвалидировать кэш статистики
+      const eventIds = new Set<number>();
+      for (const entry of entries) {
+        if (entry.registrationId) {
+          const registration = await prisma.registration.findUnique({
+            where: { id: entry.registrationId },
+            select: { eventId: true },
+          });
+          if (registration) {
+            eventIds.add(registration.eventId);
+          }
+        } else if (entry.eventId) {
+          eventIds.add(entry.eventId);
+        }
+      }
+
+      for (const eventId of eventIds) {
+        await cacheService.del(`statistics:${eventId}`);
+      }
+
+      res.json({ 
+        message: 'Payment group deleted successfully', 
+        deletedCount: result.count 
+      });
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
+// POST /api/accounting/payment-group/:paymentGroupId/restore
+router.post(
+  '/payment-group/:paymentGroupId/restore',
+  authenticateToken,
+  requireRole('ADMIN'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { paymentGroupId } = req.params;
+
+      // Найти все удалённые записи группы
+      const entries = await prisma.accountingEntry.findMany({
+        where: { 
+          paymentGroupId,
+          deletedAt: { not: null },
+        },
+      });
+
+      if (entries.length === 0) {
+        res.status(404).json({ error: 'Deleted payment group not found' });
+        return;
+      }
+
+      // Восстановить все записи группы
+      const result = await prisma.accountingEntry.updateMany({
+        where: { 
+          paymentGroupId,
+          deletedAt: { not: null },
+        },
+        data: { deletedAt: null },
+      });
+
+      // Пересчитать статусы оплаты для всех регистраций в группе
+      const registrationIds = new Set<number>();
+      entries.forEach((entry) => {
+        if (entry.registrationId) {
+          registrationIds.add(entry.registrationId);
+        }
+      });
+
+      for (const registrationId of registrationIds) {
+        await recalculateRegistrationPaymentStatus(registrationId);
+      }
+
+      // Инвалидировать кэш статистики
+      const eventIds = new Set<number>();
+      for (const entry of entries) {
+        if (entry.registrationId) {
+          const registration = await prisma.registration.findUnique({
+            where: { id: entry.registrationId },
+            select: { eventId: true },
+          });
+          if (registration) {
+            eventIds.add(registration.eventId);
+          }
+        } else if (entry.eventId) {
+          eventIds.add(entry.eventId);
+        }
+      }
+
+      for (const eventId of eventIds) {
+        await cacheService.del(`statistics:${eventId}`);
+      }
+
+      res.json({ 
+        message: 'Payment group restored successfully', 
+        restoredCount: result.count 
+      });
+    } catch (error) {
+      errorHandler(error as Error, req, res, () => {});
+    }
+  }
+);
+
 // PUT /api/accounting/payment-group/:paymentGroupId/discount
 router.put(
   '/payment-group/:paymentGroupId/discount',

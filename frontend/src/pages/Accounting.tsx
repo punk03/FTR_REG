@@ -67,6 +67,11 @@ export const Accounting: React.FC = () => {
   const [selectedEntry, setSelectedEntry] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<number | null>(null);
+  const [deleteGroupConfirmOpen, setDeleteGroupConfirmOpen] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+  const [restoreGroupConfirmOpen, setRestoreGroupConfirmOpen] = useState(false);
+  const [groupToRestore, setGroupToRestore] = useState<string | null>(null);
+  const [showDeletedGroups, setShowDeletedGroups] = useState(false);
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [discountPercent, setDiscountPercent] = useState('');
@@ -110,7 +115,7 @@ export const Accounting: React.FC = () => {
     if (selectedEventId) {
       fetchAccounting();
     }
-  }, [selectedEventId, page, rowsPerPage]);
+  }, [selectedEventId, page, rowsPerPage, showDeletedGroups]);
 
   const fetchAccounting = async () => {
     setLoading(true);
@@ -118,7 +123,7 @@ export const Accounting: React.FC = () => {
       const response = await api.get('/api/accounting', {
         params: {
           eventId: selectedEventId,
-          includeDeleted: false,
+          includeDeleted: showDeletedGroups,
           page: page + 1,
           limit: rowsPerPage,
         },
@@ -190,6 +195,46 @@ export const Accounting: React.FC = () => {
     } catch (error: any) {
       console.error('Error deleting entry:', error);
       showError(error.response?.data?.error || 'Ошибка удаления');
+    }
+  };
+
+  const handleDeleteGroupClick = (groupId: string) => {
+    setGroupToDelete(groupId);
+    setDeleteGroupConfirmOpen(true);
+  };
+
+  const handleDeleteGroupConfirm = async () => {
+    if (!groupToDelete) return;
+
+    try {
+      await api.delete(`/api/accounting/payment-group/${groupToDelete}`);
+      fetchAccounting();
+      showSuccess('Группа платежей успешно удалена');
+      setDeleteGroupConfirmOpen(false);
+      setGroupToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting payment group:', error);
+      showError(error.response?.data?.error || 'Ошибка удаления группы платежей');
+    }
+  };
+
+  const handleRestoreGroupClick = (groupId: string) => {
+    setGroupToRestore(groupId);
+    setRestoreGroupConfirmOpen(true);
+  };
+
+  const handleRestoreGroupConfirm = async () => {
+    if (!groupToRestore) return;
+
+    try {
+      await api.post(`/api/accounting/payment-group/${groupToRestore}/restore`);
+      fetchAccounting();
+      showSuccess('Группа платежей успешно восстановлена');
+      setRestoreGroupConfirmOpen(false);
+      setGroupToRestore(null);
+    } catch (error: any) {
+      console.error('Error restoring payment group:', error);
+      showError(error.response?.data?.error || 'Ошибка восстановления группы платежей');
     }
   };
 
