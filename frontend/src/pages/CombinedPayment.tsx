@@ -146,6 +146,12 @@ export const CombinedPayment: React.FC = () => {
           medalsCount: reg.medalsCount,
           diplomasList: reg.diplomasList || '',
           diplomasCount: reg.diplomasCount,
+          danceName: reg.danceName || '',
+          collectiveId: reg.collectiveId,
+          disciplineId: reg.disciplineId,
+          nominationId: reg.nominationId,
+          ageId: reg.ageId,
+          categoryId: reg.categoryId,
         };
       });
       setRegistrationData(initialData);
@@ -416,6 +422,12 @@ export const CombinedPayment: React.FC = () => {
           medalsCount: parseInt(data.medalsCount || reg?.medalsCount || 0),
           diplomasCount,
           diplomasList: diplomasList || '', // Всегда передаём diplomasList, даже если пустой
+          danceName: data.danceName !== undefined ? data.danceName : (reg?.danceName || ''),
+          collectiveId: data.collectiveId !== undefined ? data.collectiveId : (reg?.collectiveId || null),
+          disciplineId: data.disciplineId !== undefined ? data.disciplineId : (reg?.disciplineId || null),
+          nominationId: data.nominationId !== undefined ? data.nominationId : (reg?.nominationId || null),
+          ageId: data.ageId !== undefined ? data.ageId : (reg?.ageId || null),
+          categoryId: data.categoryId !== undefined ? data.categoryId : (reg?.categoryId || null),
         };
       });
 
@@ -626,24 +638,152 @@ export const CombinedPayment: React.FC = () => {
               return (
                 <Card key={reg.id} sx={{ mb: 2 }}>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {reg.danceName || 'Без названия'}
-                    </Typography>
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Название танца"
+                          value={data.danceName !== undefined ? data.danceName : (reg.danceName || '')}
+                          onChange={(e) => {
+                            setRegistrationData({
+                              ...registrationData,
+                              [reg.id]: {
+                                ...data,
+                                danceName: e.target.value,
+                              },
+                            });
+                          }}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Коллектив</InputLabel>
+                          <Select
+                            value={data.collectiveId !== undefined ? data.collectiveId : (reg.collectiveId || '')}
+                            label="Коллектив"
+                            onChange={(e) => {
+                              setRegistrationData({
+                                ...registrationData,
+                                [reg.id]: {
+                                  ...data,
+                                  collectiveId: e.target.value,
+                                },
+                              });
+                            }}
+                          >
+                            {registrations.map((r) => r.collective).filter((c, index, self) => 
+                              c && index === self.findIndex((t) => t?.id === c.id)
+                            ).map((collective) => (
+                              <MenuItem key={collective?.id} value={collective?.id}>
+                                {collective?.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Дисциплина</InputLabel>
+                          <Select
+                            value={data.disciplineId !== undefined ? data.disciplineId : (reg.disciplineId || '')}
+                            label="Дисциплина"
+                            onChange={(e) => {
+                              setRegistrationData({
+                                ...registrationData,
+                                [reg.id]: {
+                                  ...data,
+                                  disciplineId: e.target.value,
+                                },
+                              });
+                            }}
+                          >
+                            {disciplines.map((discipline) => (
+                              <MenuItem key={discipline.id} value={discipline.id}>
+                                {discipline.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Номинация</InputLabel>
+                          <Select
+                            value={data.nominationId !== undefined ? data.nominationId : (reg.nominationId || '')}
+                            label="Номинация"
+                            onChange={(e) => {
+                              setRegistrationData({
+                                ...registrationData,
+                                [reg.id]: {
+                                  ...data,
+                                  nominationId: e.target.value,
+                                },
+                              });
+                            }}
+                          >
+                            {nominations.map((nomination) => (
+                              <MenuItem key={nomination.id} value={nomination.id}>
+                                {nomination.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Возраст</InputLabel>
+                          <Select
+                            value={data.ageId !== undefined ? data.ageId : (reg.ageId || '')}
+                            label="Возраст"
+                            onChange={(e) => {
+                              setRegistrationData({
+                                ...registrationData,
+                                [reg.id]: {
+                                  ...data,
+                                  ageId: e.target.value,
+                                },
+                              });
+                            }}
+                          >
+                            {ages.map((age) => (
+                              <MenuItem key={age.id} value={age.id}>
+                                {age.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Категория</InputLabel>
+                          <Select
+                            value={data.categoryId !== undefined ? data.categoryId : (reg.categoryId || '')}
+                            label="Категория"
+                            onChange={(e) => {
+                              setRegistrationData({
+                                ...registrationData,
+                                [reg.id]: {
+                                  ...data,
+                                  categoryId: e.target.value,
+                                },
+                              });
+                            }}
+                          >
+                            {categories.map((category) => (
+                              <MenuItem key={category.id} value={category.id}>
+                                {category.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
                       <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="text.secondary">
                           Руководители: {leaders}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           Тренеры: {trainers}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="text.secondary">
-                          Дисциплина: {reg.discipline?.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Номинация: {reg.nomination?.name}
                         </Typography>
                       </Grid>
                     </Grid>

@@ -161,6 +161,26 @@ router.post(
             updateData.diplomasList = reg.diplomasList;
           }
           
+          // Обновляем все поля регистрации, если они переданы
+          if (regData.danceName !== undefined) {
+            updateData.danceName = regData.danceName;
+          }
+          if (regData.collectiveId !== undefined) {
+            updateData.collectiveId = regData.collectiveId;
+          }
+          if (regData.disciplineId !== undefined) {
+            updateData.disciplineId = regData.disciplineId;
+          }
+          if (regData.nominationId !== undefined) {
+            updateData.nominationId = regData.nominationId;
+          }
+          if (regData.ageId !== undefined) {
+            updateData.ageId = regData.ageId;
+          }
+          if (regData.categoryId !== undefined) {
+            updateData.categoryId = regData.categoryId;
+          }
+          
           await prisma.registration.update({
             where: { id: reg.id },
             data: updateData,
