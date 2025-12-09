@@ -59,9 +59,35 @@ app.options('*', (req, res) => {
   console.log('OPTIONS request from origin:', origin);
   
   // Check if origin is allowed
-  const isAllowed = !origin || 
+  let isAllowed = !origin || 
     productionOrigins.includes(origin) || 
     corsOrigins.includes(origin);
+  
+  // If not explicitly allowed, check hostname match (for mobile/VPN)
+  if (!isAllowed && origin) {
+    try {
+      const originUrl = new URL(origin);
+      const originHost = originUrl.hostname;
+      const productionHosts = productionOrigins.map(orig => {
+        try {
+          return new URL(orig).hostname;
+        } catch {
+          return orig.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+        }
+      });
+      
+      if (productionHosts.includes(originHost) || originHost === '95.71.125.8' || originHost.includes('ftr.lil-fil.netcraze.pro')) {
+        isAllowed = true;
+      }
+      
+      // In production, allow any origin with production IP/domain
+      if (process.env.NODE_ENV === 'production' && (origin.includes('95.71.125.8') || origin.includes('ftr.lil-fil.netcraze.pro'))) {
+        isAllowed = true;
+      }
+    } catch (urlError) {
+      // Continue with normal check
+    }
+  }
   
   if (isAllowed) {
     res.header('Access-Control-Allow-Origin', origin || '*');
@@ -79,12 +105,13 @@ app.options('*', (req, res) => {
 app.use(cors({
   origin: (origin, callback) => {
     try {
-      // Allow requests with no origin (like mobile apps or curl requests)
+      // Allow requests with no origin (like mobile apps, curl requests, or same-origin requests)
       if (!origin) {
+        console.log('CORS allowed (no origin):', origin);
         return callback(null, true);
       }
       
-      // Always allow production IPs
+      // Always allow production IPs and domains
       if (productionOrigins.includes(origin)) {
         console.log('CORS allowed (production):', origin);
         return callback(null, true);
@@ -94,12 +121,45 @@ app.use(cors({
       if (corsOrigins.includes(origin)) {
         console.log('CORS allowed origin:', origin);
         return callback(null, true);
-      } else {
-        console.warn('CORS blocked origin:', origin);
-        console.warn('Allowed origins:', corsOrigins);
-        // Return false instead of error to avoid 500
-        return callback(null, false);
       }
+      
+      // Allow requests from same IP/domain but different port (for mobile/VPN access)
+      // Extract host from origin
+      try {
+        const originUrl = new URL(origin);
+        const originHost = originUrl.hostname;
+        
+        // Check if hostname matches production IP or domain (without port)
+        const productionHosts = productionOrigins.map(orig => {
+          try {
+            return new URL(orig).hostname;
+          } catch {
+            return orig.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+          }
+        });
+        
+        if (productionHosts.includes(originHost) || originHost === '95.71.125.8' || originHost.includes('ftr.lil-fil.netcraze.pro')) {
+          console.log('CORS allowed (hostname match):', origin);
+          return callback(null, true);
+        }
+      } catch (urlError) {
+        // If URL parsing fails, continue with normal check
+      }
+      
+      // For production environment, be more permissive - allow any origin that matches production IP
+      // This helps with mobile and VPN access
+      if (process.env.NODE_ENV === 'production') {
+        // Check if origin contains production IP or domain
+        if (origin.includes('95.71.125.8') || origin.includes('ftr.lil-fil.netcraze.pro')) {
+          console.log('CORS allowed (production permissive):', origin);
+          return callback(null, true);
+        }
+      }
+      
+      console.warn('CORS blocked origin:', origin);
+      console.warn('Allowed origins:', corsOrigins);
+      // Return false instead of error to avoid 500
+      return callback(null, false);
     } catch (error) {
       console.error('CORS origin check error:', error);
       // On error, allow the request to avoid breaking the app
