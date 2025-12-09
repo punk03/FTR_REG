@@ -847,10 +847,21 @@ export const generatePaymentStatement = async (
       const medalsCount = reg?.medalsCount || 0;
       const diplomasList = reg?.diplomasList || null;
       
-      // Форматируем ФИО на дипломы (разделяем переносами строк и объединяем через точку с запятой)
-      const formattedDiplomasList = diplomasList && typeof diplomasList === 'string' && diplomasList.trim()
-        ? diplomasList.split('\n').filter((line: string) => line.trim()).join('; ')
-        : '';
+      // Форматируем ФИО на дипломы - каждое ФИО на отдельной строке в ячейке
+      let formattedDiplomasList: any = '';
+      if (diplomasList && typeof diplomasList === 'string' && diplomasList.trim()) {
+        const fioLines = diplomasList.split('\n').filter((line: string) => line.trim());
+        if (fioLines.length > 0) {
+          // Используем stack для многострочного текста в ячейке
+          formattedDiplomasList = {
+            stack: fioLines.map((line: string) => ({
+              text: line.trim(),
+              fontSize: 7,
+            })),
+            lineHeight: 1.2,
+          };
+        }
+      }
       
       tableBody.push([
         formatDate(entry.createdAt),
