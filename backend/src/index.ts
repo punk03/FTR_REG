@@ -176,6 +176,16 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 200
 }));
+// Logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Origin:', req.headers.origin);
+  console.log('Host:', req.headers.host);
+  console.log('X-Forwarded-For:', req.headers['x-forwarded-for']);
+  console.log('X-Real-IP:', req.headers['x-real-ip']);
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
