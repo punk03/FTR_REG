@@ -63,9 +63,12 @@ api.interceptors.response.use(
     // Если нет ответа от сервера (сетевая ошибка)
     if (!error.response) {
       console.error('Network error - no response from server');
-      console.error('Request URL:', error.config?.url);
-      console.error('Base URL:', error.config?.baseURL);
-      console.error('Full URL would be:', error.config?.baseURL + error.config?.url);
+      console.error('Request URL:', error.config?.url || 'unknown');
+      console.error('Base URL:', error.config?.baseURL || 'unknown');
+      const fullUrl = error.config?.baseURL && error.config?.url 
+        ? error.config.baseURL + error.config.url 
+        : 'unknown';
+      console.error('Full URL would be:', fullUrl);
       
       // Показываем более понятное сообщение об ошибке
       const networkError = new Error('Не удалось подключиться к серверу. Проверьте подключение к интернету.');
