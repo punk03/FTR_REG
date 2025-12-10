@@ -44,12 +44,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, password: string) => {
-    const response = await api.post('/api/auth/login', { email, password });
-    const { accessToken, refreshToken, user: userData } = response.data;
+    try {
+      console.log('Login attempt for email:', email);
+      console.log('API base URL:', api.defaults.baseURL);
+      console.log('Making POST request to /api/auth/login');
+      
+      const response = await api.post('/api/auth/login', { email, password });
+      
+      console.log('Login response received:', response.status, response.data);
+      
+      if (!response.data) {
+        throw new Error('No data in response');
+      }
+      
+      const { accessToken, refreshToken, user: userData } = response.data;
 
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    setUser(userData);
+      if (!accessToken || !refreshToken) {
+        throw new Error('Missing tokens in response');
+      }
+
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      setUser(userData);
+      
+      console.log('Login successful, user set:', userData);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      throw error;
+    }
   };
 
   const logout = () => {

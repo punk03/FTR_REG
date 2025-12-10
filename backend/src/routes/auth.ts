@@ -20,6 +20,11 @@ router.post(
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('=== LOGIN REQUEST ===');
+      console.log('Origin:', req.headers.origin);
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('Body:', { email: req.body.email, password: req.body.password ? '***' : 'missing' });
+      
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         console.error('Login validation errors:', errors.array());

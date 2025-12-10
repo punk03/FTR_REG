@@ -39,17 +39,24 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('API Request:', config.method?.toUpperCase(), config.url, 'Base URL:', config.baseURL);
     return config;
   },
   (error) => {
+    console.error('API Request error:', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor - handle errors and refresh token when needed
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', response.status, response.config.url);
+    return response;
+  },
   async (error: AxiosError<any>) => {
+    console.error('API Response error:', error.response?.status, error.config?.url);
+    console.error('Error details:', error.response?.data || error.message);
     const originalRequest: any = error.config;
 
     // Если получили 401 и это не повторный запрос на refresh
