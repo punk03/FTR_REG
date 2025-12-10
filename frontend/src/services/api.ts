@@ -82,8 +82,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
+        // Use relative path for refresh endpoint (nginx proxy will handle it)
+        const refreshUrl = API_URL ? `${API_URL}/api/auth/refresh` : '/api/auth/refresh';
         const response = await axios.post(
-          `${API_URL}/api/auth/refresh`,
+          refreshUrl,
           { refreshToken },
           {
             headers: {
