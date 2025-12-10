@@ -177,7 +177,7 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 // Logging middleware for debugging
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   console.log('Origin:', req.headers.origin);
   console.log('Host:', req.headers.host);
