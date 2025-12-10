@@ -22,7 +22,24 @@ export const Login: React.FC = () => {
       await login(email, password);
       navigate('/');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'Ошибка входа';
+      console.error('Login error in component:', err);
+      
+      let errorMessage = 'Ошибка входа';
+      
+      if (err.isNetworkError) {
+        errorMessage = 'Не удалось подключиться к серверу. Проверьте подключение к интернету.';
+      } else if (err.response) {
+        // Есть ответ от сервера
+        errorMessage = err.response.data?.error || `Ошибка сервера: ${err.response.status}`;
+      } else if (err.message) {
+        // Есть сообщение об ошибке
+        errorMessage = err.message;
+      } else if (err.request) {
+        // Запрос отправлен, но нет ответа
+        errorMessage = 'Сервер не отвечает. Попробуйте позже.';
+      }
+      
+      console.error('Final error message:', errorMessage);
       setError(errorMessage);
       showError(errorMessage);
     } finally {

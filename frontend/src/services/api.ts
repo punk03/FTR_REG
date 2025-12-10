@@ -57,6 +57,22 @@ api.interceptors.response.use(
   async (error: AxiosError<any>) => {
     console.error('API Response error:', error.response?.status, error.config?.url);
     console.error('Error details:', error.response?.data || error.message);
+    console.error('Error code:', error.code);
+    console.error('Error config:', error.config);
+    
+    // Если нет ответа от сервера (сетевая ошибка)
+    if (!error.response) {
+      console.error('Network error - no response from server');
+      console.error('Request URL:', error.config?.url);
+      console.error('Base URL:', error.config?.baseURL);
+      console.error('Full URL would be:', error.config?.baseURL + error.config?.url);
+      
+      // Показываем более понятное сообщение об ошибке
+      const networkError = new Error('Не удалось подключиться к серверу. Проверьте подключение к интернету.');
+      (networkError as any).isNetworkError = true;
+      return Promise.reject(networkError);
+    }
+    
     const originalRequest: any = error.config;
 
     // Если получили 401 и это не повторный запрос на refresh
