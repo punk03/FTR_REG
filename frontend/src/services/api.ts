@@ -39,7 +39,8 @@ api.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('API Request:', config.method?.toUpperCase(), config.url, 'Base URL:', config.baseURL);
+    const fullUrl = config.baseURL ? `${config.baseURL}${config.url}` : config.url;
+    console.log('API Request:', config.method?.toUpperCase(), fullUrl, 'Base URL:', config.baseURL || '(empty - using relative)');
     return config;
   },
   (error) => {
