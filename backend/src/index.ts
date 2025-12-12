@@ -154,7 +154,7 @@ app.use(cors({
       const nodeEnv = process.env.NODE_ENV || 'production';
       if (nodeEnv === 'production' || !process.env.NODE_ENV) {
         // Check if origin contains production IP or domain
-        if (origin.includes('95.71.125.8') || origin.includes('ftr.lil-fil.netcraze.pro')) {
+        if (origin.includes('95.71.125.8') || origin.includes('ftr.lil-fil.netcraze.pro') || origin.includes('ftr.lilfil.ru')) {
           console.log('CORS allowed (production permissive):', origin);
           return callback(null, true);
         }
