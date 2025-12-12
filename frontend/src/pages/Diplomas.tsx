@@ -25,6 +25,12 @@ import {
   Typography,
   Chip,
   Grid,
+  Card,
+  CardContent,
+  useTheme,
+  useMediaQuery,
+  Stack,
+  CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -40,6 +46,8 @@ import { useNotification } from '../context/NotificationContext';
 export const Diplomas: React.FC = () => {
   // const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -279,9 +287,17 @@ export const Diplomas: React.FC = () => {
     });
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <FormControl sx={{ minWidth: 200 }}>
+    <Box sx={{ px: { xs: 0, sm: 0 } }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: { xs: 2, sm: 3 }, 
+        flexWrap: 'wrap', 
+        gap: { xs: 1, sm: 2 },
+        px: { xs: 1, sm: 0 }
+      }}>
+        <FormControl sx={{ minWidth: { xs: '100%', sm: 200 }, mb: { xs: 1, sm: 0 } }}>
           <InputLabel>Событие</InputLabel>
           <Select
             value={selectedEventId}
@@ -289,6 +305,7 @@ export const Diplomas: React.FC = () => {
             onChange={(e) => {
               setSelectedEventId(e.target.value as number);
             }}
+            size={isMobile ? "small" : "medium"}
           >
             {events.map((event) => (
               <MenuItem key={event.id} value={event.id}>
@@ -305,51 +322,70 @@ export const Diplomas: React.FC = () => {
           InputProps={{
             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
           }}
-          sx={{ minWidth: 300 }}
+          sx={{ 
+            minWidth: { xs: '100%', sm: 300 },
+            mb: { xs: 1, sm: 0 }
+          }}
+          size={isMobile ? "small" : "medium"}
         />
 
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: { xs: 0.5, sm: 1 }, 
+          flexWrap: 'wrap',
+          width: { xs: '100%', sm: 'auto' }
+        }}>
           <FormControlLabel
-            control={<Checkbox checked={showPaid} onChange={(e) => setShowPaid(e.target.checked)} />}
-            label="Оплаченные"
+            control={<Checkbox checked={showPaid} onChange={(e) => setShowPaid(e.target.checked)} size={isMobile ? "small" : "medium"} />}
+            label={<Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Оплаченные</Typography>}
           />
           <FormControlLabel
-            control={<Checkbox checked={showUnpaid} onChange={(e) => setShowUnpaid(e.target.checked)} />}
-            label="Неоплаченные"
+            control={<Checkbox checked={showUnpaid} onChange={(e) => setShowUnpaid(e.target.checked)} size={isMobile ? "small" : "medium"} />}
+            label={<Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Неоплаченные</Typography>}
           />
           <FormControlLabel
-            control={<Checkbox checked={showPrinted} onChange={(e) => setShowPrinted(e.target.checked)} />}
-            label="Распечатанные"
+            control={<Checkbox checked={showPrinted} onChange={(e) => setShowPrinted(e.target.checked)} size={isMobile ? "small" : "medium"} />}
+            label={<Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Распечатанные</Typography>}
           />
           <FormControlLabel
-            control={<Checkbox checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} />}
-            label="Удаленные"
+            control={<Checkbox checked={showDeleted} onChange={(e) => setShowDeleted(e.target.checked)} size={isMobile ? "small" : "medium"} />}
+            label={<Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Удаленные</Typography>}
           />
           <FormControlLabel
-            control={<Checkbox checked={showOnlyWithDiplomasOrMedals} onChange={(e) => setShowOnlyWithDiplomasOrMedals(e.target.checked)} />}
-            label="Только с дипломами/медалями"
+            control={<Checkbox checked={showOnlyWithDiplomasOrMedals} onChange={(e) => setShowOnlyWithDiplomasOrMedals(e.target.checked)} size={isMobile ? "small" : "medium"} />}
+            label={<Typography sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>Только с дипломами/медалями</Typography>}
           />
         </Box>
 
         {selectedForBulk.size > 0 && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: { xs: 0.5, sm: 1 },
+            flexWrap: 'wrap',
+            width: { xs: '100%', sm: 'auto' },
+            mt: { xs: 1, sm: 0 }
+          }}>
             <Button
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               onClick={() => setBulkPayDialogOpen(true)}
+              fullWidth={isMobile}
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
             >
               Оплатить ({selectedForBulk.size})
             </Button>
             <Button
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               onClick={() => setBulkPrintDialogOpen(true)}
+              fullWidth={isMobile}
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
             >
-              Отметить печать ({selectedForBulk.size})
+              Печать ({selectedForBulk.size})
             </Button>
             <Button
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               color="secondary"
               startIcon={<FileDownloadIcon />}
               onClick={async () => {
@@ -381,13 +417,17 @@ export const Diplomas: React.FC = () => {
                 }
               }}
               disabled={!selectedEventId}
+              fullWidth={isMobile}
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
             >
-              Печать PDF ({selectedForBulk.size})
+              {isMobile ? 'PDF' : `Печать PDF (${selectedForBulk.size})`}
             </Button>
             <Button
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               onClick={() => setSelectedForBulk(new Set())}
+              fullWidth={isMobile}
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
             >
               Снять выбор
             </Button>
@@ -395,7 +435,8 @@ export const Diplomas: React.FC = () => {
         )}
       </Box>
 
-      <TableContainer component={Paper}>
+      {/* Desktop table view */}
+      <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' } }}>
         <Table>
           <TableHead>
             <TableRow>

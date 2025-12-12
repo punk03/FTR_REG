@@ -28,6 +28,9 @@ import {
   CardContent,
   IconButton,
   InputAdornment,
+  useTheme,
+  useMediaQuery,
+  Stack,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
@@ -57,6 +60,8 @@ export const CombinedPayment: React.FC = () => {
   const { showSuccess, showError } = useNotification();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -490,8 +495,15 @@ export const CombinedPayment: React.FC = () => {
 
   const renderSelectStep = () => (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <FormControl sx={{ minWidth: 200 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', sm: 'center' }, 
+        mb: { xs: 2, sm: 3 },
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 2, sm: 2 }
+      }}>
+        <FormControl sx={{ minWidth: { xs: '100%', sm: 200 } }}>
           <InputLabel>Событие</InputLabel>
           <Select
             value={selectedEventId}
@@ -500,6 +512,7 @@ export const CombinedPayment: React.FC = () => {
               setSelectedEventId(e.target.value as number);
               setSelectedRegistrations(new Set());
             }}
+            size={isMobile ? "small" : "medium"}
           >
             {events.map((event) => (
               <MenuItem key={event.id} value={event.id}>
@@ -508,12 +521,19 @@ export const CombinedPayment: React.FC = () => {
             ))}
           </Select>
         </FormControl>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: { xs: 1, sm: 2 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          width: { xs: '100%', sm: 'auto' }
+        }}>
           {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
               onClick={() => navigate('/accounting')}
+              fullWidth={isMobile}
+              size={isMobile ? "small" : "medium"}
             >
               Добавить платеж
             </Button>
@@ -523,17 +543,32 @@ export const CombinedPayment: React.FC = () => {
             onClick={handleNext}
             disabled={selectedRegistrations.size === 0}
             endIcon={<ArrowForwardIcon />}
+            fullWidth={isMobile}
+            size={isMobile ? "small" : "medium"}
           >
-            Перейти к оплате ({selectedRegistrations.size})
+            {isMobile ? `Оплата (${selectedRegistrations.size})` : `Перейти к оплате (${selectedRegistrations.size})`}
           </Button>
         </Box>
       </Box>
 
-      <Paper sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Выберите заявки для оплаты</Typography>
+      <Paper sx={{ p: { xs: 1, sm: 2 } }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: { xs: 1.5, sm: 2 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 0 }
+        }}>
+          <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+            Выберите заявки для оплаты
+          </Typography>
           {search && (
-            <Button size="small" onClick={handleSelectAll}>
+            <Button 
+              size="small" 
+              onClick={handleSelectAll}
+              sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+            >
               {filteredRegistrations.every((r) => selectedRegistrations.has(r.id)) 
                 ? 'Снять все' 
                 : 'Выбрать все'}
@@ -547,6 +582,7 @@ export const CombinedPayment: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           sx={{ mb: 2 }}
+          size={isMobile ? "small" : "medium"}
         />
 
         {loading ? (
@@ -554,7 +590,7 @@ export const CombinedPayment: React.FC = () => {
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer>
+          <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -600,28 +636,113 @@ export const CombinedPayment: React.FC = () => {
             </Table>
           </TableContainer>
         )}
+
+        {/* Mobile card view */}
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          {filteredRegistrations.map((reg) => {
+            const isSelected = selectedRegistrations.has(reg.id);
+            const leaders = reg.leaders?.map((l: any) => l.person?.fullName).filter(Boolean).join(', ') || '-';
+            const trainers = reg.trainers?.map((t: any) => t.person?.fullName).filter(Boolean).join(', ') || '-';
+            const diplomasList = reg.diplomasList || '';
+            const diplomasCount = countRussianLines(diplomasList);
+
+            return (
+              <Card 
+                key={reg.id} 
+                sx={{ 
+                  mb: 2, 
+                  border: isSelected ? '2px solid' : '1px solid',
+                  borderColor: isSelected ? 'primary.main' : 'divider',
+                  backgroundColor: isSelected ? 'action.selected' : 'background.paper'
+                }}
+                onClick={() => handleToggleRegistration(reg.id)}
+              >
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="h6" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' }, fontWeight: 600, mb: 0.5 }}>
+                        {reg.collective?.name || '-'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, mb: 0.5 }}>
+                        №{formatRegistrationNumber(reg)} — {reg.danceName || '-'}
+                      </Typography>
+                    </Box>
+                    <Checkbox
+                      checked={isSelected}
+                      onChange={() => handleToggleRegistration(reg.id)}
+                      size="small"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </Box>
+
+                  <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                    <Chip 
+                      label={`Участников: ${reg.participantsCount || 0}`} 
+                      size="small" 
+                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
+                    />
+                    <Chip 
+                      label={`Дипломов: ${diplomasCount}`} 
+                      size="small" 
+                      color="primary"
+                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
+                    />
+                    <Chip 
+                      label={`Медалей: ${reg.medalsCount || 0}`} 
+                      size="small" 
+                      color="secondary"
+                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
+                    />
+                  </Stack>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {leaders !== '-' && (
+                      <Typography variant="caption" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                        Руководители: {leaders}
+                      </Typography>
+                    )}
+                    {trainers !== '-' && (
+                      <Typography variant="caption" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                        Тренеры: {trainers}
+                      </Typography>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
       </Paper>
     </>
   );
 
   const renderEditStep = () => (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: { xs: 2, sm: 3 },
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 1, sm: 0 }
+      }}>
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={handleBack}
+          size={isMobile ? "small" : "medium"}
+          fullWidth={isMobile}
         >
           Назад к выбору
         </Button>
-        <Typography variant="h6">
+        <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, textAlign: { xs: 'center', sm: 'left' } }}>
           Редактирование и оплата ({selectedRegistrations.size} заявок)
         </Typography>
       </Box>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 } }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Выбранные заявки
             </Typography>
             {selectedRegistrationsList.map((reg) => {
@@ -637,8 +758,8 @@ export const CombinedPayment: React.FC = () => {
 
               return (
                 <Card key={reg.id} sx={{ mb: 2 }}>
-                  <CardContent>
-                    <Grid container spacing={2}>
+                  <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                    <Grid container spacing={{ xs: 1.5, sm: 2 }}>
                       <Grid item xs={12}>
                         <TextField
                           fullWidth
@@ -653,11 +774,11 @@ export const CombinedPayment: React.FC = () => {
                               },
                             });
                           }}
-                          size="small"
+                          size={isMobile ? "small" : "medium"}
                         />
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                           <InputLabel>Коллектив</InputLabel>
                           <Select
                             value={data.collectiveId !== undefined ? data.collectiveId : (reg.collectiveId || '')}
@@ -683,7 +804,7 @@ export const CombinedPayment: React.FC = () => {
                         </FormControl>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                           <InputLabel>Дисциплина</InputLabel>
                           <Select
                             value={data.disciplineId !== undefined ? data.disciplineId : (reg.disciplineId || '')}
@@ -707,7 +828,7 @@ export const CombinedPayment: React.FC = () => {
                         </FormControl>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                           <InputLabel>Номинация</InputLabel>
                           <Select
                             value={data.nominationId !== undefined ? data.nominationId : (reg.nominationId || '')}
@@ -731,7 +852,7 @@ export const CombinedPayment: React.FC = () => {
                         </FormControl>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                           <InputLabel>Возраст</InputLabel>
                           <Select
                             value={data.ageId !== undefined ? data.ageId : (reg.ageId || '')}
@@ -755,7 +876,7 @@ export const CombinedPayment: React.FC = () => {
                         </FormControl>
                       </Grid>
                       <Grid item xs={12} sm={6}>
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                           <InputLabel>Категория</InputLabel>
                           <Select
                             value={data.categoryId !== undefined ? data.categoryId : (reg.categoryId || '')}
@@ -794,11 +915,16 @@ export const CombinedPayment: React.FC = () => {
                           fullWidth
                           label="Участников"
                           type="number"
-                          size="small"
+                          size={isMobile ? "small" : "medium"}
                           value={currentTotal}
                           onChange={(e) => handleParticipantsChange(reg.id, e.target.value, false)}
                           inputProps={{ min: currentFederation }}
                           helperText={`Обычных: ${currentRegular}`}
+                          sx={{
+                            '& .MuiInputBase-input': {
+                              fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                            }
+                          }}
                         />
                       </Grid>
                       <Grid item xs={6} sm={3}>
@@ -806,10 +932,15 @@ export const CombinedPayment: React.FC = () => {
                           fullWidth
                           label="Участников федерации"
                           type="number"
-                          size="small"
+                          size={isMobile ? "small" : "medium"}
                           value={currentFederation}
                           onChange={(e) => handleParticipantsChange(reg.id, e.target.value, true)}
                           inputProps={{ min: 0, max: currentTotal }}
+                          sx={{
+                            '& .MuiInputBase-input': {
+                              fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                            }
+                          }}
                         />
                       </Grid>
                       <Grid item xs={6} sm={3}>
@@ -817,7 +948,7 @@ export const CombinedPayment: React.FC = () => {
                           fullWidth
                           label="Медалей"
                           type="number"
-                          size="small"
+                          size={isMobile ? "small" : "medium"}
                           value={data.medalsCount || reg.medalsCount}
                           onChange={(e) => {
                             setRegistrationData({
@@ -836,7 +967,7 @@ export const CombinedPayment: React.FC = () => {
                           fullWidth
                           label={`Дипломов (${diplomasCount})`}
                           type="text"
-                          size="small"
+                          size={isMobile ? "small" : "medium"}
                           value={diplomasCount}
                           InputProps={{
                             readOnly: true,
@@ -849,7 +980,7 @@ export const CombinedPayment: React.FC = () => {
                           fullWidth
                           label="ФИО на дипломы (каждое на новой строке)"
                           multiline
-                          rows={3}
+                          rows={isMobile ? 4 : 3}
                           value={diplomasList}
                           onChange={(e) => {
                             setRegistrationData({
@@ -861,6 +992,12 @@ export const CombinedPayment: React.FC = () => {
                             });
                           }}
                           helperText={`Строк с русскими символами: ${diplomasCount}`}
+                          size={isMobile ? "small" : "medium"}
+                          sx={{
+                            '& .MuiInputBase-input': {
+                              fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                            }
+                          }}
                         />
                       </Grid>
                     </Grid>
@@ -887,8 +1024,8 @@ export const CombinedPayment: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 } }}>
+            <Typography variant="h6" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Оплата
             </Typography>
 
@@ -897,9 +1034,10 @@ export const CombinedPayment: React.FC = () => {
                 <Checkbox
                   checked={payingPerformance}
                   onChange={(e) => setPayingPerformance(e.target.checked)}
+                  size={isMobile ? "small" : "medium"}
                 />
               }
-              label="Оплатить выступления"
+              label={<Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Оплатить выступления</Typography>}
             />
 
             <FormControlLabel
@@ -907,9 +1045,10 @@ export const CombinedPayment: React.FC = () => {
                 <Checkbox
                   checked={payingDiplomasAndMedals}
                   onChange={(e) => setPayingDiplomasAndMedals(e.target.checked)}
+                  size={isMobile ? "small" : "medium"}
                 />
               }
-              label="Оплатить дипломы и медали"
+              label={<Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Оплатить дипломы и медали</Typography>}
             />
 
             {payingPerformance && (
@@ -918,9 +1057,10 @@ export const CombinedPayment: React.FC = () => {
                   <Checkbox
                     checked={applyDiscount}
                     onChange={(e) => setApplyDiscount(e.target.checked)}
+                    size={isMobile ? "small" : "medium"}
                   />
                 }
-                label="Применить откат"
+                label={<Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Применить откат</Typography>}
               />
             )}
 
@@ -930,6 +1070,7 @@ export const CombinedPayment: React.FC = () => {
               value={paymentGroupName}
               onChange={(e) => setPaymentGroupName(e.target.value)}
               sx={{ mt: 2 }}
+              size={isMobile ? "small" : "medium"}
             />
 
             <Divider sx={{ my: 2 }} />
@@ -947,18 +1088,18 @@ export const CombinedPayment: React.FC = () => {
 
             {priceCalculation && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                   Выступления: {formatCurrency(priceCalculation.performance)}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                   Дипломы/медали: {formatCurrency(priceCalculation.diplomas)}
                 </Typography>
                 {priceCalculation.discount > 0 && (
-                  <Typography variant="body2" color="error">
+                  <Typography variant="body2" color="error" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                     Откат: -{formatCurrency(priceCalculation.discount)}
                   </Typography>
                 )}
-                <Typography variant="h6" sx={{ mt: 1 }}>
+                <Typography variant="h6" sx={{ mt: 1, fontSize: { xs: '1rem', sm: '1.25rem' } }}>
                   Итого: {formatCurrency(priceCalculation.total)}
                 </Typography>
               </Box>
@@ -977,6 +1118,7 @@ export const CombinedPayment: React.FC = () => {
               value={paymentsByMethod.cash}
               onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, cash: e.target.value })}
               sx={{ mb: 2 }}
+              size={isMobile ? "small" : "medium"}
               inputProps={{ min: 0 }}
               InputProps={{
                 endAdornment: (
@@ -1001,6 +1143,7 @@ export const CombinedPayment: React.FC = () => {
               value={paymentsByMethod.card}
               onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, card: e.target.value })}
               sx={{ mb: 2 }}
+              size={isMobile ? "small" : "medium"}
               inputProps={{ min: 0 }}
               InputProps={{
                 endAdornment: (
@@ -1025,6 +1168,7 @@ export const CombinedPayment: React.FC = () => {
               value={paymentsByMethod.transfer}
               onChange={(e) => setPaymentsByMethod({ ...paymentsByMethod, transfer: e.target.value })}
               sx={{ mb: 2 }}
+              size={isMobile ? "small" : "medium"}
               inputProps={{ min: 0 }}
               InputProps={{
                 endAdornment: (
@@ -1056,6 +1200,7 @@ export const CombinedPayment: React.FC = () => {
               fullWidth
               variant="contained"
               startIcon={saving ? <CircularProgress size={20} /> : <SaveIcon />}
+              size={isMobile ? "small" : "medium"}
               onClick={handleSave}
               disabled={saving || selectedRegistrations.size === 0}
             >
