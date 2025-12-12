@@ -18,7 +18,7 @@
 ### Details (Основные настройки)
 
 - **Domain Names:** `ftr.lilfil.ru`
-- **Scheme:** `http`
+- **Scheme:** `http` ⚠️ **ВАЖНО: HTTP, не HTTPS!** (Docker контейнеры слушают только HTTP)
 - **Forward Hostname / IP:** `192.168.1.138`
 - **Forward Port:** `3000`
 - **Cache Assets:** ✅ (включено)
@@ -46,7 +46,7 @@
 ### Настройки Custom Location:
 
 - **Location:** `/api`
-- **Scheme:** `http`
+- **Scheme:** `http` ⚠️ **ВАЖНО: HTTP, не HTTPS!** (Docker контейнеры слушают только HTTP)
 - **Forward Hostname / IP:** `192.168.1.138`
 - **Forward Port:** `3001`
 - **Websockets Support:** ✅ (включено) - **ВАЖНО!**
