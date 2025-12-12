@@ -439,6 +439,28 @@ export const Admin: React.FC = () => {
   const [errorEditNominations, setErrorEditNominations] = useState<any[]>([]);
   const [errorEditAges, setErrorEditAges] = useState<any[]>([]);
   const [errorEditCategories, setErrorEditCategories] = useState<any[]>([]);
+  
+  // Справочники
+  const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [nominations, setNominations] = useState<any[]>([]);
+  const [ages, setAges] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+  const [editingDiscipline, setEditingDiscipline] = useState<any | null>(null);
+  const [editingNomination, setEditingNomination] = useState<any | null>(null);
+  const [editingAge, setEditingAge] = useState<any | null>(null);
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [disciplineFormData, setDisciplineFormData] = useState({
+    name: '',
+    abbreviations: [] as string[],
+    variants: [] as string[],
+  });
+  const [nominationFormData, setNominationFormData] = useState({ name: '' });
+  const [ageFormData, setAgeFormData] = useState({ name: '' });
+  const [categoryFormData, setCategoryFormData] = useState({ name: '' });
+  const [newAbbreviation, setNewAbbreviation] = useState('');
+  const [newVariant, setNewVariant] = useState('');
+  const [showDisciplineDialog, setShowDisciplineDialog] = useState(false);
 
   useEffect(() => {
     if (tabValue === 0) {
