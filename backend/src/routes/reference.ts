@@ -135,7 +135,7 @@ router.post('/disciplines', authenticateToken, requireRole('ADMIN'), async (req:
       },
     });
 
-    await cacheService.delete('reference:disciplines');
+    await cacheService.del('reference:disciplines');
     res.json(discipline);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -166,7 +166,7 @@ router.put('/disciplines/:id', authenticateToken, requireRole('ADMIN'), async (r
       },
     });
 
-    await cacheService.delete('reference:disciplines');
+    await cacheService.del('reference:disciplines');
     res.json(discipline);
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -203,7 +203,7 @@ router.delete('/disciplines/:id', authenticateToken, requireRole('ADMIN'), async
       where: { id },
     });
 
-    await cacheService.delete('reference:disciplines');
+    await cacheService.del('reference:disciplines');
     res.json({ success: true });
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -229,7 +229,7 @@ router.post('/nominations', authenticateToken, requireRole('ADMIN'), async (req:
       data: { name },
     });
 
-    await cacheService.delete('reference:nominations');
+    await cacheService.del('reference:nominations');
     res.json(nomination);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -256,7 +256,7 @@ router.put('/nominations/:id', authenticateToken, requireRole('ADMIN'), async (r
       data: { name },
     });
 
-    await cacheService.delete('reference:nominations');
+    await cacheService.del('reference:nominations');
     res.json(nomination);
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -293,7 +293,7 @@ router.delete('/nominations/:id', authenticateToken, requireRole('ADMIN'), async
       where: { id },
     });
 
-    await cacheService.delete('reference:nominations');
+    await cacheService.del('reference:nominations');
     res.json({ success: true });
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -319,7 +319,7 @@ router.post('/ages', authenticateToken, requireRole('ADMIN'), async (req: Reques
       data: { name },
     });
 
-    await cacheService.delete('reference:ages');
+    await cacheService.del('reference:ages');
     res.json(age);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -346,7 +346,7 @@ router.put('/ages/:id', authenticateToken, requireRole('ADMIN'), async (req: Req
       data: { name },
     });
 
-    await cacheService.delete('reference:ages');
+    await cacheService.del('reference:ages');
     res.json(age);
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -383,7 +383,7 @@ router.delete('/ages/:id', authenticateToken, requireRole('ADMIN'), async (req: 
       where: { id },
     });
 
-    await cacheService.delete('reference:ages');
+    await cacheService.del('reference:ages');
     res.json({ success: true });
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -409,7 +409,7 @@ router.post('/categories', authenticateToken, requireRole('ADMIN'), async (req: 
       data: { name },
     });
 
-    await cacheService.delete('reference:categories');
+    await cacheService.del('reference:categories');
     res.json(category);
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -436,7 +436,7 @@ router.put('/categories/:id', authenticateToken, requireRole('ADMIN'), async (re
       data: { name },
     });
 
-    await cacheService.delete('reference:categories');
+    await cacheService.del('reference:categories');
     res.json(category);
   } catch (error: any) {
     if (error.code === 'P2025') {
@@ -473,7 +473,7 @@ router.delete('/categories/:id', authenticateToken, requireRole('ADMIN'), async 
       where: { id },
     });
 
-    await cacheService.delete('reference:categories');
+    await cacheService.del('reference:categories');
     res.json({ success: true });
   } catch (error: any) {
     if (error.code === 'P2025') {
