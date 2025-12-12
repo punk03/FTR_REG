@@ -24,8 +24,14 @@ import {
   Checkbox,
   Alert,
   TextField,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Divider,
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import api from '../services/api';
 import { Event } from '../types';
 import { useNotification } from '../context/NotificationContext';
@@ -276,6 +282,165 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
       <DialogTitle>Импорт регистраций из Excel</DialogTitle>
       <DialogContent dividers>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Справка по формату таблицы */}
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <HelpOutlineIcon color="primary" />
+                <Typography variant="subtitle1" fontWeight="medium">
+                  Справка по формату таблицы для импорта
+                </Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Таблица должна содержать следующие столбцы (все столбцы опциональны, кроме отмеченных):
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold', width: '80px' }}>Столбец</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Название</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Описание</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', width: '100px' }}>Обязательно</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>A</TableCell>
+                      <TableCell>Номер/Категория</TableCell>
+                      <TableCell>
+                        Может содержать строку категории вида "1. Jazz Соло Бэби Beginners" 
+                        (номер блока, дисциплина, номинация, возраст, категория). 
+                        Если категория указана в отдельной строке, она применяется ко всем последующим строкам до следующей категории.
+                      </TableCell>
+                      <TableCell>Нет*</TableCell>
+                    </TableRow>
+                    <TableRow sx={{ bgcolor: 'error.light', opacity: 0.1 }}>
+                      <TableCell>B</TableCell>
+                      <TableCell><strong>Коллектив</strong></TableCell>
+                      <TableCell>Название коллектива</TableCell>
+                      <TableCell><strong>Да</strong></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>C</TableCell>
+                      <TableCell>Название танца</TableCell>
+                      <TableCell>Название номера. Может быть пустым для соло (в этом случае используется название коллектива)</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>D</TableCell>
+                      <TableCell>Количество участников</TableCell>
+                      <TableCell>Число участников в номере</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>E</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>Не используется (пустая колонка)</TableCell>
+                      <TableCell>-</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>F</TableCell>
+                      <TableCell>Руководители</TableCell>
+                      <TableCell>ФИО руководителей (можно несколько через запятую)</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>G</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>Не используется (пустая колонка)</TableCell>
+                      <TableCell>-</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>H</TableCell>
+                      <TableCell>Тренеры</TableCell>
+                      <TableCell>ФИО тренеров (можно несколько через запятую)</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>I</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>Не используется (пустая колонка)</TableCell>
+                      <TableCell>-</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>J</TableCell>
+                      <TableCell>Школа</TableCell>
+                      <TableCell>Название школы/студии</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>K</TableCell>
+                      <TableCell>Контакты</TableCell>
+                      <TableCell>Контактная информация (телефон, email и т.д.)</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>L</TableCell>
+                      <TableCell>Город</TableCell>
+                      <TableCell>Город коллектива</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>M</TableCell>
+                      <TableCell>Длительность</TableCell>
+                      <TableCell>Длительность номера в формате HH:MM:SS или MM:SS</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>N</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>Не используется (длительность с перерывами)</TableCell>
+                      <TableCell>-</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>O</TableCell>
+                      <TableCell>Видео URL</TableCell>
+                      <TableCell>Ссылка на видео номера</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>P</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>Не используется (примечание)</TableCell>
+                      <TableCell>-</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Q</TableCell>
+                      <TableCell>ФИО на дипломы</TableCell>
+                      <TableCell>
+                        Список ФИО участников для дипломов. Каждое ФИО на новой строке. 
+                        Количество дипломов определяется автоматически по количеству строк с русскими символами.
+                      </TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>R</TableCell>
+                      <TableCell>Количество медалей</TableCell>
+                      <TableCell>Число медалей для номера</TableCell>
+                      <TableCell>Нет</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2" component="div">
+                  <strong>Важно:</strong>
+                  <ul style={{ marginTop: '8px', marginBottom: '0', paddingLeft: '20px' }}>
+                    <li>Столбец B (Коллектив) обязателен для всех строк с данными регистрации</li>
+                    <li>Категория (столбец A) может быть указана в отдельной строке перед группой регистраций</li>
+                    <li>Если категория указана в строке вида "1. Jazz Соло Бэби Beginners", она применяется ко всем последующим строкам</li>
+                    <li>Для определения дисциплины, номинации, возраста и категории система использует категорию из столбца A</li>
+                    <li>Если категория не указана или не распознана, строка будет помечена как содержащая ошибки</li>
+                    <li>Строки с ошибками сохраняются в разделе "Ошибки импорта" для последующего исправления</li>
+                  </ul>
+                </Typography>
+              </Alert>
+            </AccordionDetails>
+          </Accordion>
+
           <FormControl fullWidth>
             <InputLabel>Мероприятие</InputLabel>
             <Select
