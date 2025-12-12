@@ -1790,6 +1790,323 @@ export const Admin: React.FC = () => {
         <TabPanel value={tabValue} index={3}>
           <Box sx={{ mb: 3 }}>
             <Typography variant="h6" gutterBottom>
+              Управление справочниками
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Управляйте справочниками для корректного распознавания при импорте из Excel
+            </Typography>
+          </Box>
+
+          {referenceLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Дисциплины</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setDisciplineFormData({ name: '', abbreviations: [], variants: [] });
+                        setEditingDiscipline(null);
+                        setNewAbbreviation('');
+                        setNewVariant('');
+                        setShowDisciplineDialog(true);
+                      }}
+                    >
+                      Добавить дисциплину
+                    </Button>
+                  </Box>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Название</TableCell>
+                          <TableCell>Аббревиатуры</TableCell>
+                          <TableCell>Варианты написания</TableCell>
+                          <TableCell>Действия</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {disciplines.map((discipline) => {
+                          const abbrs = discipline.abbreviations ? JSON.parse(discipline.abbreviations) : [];
+                          const vars = discipline.variants ? JSON.parse(discipline.variants) : [];
+                          return (
+                            <TableRow key={discipline.id}>
+                              <TableCell>{discipline.name}</TableCell>
+                              <TableCell>
+                                {Array.isArray(abbrs) && abbrs.length > 0 ? (
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {abbrs.map((abbr: string, idx: number) => (
+                                      <Chip key={idx} label={abbr} size="small" />
+                                    ))}
+                                  </Box>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">Нет</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {Array.isArray(vars) && vars.length > 0 ? (
+                                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {vars.map((variant: string, idx: number) => (
+                                      <Chip key={idx} label={variant} size="small" color="secondary" />
+                                    ))}
+                                  </Box>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">Нет</Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setEditingDiscipline(discipline);
+                                    setDisciplineFormData({
+                                      name: discipline.name,
+                                      abbreviations: abbrs,
+                                      variants: vars,
+                                    });
+                                    setNewAbbreviation('');
+                                    setNewVariant('');
+                                    setShowDisciplineDialog(true);
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={async () => {
+                                    if (window.confirm(`Удалить дисциплину "${discipline.name}"?`)) {
+                                      try {
+                                        await api.delete(`/api/reference/disciplines/${discipline.id}`);
+                                        showSuccess('Дисциплина удалена');
+                                        fetchReferences();
+                                      } catch (error: any) {
+                                        showError(error.response?.data?.error || 'Ошибка удаления дисциплины');
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Номинации</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setNominationFormData({ name: '' });
+                        setEditingNomination({ id: 0, name: '' } as any);
+                      }}
+                    >
+                      Добавить номинацию
+                    </Button>
+                  </Box>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Название</TableCell>
+                          <TableCell>Действия</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {nominations.map((nomination) => (
+                          <TableRow key={nomination.id}>
+                            <TableCell>{nomination.name}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setEditingNomination(nomination);
+                                  setNominationFormData({ name: nomination.name });
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={async () => {
+                                  if (window.confirm(`Удалить номинацию "${nomination.name}"?`)) {
+                                    try {
+                                      await api.delete(`/api/reference/nominations/${nomination.id}`);
+                                      showSuccess('Номинация удалена');
+                                      fetchReferences();
+                                    } catch (error: any) {
+                                      showError(error.response?.data?.error || 'Ошибка удаления номинации');
+                                    }
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Возрасты</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setAgeFormData({ name: '' });
+                        setEditingAge({ id: 0, name: '' } as any);
+                      }}
+                    >
+                      Добавить возраст
+                    </Button>
+                  </Box>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Название</TableCell>
+                          <TableCell>Действия</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {ages.map((age) => (
+                          <TableRow key={age.id}>
+                            <TableCell>{age.name}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setEditingAge(age);
+                                  setAgeFormData({ name: age.name });
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={async () => {
+                                  if (window.confirm(`Удалить возраст "${age.name}"?`)) {
+                                    try {
+                                      await api.delete(`/api/reference/ages/${age.id}`);
+                                      showSuccess('Возраст удален');
+                                      fetchReferences();
+                                    } catch (error: any) {
+                                      showError(error.response?.data?.error || 'Ошибка удаления возраста');
+                                    }
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Категории</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ mb: 2 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setCategoryFormData({ name: '' });
+                        setEditingCategory({ id: 0, name: '' } as any);
+                      }}
+                    >
+                      Добавить категорию
+                    </Button>
+                  </Box>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Название</TableCell>
+                          <TableCell>Действия</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {categories.map((category) => (
+                          <TableRow key={category.id}>
+                            <TableCell>{category.name}</TableCell>
+                            <TableCell>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  setEditingCategory(category);
+                                  setCategoryFormData({ name: category.name });
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={async () => {
+                                  if (window.confirm(`Удалить категорию "${category.name}"?`)) {
+                                    try {
+                                      await api.delete(`/api/reference/categories/${category.id}`);
+                                      showSuccess('Категория удалена');
+                                      fetchReferences();
+                                    } catch (error: any) {
+                                      showError(error.response?.data?.error || 'Ошибка удаления категории');
+                                    }
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
+          )}
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
               Системные настройки
             </Typography>
             <Typography variant="body2" color="text.secondary" gutterBottom>
