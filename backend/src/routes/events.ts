@@ -360,6 +360,14 @@ router.put('/:id/import-errors/:errorId', authenticateToken, requireRole('ADMIN'
 
     const rowData = JSON.parse(importError.rowData);
     const updatedRowData = { ...rowData, ...req.body };
+    
+    // Обновляем также parsed данные, если они переданы
+    if (req.body.parsed) {
+      updatedRowData.parsed = {
+        ...rowData.parsed,
+        ...req.body.parsed,
+      };
+    }
 
     await prisma.importError.update({
       where: { id: errorId },

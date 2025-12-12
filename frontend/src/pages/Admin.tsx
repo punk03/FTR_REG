@@ -800,9 +800,21 @@ export const Admin: React.FC = () => {
       const category = categoriesRes.data.find((c: any) => c.name === error.rowData?.parsed?.categoryName);
       
       setErrorEditFormData({
+        categoryString: error.rowData?.categoryString || '',
         collective: error.rowData?.collective || '',
         danceName: error.rowData?.danceName || '',
-        participantsCount: error.rowData?.participantsCount || '',
+        participantsCount: error.rowData?.participantsCount || 0,
+        federationParticipantsCount: error.rowData?.federationParticipantsCount || 0,
+        leaders: error.rowData?.leaders || '',
+        trainers: error.rowData?.trainers || '',
+        school: error.rowData?.school || '',
+        contacts: error.rowData?.contacts || '',
+        city: error.rowData?.city || '',
+        duration: error.rowData?.duration || '',
+        videoUrl: error.rowData?.videoUrl || '',
+        diplomasList: error.rowData?.diplomasList || '',
+        medalsCount: error.rowData?.medalsCount || 0,
+        blockNumber: error.rowData?.parsed?.blockNumber || '',
         disciplineId: discipline ? String(discipline.id) : '',
         disciplineName: error.rowData?.parsed?.disciplineName || '',
         nominationId: nomination ? String(nomination.id) : '',
@@ -816,9 +828,21 @@ export const Admin: React.FC = () => {
       console.error('Error loading reference data:', error);
       // Устанавливаем данные без справочников
       setErrorEditFormData({
+        categoryString: error.rowData?.categoryString || '',
         collective: error.rowData?.collective || '',
         danceName: error.rowData?.danceName || '',
-        participantsCount: error.rowData?.participantsCount || '',
+        participantsCount: error.rowData?.participantsCount || 0,
+        federationParticipantsCount: error.rowData?.federationParticipantsCount || 0,
+        leaders: error.rowData?.leaders || '',
+        trainers: error.rowData?.trainers || '',
+        school: error.rowData?.school || '',
+        contacts: error.rowData?.contacts || '',
+        city: error.rowData?.city || '',
+        duration: error.rowData?.duration || '',
+        videoUrl: error.rowData?.videoUrl || '',
+        diplomasList: error.rowData?.diplomasList || '',
+        medalsCount: error.rowData?.medalsCount || 0,
+        blockNumber: error.rowData?.parsed?.blockNumber || '',
         disciplineId: '',
         disciplineName: error.rowData?.parsed?.disciplineName || '',
         nominationId: '',
@@ -831,21 +855,113 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const handleParseCategoryString = async (categoryString: string) => {
+    if (!categoryString || !selectedEventForErrors) return;
+    
+    try {
+      const response = await api.post('/api/excel-import/parse-category', {
+        categoryString,
+      });
+      
+      const parsed = response.data;
+      
+      // Обновляем форму с распознанными значениями
+      if (parsed.disciplineName) {
+        const discipline = errorEditDisciplines.find((d: any) => d.name === parsed.disciplineName);
+        if (discipline) {
+          setErrorEditFormData((prev: any) => ({
+            ...prev,
+            disciplineId: String(discipline.id),
+            disciplineName: parsed.disciplineName,
+          }));
+        }
+      }
+      
+      if (parsed.nominationName) {
+        const nomination = errorEditNominations.find((n: any) => n.name === parsed.nominationName);
+        if (nomination) {
+          setErrorEditFormData((prev: any) => ({
+            ...prev,
+            nominationId: String(nomination.id),
+            nominationName: parsed.nominationName,
+          }));
+        }
+      }
+      
+      if (parsed.ageName) {
+        const age = errorEditAges.find((a: any) => a.name === parsed.ageName);
+        if (age) {
+          setErrorEditFormData((prev: any) => ({
+            ...prev,
+            ageId: String(age.id),
+            ageName: parsed.ageName,
+          }));
+        }
+      }
+      
+      if (parsed.categoryName) {
+        const category = errorEditCategories.find((c: any) => c.name === parsed.categoryName);
+        if (category) {
+          setErrorEditFormData((prev: any) => ({
+            ...prev,
+            categoryId: String(category.id),
+            categoryName: parsed.categoryName,
+          }));
+        }
+      }
+      
+      if (parsed.blockNumber) {
+        setErrorEditFormData((prev: any) => ({
+          ...prev,
+          blockNumber: parsed.blockNumber,
+        }));
+      }
+      
+      showSuccess('Категория успешно распознана');
+    } catch (error: any) {
+      console.error('Error parsing category:', error);
+      showError(error.response?.data?.error || 'Ошибка распознавания категории');
+    }
+  };
+
   const handleSaveErrorEdit = async () => {
     if (!editingError || !selectedEventForErrors) return;
     try {
       const rowData = editingError.rowData;
+      
+      // Находим ID для дисциплины, номинации, возраста, категории
+      const discipline = errorEditDisciplines.find((d: any) => String(d.id) === errorEditFormData.disciplineId);
+      const nomination = errorEditNominations.find((n: any) => String(n.id) === errorEditFormData.nominationId);
+      const age = errorEditAges.find((a: any) => String(a.id) === errorEditFormData.ageId);
+      const category = errorEditCategories.find((c: any) => String(c.id) === errorEditFormData.categoryId);
+      
       const updatedRowData = {
         ...rowData,
-        collective: errorEditFormData.collective,
-        danceName: errorEditFormData.danceName,
-        participantsCount: errorEditFormData.participantsCount,
+        categoryString: errorEditFormData.categoryString || '',
+        collective: errorEditFormData.collective || '',
+        danceName: errorEditFormData.danceName || '',
+        participantsCount: parseInt(String(errorEditFormData.participantsCount)) || 0,
+        federationParticipantsCount: parseInt(String(errorEditFormData.federationParticipantsCount)) || 0,
+        leaders: errorEditFormData.leaders || '',
+        trainers: errorEditFormData.trainers || '',
+        school: errorEditFormData.school || '',
+        contacts: errorEditFormData.contacts || '',
+        city: errorEditFormData.city || '',
+        duration: errorEditFormData.duration || '',
+        videoUrl: errorEditFormData.videoUrl || '',
+        diplomasList: errorEditFormData.diplomasList || '',
+        medalsCount: parseInt(String(errorEditFormData.medalsCount)) || 0,
         parsed: {
           ...rowData.parsed,
-          disciplineName: errorEditFormData.disciplineName,
-          nominationName: errorEditFormData.nominationName,
-          ageName: errorEditFormData.ageName,
-          categoryName: errorEditFormData.categoryName,
+          blockNumber: errorEditFormData.blockNumber ? parseInt(String(errorEditFormData.blockNumber)) : undefined,
+          disciplineId: discipline ? discipline.id : undefined,
+          disciplineName: discipline ? discipline.name : errorEditFormData.disciplineName || '',
+          nominationId: nomination ? nomination.id : undefined,
+          nominationName: nomination ? nomination.name : errorEditFormData.nominationName || '',
+          ageId: age ? age.id : undefined,
+          ageName: age ? age.name : errorEditFormData.ageName || '',
+          categoryId: category ? category.id : undefined,
+          categoryName: category ? category.name : errorEditFormData.categoryName || '',
         },
       };
       
@@ -1222,35 +1338,60 @@ export const Admin: React.FC = () => {
           )}
 
           {/* Диалог редактирования ошибки импорта */}
-          <Dialog open={!!editingError} onClose={() => setEditingError(null)} maxWidth="md" fullWidth>
+          <Dialog open={!!editingError} onClose={() => setEditingError(null)} maxWidth="lg" fullWidth>
             <DialogTitle>Редактирование записи с ошибкой</DialogTitle>
-            <DialogContent>
+            <DialogContent dividers>
               <Grid container spacing={2} sx={{ mt: 1 }}>
+                {/* Строка категории с автоматическим распознаванием */}
                 <Grid item xs={12}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                    <TextField
+                      fullWidth
+                      label="Строка категории (например: '1. Jazz Соло Бэби Beginners')"
+                      value={errorEditFormData.categoryString || ''}
+                      onChange={(e) => setErrorEditFormData({ ...errorEditFormData, categoryString: e.target.value })}
+                      helperText="Введите строку категории и нажмите 'Распознать' для автоматического заполнения полей"
+                      multiline
+                      rows={2}
+                    />
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleParseCategoryString(errorEditFormData.categoryString || '')}
+                      disabled={!errorEditFormData.categoryString}
+                      sx={{ mt: 1, whiteSpace: 'nowrap' }}
+                    >
+                      Распознать
+                    </Button>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Divider />
+                </Grid>
+
+                {/* Основные поля */}
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
+                    required
                     label="Коллектив"
                     value={errorEditFormData.collective || ''}
                     onChange={(e) => setErrorEditFormData({ ...errorEditFormData, collective: e.target.value })}
-                    InputLabelProps={{
-                      shrink: !!errorEditFormData.collective,
-                    }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Название танца"
                     value={errorEditFormData.danceName || ''}
                     onChange={(e) => setErrorEditFormData({ ...errorEditFormData, danceName: e.target.value })}
-                    InputLabelProps={{
-                      shrink: !!errorEditFormData.danceName,
-                    }}
                   />
                 </Grid>
+                
+                {/* Дисциплина, номинация, возраст, категория */}
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel shrink={!!errorEditFormData.disciplineId}>Дисциплина</InputLabel>
+                    <InputLabel>Дисциплина</InputLabel>
                     <Select
                       value={errorEditFormData.disciplineId || ''}
                       label="Дисциплина"
@@ -1278,7 +1419,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel shrink={!!errorEditFormData.nominationId}>Номинация</InputLabel>
+                    <InputLabel>Номинация</InputLabel>
                     <Select
                       value={errorEditFormData.nominationId || ''}
                       label="Номинация"
@@ -1306,7 +1447,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel shrink={!!errorEditFormData.ageId}>Возраст</InputLabel>
+                    <InputLabel>Возраст</InputLabel>
                     <Select
                       value={errorEditFormData.ageId || ''}
                       label="Возраст"
@@ -1334,7 +1475,7 @@ export const Admin: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <FormControl fullWidth>
-                    <InputLabel shrink={!!errorEditFormData.categoryId}>Категория</InputLabel>
+                    <InputLabel>Категория</InputLabel>
                     <Select
                       value={errorEditFormData.categoryId || ''}
                       label="Категория"
@@ -1363,13 +1504,122 @@ export const Admin: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
+                
+                {/* Участники */}
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Количество участников"
                     type="number"
-                    value={errorEditFormData.participantsCount}
+                    value={errorEditFormData.participantsCount || 0}
                     onChange={(e) => setErrorEditFormData({ ...errorEditFormData, participantsCount: parseInt(e.target.value) || 0 })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Участников федерации"
+                    type="number"
+                    value={errorEditFormData.federationParticipantsCount || 0}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, federationParticipantsCount: parseInt(e.target.value) || 0 })}
+                  />
+                </Grid>
+                
+                {/* Блок */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Номер блока"
+                    type="number"
+                    value={errorEditFormData.blockNumber || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, blockNumber: e.target.value })}
+                  />
+                </Grid>
+                
+                {/* Руководители и тренеры */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Руководители"
+                    value={errorEditFormData.leaders || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, leaders: e.target.value })}
+                    helperText="Можно указать несколько через запятую"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Тренеры"
+                    value={errorEditFormData.trainers || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, trainers: e.target.value })}
+                    helperText="Можно указать несколько через запятую"
+                  />
+                </Grid>
+                
+                {/* Школа, контакты, город */}
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Школа"
+                    value={errorEditFormData.school || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, school: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Контакты"
+                    value={errorEditFormData.contacts || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, contacts: e.target.value })}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Город"
+                    value={errorEditFormData.city || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, city: e.target.value })}
+                  />
+                </Grid>
+                
+                {/* Длительность и видео */}
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Длительность (HH:MM:SS или MM:SS)"
+                    value={errorEditFormData.duration || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, duration: e.target.value })}
+                    placeholder="03:45 или 03:45:00"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Видео URL"
+                    value={errorEditFormData.videoUrl || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, videoUrl: e.target.value })}
+                  />
+                </Grid>
+                
+                {/* Дипломы и медали */}
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="ФИО на дипломы (каждое на новой строке)"
+                    multiline
+                    rows={4}
+                    value={errorEditFormData.diplomasList || ''}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, diplomasList: e.target.value })}
+                    helperText="Введите ФИО участников, каждое с новой строки"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Количество медалей"
+                    type="number"
+                    value={errorEditFormData.medalsCount || 0}
+                    onChange={(e) => setErrorEditFormData({ ...errorEditFormData, medalsCount: parseInt(e.target.value) || 0 })}
                   />
                 </Grid>
               </Grid>

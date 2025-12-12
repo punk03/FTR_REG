@@ -1031,5 +1031,38 @@ router.post(
   }
 );
 
+// POST /api/excel-import/parse-category
+router.post('/parse-category', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { categoryString } = req.body;
+    
+    if (!categoryString || typeof categoryString !== 'string') {
+      res.status(400).json({ error: 'categoryString is required' });
+      return;
+    }
+
+    // Загружаем справочники
+    const [disciplines, nominations, ages, categories] = await Promise.all([
+      prisma.discipline.findMany(),
+      prisma.nomination.findMany(),
+      prisma.age.findMany(),
+      prisma.category.findMany(),
+    ]);
+
+    // Парсим категорию
+    const parsed = await parseCategoryString(
+      categoryString,
+      disciplines,
+      nominations,
+      ages,
+      categories
+    );
+
+    res.json(parsed);
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
 export default router;
 
