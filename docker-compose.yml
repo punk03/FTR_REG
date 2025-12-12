@@ -93,6 +93,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-}
+      # VITE_API_URL должен быть пустым для использования относительных путей через NPM
     container_name: ftr_frontend
     ports:
       - "${FRONTEND_PORT:-3000}:80"
