@@ -131,11 +131,30 @@ export const Layout: React.FC<LayoutProps> = ({ darkMode, toggleDarkMode }) => {
           ml: { md: `${drawerWidth}px` },
         }}
       >
-        <Toolbar>
-          <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { md: 'none' } }}>
+        <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
+          <IconButton 
+            color="inherit" 
+            edge="start" 
+            onClick={handleDrawerToggle} 
+            sx={{ 
+              mr: 2, 
+              display: { md: 'none' },
+              fontSize: { xs: '1.5rem', sm: '2rem' }
+            }}
+          >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography 
+            variant="h6" 
+            noWrap 
+            component="div" 
+            sx={{ 
+              flexGrow: 1,
+              fontSize: { xs: '0.875rem', sm: '1rem', md: '1.25rem' },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
             {user?.name} ({user?.role})
           </Typography>
         </Toolbar>
@@ -173,7 +192,9 @@ export const Layout: React.FC<LayoutProps> = ({ darkMode, toggleDarkMode }) => {
           flexGrow: 1,
           p: { xs: 1, sm: 2, md: 3 },
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: { xs: 7, md: 8 },
+          mt: { xs: 7, sm: 8 },
+          mb: { xs: 2, sm: 0 },
+          minHeight: { xs: 'calc(100vh - 56px)', sm: 'calc(100vh - 64px)' },
         }}
       >
         <Outlet />

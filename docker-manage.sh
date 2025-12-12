@@ -120,9 +120,12 @@ install_updates() {
         return
     fi
     
-    echo -e "${YELLOW}Остановка текущих контейнеров...${NC}"
+    echo -e "${YELLOW}Остановка текущих контейнеров (volumes сохраняются)...${NC}"
+    # Важно: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
     docker-compose down 2>/dev/null || docker compose down
     
+    echo ""
+    echo -e "${GREEN}✓ Контейнеры остановлены, данные БД сохранены${NC}"
     echo ""
     echo -e "${YELLOW}Пересборка и запуск контейнеров...${NC}"
     docker-compose up -d --build 2>/dev/null || docker compose up -d --build
@@ -245,6 +248,8 @@ quick_update() {
     show_header
     echo -e "${GREEN}=== Быстрое обновление ===${NC}"
     echo ""
+    echo -e "${BLUE}⚠ ВАЖНО: Данные БД будут сохранены (volumes не удаляются)${NC}"
+    echo ""
     echo -e "${YELLOW}Шаг 1: Обновление репозитория...${NC}"
     update_repository_silent
     
@@ -319,9 +324,10 @@ main_menu() {
                 ;;
             7)
                 show_header
-                echo -e "${YELLOW}Остановка всех контейнеров...${NC}"
+                echo -e "${YELLOW}Остановка всех контейнеров (volumes сохраняются)...${NC}"
+                # Важно: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
                 docker-compose down 2>/dev/null || docker compose down
-                echo -e "${GREEN}✓ Контейнеры остановлены${NC}"
+                echo -e "${GREEN}✓ Контейнеры остановлены, данные БД сохранены${NC}"
                 sleep 2
                 ;;
             8)
