@@ -33,6 +33,8 @@ const productionOrigins = [
   'http://95.71.125.8',
   'http://ftr.lil-fil.netcraze.pro:8080',
   'http://ftr.lil-fil.netcraze.pro',
+  'https://ftr.lilfil.ru',
+  'http://ftr.lilfil.ru',
 ];
 
 const developmentOrigins = [
@@ -76,13 +78,13 @@ app.options('*', (req, res) => {
         }
       });
       
-      if (productionHosts.includes(originHost) || originHost === '95.71.125.8' || originHost.includes('ftr.lil-fil.netcraze.pro')) {
+      if (productionHosts.includes(originHost) || originHost === '95.71.125.8' || originHost.includes('ftr.lil-fil.netcraze.pro') || originHost.includes('ftr.lilfil.ru')) {
         isAllowed = true;
       }
       
       // In production, allow any origin with production IP/domain
       const nodeEnv = process.env.NODE_ENV || 'production';
-      if ((nodeEnv === 'production' || !process.env.NODE_ENV) && (origin.includes('95.71.125.8') || origin.includes('ftr.lil-fil.netcraze.pro'))) {
+      if ((nodeEnv === 'production' || !process.env.NODE_ENV) && (origin.includes('95.71.125.8') || origin.includes('ftr.lil-fil.netcraze.pro') || origin.includes('ftr.lilfil.ru'))) {
         isAllowed = true;
       }
     } catch (urlError) {
@@ -139,7 +141,7 @@ app.use(cors({
           }
         });
         
-        if (productionHosts.includes(originHost) || originHost === '95.71.125.8' || originHost.includes('ftr.lil-fil.netcraze.pro')) {
+        if (productionHosts.includes(originHost) || originHost === '95.71.125.8' || originHost.includes('ftr.lil-fil.netcraze.pro') || originHost.includes('ftr.lilfil.ru')) {
           console.log('CORS allowed (hostname match):', origin);
           return callback(null, true);
         }
