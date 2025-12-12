@@ -53,9 +53,22 @@
 
 ### Advanced (Дополнительные настройки)
 
+⚠️ **ВАЖНО:** Обязательно добавьте эти настройки в **Custom Nginx Configuration**!
+
 Вставьте следующий код в поле **Custom Nginx Configuration**:
 
 ```nginx
+# Правильная передача заголовков (ОБЯЗАТЕЛЬНО!)
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Forwarded-Host $host;
+proxy_set_header X-Forwarded-Port $server_port;
+
+# Передаем оригинальный Origin для CORS
+proxy_set_header Origin $http_origin;
+
 # Увеличенные таймауты для API
 proxy_connect_timeout 60s;
 proxy_send_timeout 60s;
@@ -63,14 +76,9 @@ proxy_read_timeout 60s;
 
 # Отключаем буферизацию для streaming ответов
 proxy_buffering off;
-
-# Передаем оригинальный Origin для CORS
-proxy_set_header Origin $http_origin;
-
-# Дополнительные заголовки
-proxy_set_header X-Forwarded-Host $host;
-proxy_set_header X-Forwarded-Port $server_port;
 ```
+
+**Без этих заголовков API не будет работать!** Backend будет получать `Host: localhost:3001` вместо правильного домена.
 
 Нажмите **Save**.
 
