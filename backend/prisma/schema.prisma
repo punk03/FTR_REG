@@ -153,6 +153,8 @@ model Person {
 model Discipline {
   id        Int      @id @default(autoincrement())
   name      String   @unique
+  abbreviations String? // JSON array of abbreviations
+  variants      String? // JSON array of variant spellings
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

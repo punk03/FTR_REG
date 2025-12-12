@@ -58,30 +58,74 @@ interface ParsedRow {
   };
 }
 
-// Маппинг аббревиатур на полные названия дисциплин
-const DISCIPLINE_ABBREVIATIONS: Record<string, string> = {
-  'СТК': 'Современный танец',
-  'СЭТ': 'Эстрадный танец',
-  'СТ': 'Современный танец',
-  'ЭТ': 'Эстрадный танец',
-  'Классика': 'Классический танец',
-  'Народный': 'Народный танец',
-  'Бальный': 'Бальный танец',
-  'Детский': 'Детский танец',
-  'Спортивный': 'Спортивный танец',
-  'Акробатический': 'Акробатический танец',
-  'Цирковой': 'Цирковой танец',
-  'Театр': 'Театр танца',
-};
+// Функция для получения аббревиатур и вариантов из БД
+async function getDisciplineMappings(disciplines: any[]): Promise<{
+  abbreviations: Record<string, string>;
+  variants: Record<string, string>;
+}> {
+  const abbreviations: Record<string, string> = {};
+  const variants: Record<string, string> = {};
 
-// Маппинг опечаток и вариантов написания
-const DISCIPLINE_VARIANTS: Record<string, string> = {
-  'contemprorary': 'Contemporary',
-  'contemporary': 'Contemporary',
-  'contemp': 'Contemporary',
-  'dance show': 'Dance Show',
-  'danceshow': 'Dance Show',
-};
+  // Стандартные аббревиатуры (для обратной совместимости)
+  const defaultAbbreviations: Record<string, string> = {
+    'СТК': 'Современный танец',
+    'СЭТ': 'Эстрадный танец',
+    'СТ': 'Современный танец',
+    'ЭТ': 'Эстрадный танец',
+    'Классика': 'Классический танец',
+    'Народный': 'Народный танец',
+    'Бальный': 'Бальный танец',
+    'Детский': 'Детский танец',
+    'Спортивный': 'Спортивный танец',
+    'Акробатический': 'Акробатический танец',
+    'Цирковой': 'Цирковой танец',
+    'Театр': 'Театр танца',
+  };
+
+  // Стандартные варианты (для обратной совместимости)
+  const defaultVariants: Record<string, string> = {
+    'contemprorary': 'Contemporary',
+    'contemporary': 'Contemporary',
+    'contemp': 'Contemporary',
+    'dance show': 'Dance Show',
+    'danceshow': 'Dance Show',
+  };
+
+  // Копируем стандартные значения
+  Object.assign(abbreviations, defaultAbbreviations);
+  Object.assign(variants, defaultVariants);
+
+  // Загружаем из БД
+  for (const discipline of disciplines) {
+    if (discipline.abbreviations) {
+      try {
+        const abbrs = JSON.parse(discipline.abbreviations);
+        if (Array.isArray(abbrs)) {
+          abbrs.forEach((abbr: string) => {
+            abbreviations[abbr] = discipline.name;
+          });
+        }
+      } catch (e) {
+        console.warn(`[Excel Import] Error parsing abbreviations for discipline ${discipline.id}:`, e);
+      }
+    }
+
+    if (discipline.variants) {
+      try {
+        const vars = JSON.parse(discipline.variants);
+        if (Array.isArray(vars)) {
+          vars.forEach((variant: string) => {
+            variants[variant.toLowerCase()] = discipline.name;
+          });
+        }
+      } catch (e) {
+        console.warn(`[Excel Import] Error parsing variants for discipline ${discipline.id}:`, e);
+      }
+    }
+  }
+
+  return { abbreviations, variants };
+}
 
 // Функция парсинга категории из строки вида "1. Jazz Соло Бэби Beginners" или "1. СТК (свободная танцевальная категория) (начинающие) Формейшн Бэби Beginners"
 async function parseCategoryString(
@@ -124,11 +168,14 @@ async function parseCategoryString(
   // Разбиваем на слова
   const words = cleaned.split(/\s+/).filter(w => w.length > 0);
 
+  // Получаем маппинги из БД
+  const { abbreviations, variants } = await getDisciplineMappings(disciplines);
+
   // Ищем дисциплину - сначала проверяем аббревиатуры
   let disciplineFound = false;
   
   // Проверяем аббревиатуры в оригинальной строке (до удаления скобок)
-  for (const [abbr, fullName] of Object.entries(DISCIPLINE_ABBREVIATIONS)) {
+  for (const [abbr, fullName] of Object.entries(abbreviations)) {
     if (originalCleaned.includes(abbr) || cleaned.includes(abbr)) {
       const discipline = disciplines.find((d) => d.name === fullName);
       if (discipline) {
@@ -163,8 +210,8 @@ async function parseCategoryString(
       
       // Проверяем варианты написания и опечатки
       const wordLower = words[i].toLowerCase();
-      if (DISCIPLINE_VARIANTS[wordLower]) {
-        const variantName = DISCIPLINE_VARIANTS[wordLower];
+      if (variants[wordLower]) {
+        const variantName = variants[wordLower];
         const discipline = disciplines.find((d) => d.name.toLowerCase() === variantName.toLowerCase());
         if (discipline) {
           result.disciplineName = discipline.name;

@@ -33,6 +33,7 @@ import {
   AccordionDetails,
   Divider,
   Alert,
+  Chip,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
@@ -455,6 +456,8 @@ export const Admin: React.FC = () => {
         fetchImportErrors(selectedEventForErrors);
       }
     } else if (tabValue === 3) {
+      fetchReferences();
+    } else if (tabValue === 4) {
       fetchSettings();
     }
   }, [tabValue]);
@@ -1004,6 +1007,134 @@ export const Admin: React.FC = () => {
     setExpandedCategories(newExpanded);
   };
 
+  const fetchReferences = async () => {
+    setReferenceLoading(true);
+    try {
+      const [disciplinesRes, nominationsRes, agesRes, categoriesRes] = await Promise.all([
+        api.get('/api/reference/disciplines'),
+        api.get('/api/reference/nominations'),
+        api.get('/api/reference/ages'),
+        api.get('/api/reference/categories'),
+      ]);
+      setDisciplines(disciplinesRes.data);
+      setNominations(nominationsRes.data);
+      setAges(agesRes.data);
+      setCategories(categoriesRes.data);
+    } catch (error) {
+      console.error('Error fetching references:', error);
+    } finally {
+      setReferenceLoading(false);
+    }
+  };
+
+  const handleSaveDiscipline = async () => {
+    if (!disciplineFormData.name.trim()) {
+      showError('Название дисциплины обязательно');
+      return;
+    }
+
+    try {
+      if (editingDiscipline) {
+        await api.put(`/api/reference/disciplines/${editingDiscipline.id}`, {
+          name: disciplineFormData.name,
+          abbreviations: disciplineFormData.abbreviations,
+          variants: disciplineFormData.variants,
+        });
+        showSuccess('Дисциплина обновлена');
+      } else {
+        await api.post('/api/reference/disciplines', {
+          name: disciplineFormData.name,
+          abbreviations: disciplineFormData.abbreviations,
+          variants: disciplineFormData.variants,
+        });
+        showSuccess('Дисциплина добавлена');
+      }
+      setEditingDiscipline(null);
+      setDisciplineFormData({ name: '', abbreviations: [], variants: [] });
+      fetchReferences();
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Ошибка сохранения дисциплины');
+    }
+  };
+
+  const handleSaveNomination = async () => {
+    if (!nominationFormData.name.trim()) {
+      showError('Название номинации обязательно');
+      return;
+    }
+
+    try {
+      if (editingNomination) {
+        await api.put(`/api/reference/nominations/${editingNomination.id}`, {
+          name: nominationFormData.name,
+        });
+        showSuccess('Номинация обновлена');
+      } else {
+        await api.post('/api/reference/nominations', {
+          name: nominationFormData.name,
+        });
+        showSuccess('Номинация добавлена');
+      }
+      setEditingNomination(null);
+      setNominationFormData({ name: '' });
+      fetchReferences();
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Ошибка сохранения номинации');
+    }
+  };
+
+  const handleSaveAge = async () => {
+    if (!ageFormData.name.trim()) {
+      showError('Название возраста обязательно');
+      return;
+    }
+
+    try {
+      if (editingAge) {
+        await api.put(`/api/reference/ages/${editingAge.id}`, {
+          name: ageFormData.name,
+        });
+        showSuccess('Возраст обновлен');
+      } else {
+        await api.post('/api/reference/ages', {
+          name: ageFormData.name,
+        });
+        showSuccess('Возраст добавлен');
+      }
+      setEditingAge(null);
+      setAgeFormData({ name: '' });
+      fetchReferences();
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Ошибка сохранения возраста');
+    }
+  };
+
+  const handleSaveCategory = async () => {
+    if (!categoryFormData.name.trim()) {
+      showError('Название категории обязательно');
+      return;
+    }
+
+    try {
+      if (editingCategory) {
+        await api.put(`/api/reference/categories/${editingCategory.id}`, {
+          name: categoryFormData.name,
+        });
+        showSuccess('Категория обновлена');
+      } else {
+        await api.post('/api/reference/categories', {
+          name: categoryFormData.name,
+        });
+        showSuccess('Категория добавлена');
+      }
+      setEditingCategory(null);
+      setCategoryFormData({ name: '' });
+      fetchReferences();
+    } catch (error: any) {
+      showError(error.response?.data?.error || 'Ошибка сохранения категории');
+    }
+  };
+
   const renderSettingField = (setting: SettingItem) => {
     const currentValue = systemSettings[setting.key] !== undefined 
       ? systemSettings[setting.key] 
@@ -1123,6 +1254,7 @@ export const Admin: React.FC = () => {
           <Tab label="Пользователи" />
           <Tab label="Мероприятия" />
           <Tab label="Ошибки импорта" />
+          <Tab label="Справочники" />
           <Tab label="Системные настройки" />
         </Tabs>
 
