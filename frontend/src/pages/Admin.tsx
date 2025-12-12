@@ -2155,6 +2155,235 @@ export const Admin: React.FC = () => {
         </TabPanel>
       </Paper>
 
+      {/* Диалог редактирования дисциплины */}
+      <Dialog open={showDisciplineDialog} onClose={() => {
+        setEditingDiscipline(null);
+        setDisciplineFormData({ name: '', abbreviations: [], variants: [] });
+        setNewAbbreviation('');
+        setNewVariant('');
+        setShowDisciplineDialog(false);
+      }} maxWidth="md" fullWidth>
+        <DialogTitle>{editingDiscipline ? 'Редактирование дисциплины' : 'Добавление дисциплины'}</DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                required
+                label="Название дисциплины"
+                value={disciplineFormData.name}
+                onChange={(e) => setDisciplineFormData({ ...disciplineFormData, name: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" gutterBottom>
+                Аббревиатуры (например: СТК, СЭТ, ЭТ)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                {disciplineFormData.abbreviations.map((abbr, idx) => (
+                  <Chip
+                    key={idx}
+                    label={abbr}
+                    onDelete={() => {
+                      const newAbbrs = [...disciplineFormData.abbreviations];
+                      newAbbrs.splice(idx, 1);
+                      setDisciplineFormData({ ...disciplineFormData, abbreviations: newAbbrs });
+                    }}
+                  />
+                ))}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField
+                  size="small"
+                  placeholder="Новая аббревиатура"
+                  value={newAbbreviation}
+                  onChange={(e) => setNewAbbreviation(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && newAbbreviation.trim()) {
+                      setDisciplineFormData({
+                        ...disciplineFormData,
+                        abbreviations: [...disciplineFormData.abbreviations, newAbbreviation.trim()],
+                      });
+                      setNewAbbreviation('');
+                    }
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    if (newAbbreviation.trim()) {
+                      setDisciplineFormData({
+                        ...disciplineFormData,
+                        abbreviations: [...disciplineFormData.abbreviations, newAbbreviation.trim()],
+                      });
+                      setNewAbbreviation('');
+                    }
+                  }}
+                >
+                  Добавить
+                </Button>
+              </Box>
+            </Grid>
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" gutterBottom>
+                Варианты написания (для распознавания опечаток)
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                {disciplineFormData.variants.map((variant, idx) => (
+                  <Chip
+                    key={idx}
+                    label={variant}
+                    color="secondary"
+                    onDelete={() => {
+                      const newVariants = [...disciplineFormData.variants];
+                      newVariants.splice(idx, 1);
+                      setDisciplineFormData({ ...disciplineFormData, variants: newVariants });
+                    }}
+                  />
+                ))}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField
+                  size="small"
+                  placeholder="Новый вариант написания"
+                  value={newVariant}
+                  onChange={(e) => setNewVariant(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && newVariant.trim()) {
+                      setDisciplineFormData({
+                        ...disciplineFormData,
+                        variants: [...disciplineFormData.variants, newVariant.trim()],
+                      });
+                      setNewVariant('');
+                    }
+                  }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    if (newVariant.trim()) {
+                      setDisciplineFormData({
+                        ...disciplineFormData,
+                        variants: [...disciplineFormData.variants, newVariant.trim()],
+                      });
+                      setNewVariant('');
+                    }
+                  }}
+                >
+                  Добавить
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setEditingDiscipline(null);
+            setDisciplineFormData({ name: '', abbreviations: [], variants: [] });
+            setNewAbbreviation('');
+            setNewVariant('');
+            setShowDisciplineDialog(false);
+          }}>
+            Отмена
+          </Button>
+          <Button variant="contained" onClick={() => {
+            handleSaveDiscipline();
+            setShowDisciplineDialog(false);
+          }}>
+            Сохранить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог редактирования номинации */}
+      <Dialog open={!!editingNomination} onClose={() => {
+        setEditingNomination(null);
+        setNominationFormData({ name: '' });
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingNomination && editingNomination.id ? 'Редактирование номинации' : 'Добавление номинации'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            required
+            label="Название номинации"
+            value={nominationFormData.name}
+            onChange={(e) => setNominationFormData({ name: e.target.value })}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setEditingNomination(null);
+            setNominationFormData({ name: '' });
+          }}>
+            Отмена
+          </Button>
+          <Button variant="contained" onClick={handleSaveNomination}>
+            Сохранить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог редактирования возраста */}
+      <Dialog open={!!editingAge} onClose={() => {
+        setEditingAge(null);
+        setAgeFormData({ name: '' });
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingAge && editingAge.id ? 'Редактирование возраста' : 'Добавление возраста'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            required
+            label="Название возраста"
+            value={ageFormData.name}
+            onChange={(e) => setAgeFormData({ name: e.target.value })}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setEditingAge(null);
+            setAgeFormData({ name: '' });
+          }}>
+            Отмена
+          </Button>
+          <Button variant="contained" onClick={handleSaveAge}>
+            Сохранить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог редактирования категории */}
+      <Dialog open={!!editingCategory} onClose={() => {
+        setEditingCategory(null);
+        setCategoryFormData({ name: '' });
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingCategory && editingCategory.id ? 'Редактирование категории' : 'Добавление категории'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            required
+            label="Название категории"
+            value={categoryFormData.name}
+            onChange={(e) => setCategoryFormData({ name: e.target.value })}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setEditingCategory(null);
+            setCategoryFormData({ name: '' });
+          }}>
+            Отмена
+          </Button>
+          <Button variant="contained" onClick={handleSaveCategory}>
+            Сохранить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={userDialogOpen} onClose={() => setUserDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{selectedUser ? 'Редактирование пользователя' : 'Создание пользователя'}</DialogTitle>
         <DialogContent>
