@@ -537,15 +537,21 @@ export const Diplomas: React.FC = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Редактирование дипломов</DialogTitle>
+      <Dialog 
+        open={editDialogOpen} 
+        onClose={() => setEditDialogOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Редактирование дипломов</DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mt: { xs: 0, sm: 1 } }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 multiline
-                rows={10}
+                rows={isMobile ? 8 : 10}
                 label="Список ФИО для дипломов"
                 value={editFormData.diplomasList}
                 onChange={(e) => {
@@ -557,6 +563,12 @@ export const Diplomas: React.FC = () => {
                   });
                 }}
                 helperText="Введите ФИО участников, каждое с новой строки. Количество дипломов обновится автоматически."
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -569,6 +581,12 @@ export const Diplomas: React.FC = () => {
                 inputProps={{ min: 0 }}
                 disabled
                 helperText="Автоматически рассчитывается из списка"
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -579,6 +597,12 @@ export const Diplomas: React.FC = () => {
                 value={editFormData.medalsCount}
                 onChange={(e) => setEditFormData({ ...editFormData, medalsCount: e.target.value })}
                 inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -590,6 +614,12 @@ export const Diplomas: React.FC = () => {
                 onChange={(e) => setEditFormData({ ...editFormData, blockNumber: e.target.value })}
                 inputProps={{ min: 1 }}
                 helperText="Номер блока для танца"
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
             {selectedRegistration && (
@@ -604,21 +634,39 @@ export const Diplomas: React.FC = () => {
             )}
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={handleSaveEdit}>
+        <DialogActions sx={{ px: { xs: 1.5, sm: 2 }, pb: { xs: 1.5, sm: 2 } }}>
+          <Button 
+            onClick={() => setEditDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+          >
+            Отмена
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSaveEdit}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+            sx={{ ml: { xs: 0, sm: 1 }, mt: { xs: 1, sm: 0 } }}
+          >
             Сохранить
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={bulkPayDialogOpen} onClose={() => setBulkPayDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Массовая оплата дипломов</DialogTitle>
+      <Dialog 
+        open={bulkPayDialogOpen} 
+        onClose={() => setBulkPayDialogOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Массовая оплата дипломов</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
             Выбрано регистраций: {selectedForBulk.size}
           </Typography>
-          <Grid container spacing={2}>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -627,6 +675,12 @@ export const Diplomas: React.FC = () => {
                 value={bulkPayments.cash}
                 onChange={(e) => setBulkPayments({ ...bulkPayments, cash: e.target.value })}
                 inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -637,6 +691,12 @@ export const Diplomas: React.FC = () => {
                 value={bulkPayments.card}
                 onChange={(e) => setBulkPayments({ ...bulkPayments, card: e.target.value })}
                 inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -647,32 +707,68 @@ export const Diplomas: React.FC = () => {
                 value={bulkPayments.transfer}
                 onChange={(e) => setBulkPayments({ ...bulkPayments, transfer: e.target.value })}
                 inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' } // Предотвращает зум на iOS
+                  }
+                }}
               />
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkPayDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={handleBulkPay}>
+        <DialogActions sx={{ px: { xs: 1.5, sm: 2 }, pb: { xs: 1.5, sm: 2 } }}>
+          <Button 
+            onClick={() => setBulkPayDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+          >
+            Отмена
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleBulkPay}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+            sx={{ ml: { xs: 0, sm: 1 }, mt: { xs: 1, sm: 0 } }}
+          >
             Оплатить
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={bulkPrintDialogOpen} onClose={() => setBulkPrintDialogOpen(false)}>
-        <DialogTitle>Массовая отметка печати</DialogTitle>
+      <Dialog 
+        open={bulkPrintDialogOpen} 
+        onClose={() => setBulkPrintDialogOpen(false)}
+        fullScreen={isMobile}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Массовая отметка печати</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2 }}>
+          <Typography variant="body2" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
             Выбрано регистраций: {selectedForBulk.size}
           </Typography>
           <FormControlLabel
-            control={<Checkbox defaultChecked />}
-            label="Отметить как распечатанные"
+            control={<Checkbox defaultChecked size={isMobile ? "small" : "medium"} />}
+            label={<Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Отметить как распечатанные</Typography>}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkPrintDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={() => handleBulkPrint(true)}>
+        <DialogActions sx={{ px: { xs: 1.5, sm: 2 }, pb: { xs: 1.5, sm: 2 } }}>
+          <Button 
+            onClick={() => setBulkPrintDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+          >
+            Отмена
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={() => handleBulkPrint(true)}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+            sx={{ ml: { xs: 0, sm: 1 }, mt: { xs: 1, sm: 0 } }}
+          >
             Отметить
           </Button>
         </DialogActions>
