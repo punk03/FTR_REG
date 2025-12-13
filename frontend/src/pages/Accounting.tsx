@@ -588,115 +588,121 @@ export const Accounting: React.FC = () => {
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 1, 
-                justifyContent: { xs: 'stretch', sm: 'flex-end' }, 
-                flexWrap: 'wrap', 
-                flexDirection: { xs: 'column', sm: 'row' } 
-              }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<FileDownloadIcon />}
-                  onClick={async () => {
-                    if (selectedEventId) {
-                      try {
-                        const response = await api.get('/api/accounting/export/excel', {
-                          params: { eventId: selectedEventId },
-                          responseType: 'blob',
-                        });
-                        const url = window.URL.createObjectURL(new Blob([response.data]));
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.setAttribute('download', `accounting_${selectedEventId}_${Date.now()}.xlsx`);
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-                        window.URL.revokeObjectURL(url);
-                        showSuccess('Excel файл успешно экспортирован');
-                      } catch (error: any) {
-                        showError(error.response?.data?.error || 'Ошибка экспорта в Excel');
-                      }
-                    }
-                  }}
-                  disabled={!selectedEventId}
-                  fullWidth={isMobile}
-                  size={isMobile ? 'medium' : 'medium'}
-                >
-                  {isMobile ? 'Excel' : 'Экспорт в Excel'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<FileDownloadIcon />}
-                  onClick={async () => {
-                    if (selectedEventId) {
-                      try {
-                        const response = await api.get('/api/accounting/export/csv', {
-                          params: { eventId: selectedEventId },
-                          responseType: 'blob',
-                        });
-                        const url = window.URL.createObjectURL(new Blob([response.data]));
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.setAttribute('download', `accounting_${selectedEventId}_${Date.now()}.csv`);
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-                        window.URL.revokeObjectURL(url);
-                        showSuccess('CSV файл успешно экспортирован');
-                      } catch (error: any) {
-                        showError(error.response?.data?.error || 'Ошибка экспорта в CSV');
-                      }
-                    }
-                  }}
-                  disabled={!selectedEventId}
-                  fullWidth={isMobile}
-                  size={isMobile ? 'medium' : 'medium'}
-                >
-                  {isMobile ? 'CSV' : 'Экспорт в CSV'}
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<FileDownloadIcon />}
-                  onClick={async () => {
-                    if (accountingData && selectedEventId) {
-                      try {
-                        const event = events.find((e) => e.id === selectedEventId);
-                        await exportAccountingToPDF(accountingData, event?.name || 'Неизвестное мероприятие', selectedEventId as number);
-                        showSuccess('PDF отчет успешно сгенерирован');
-                      } catch (error: any) {
-                        console.error('Error exporting PDF:', error);
-                        showError(error.message || 'Ошибка при создании PDF файла');
-                      }
-                    }
-                  }}
-                  disabled={!accountingData || !selectedEventId}
-                  fullWidth={isMobile}
-                  size={isMobile ? 'medium' : 'medium'}
-                >
-                  {isMobile ? 'PDF' : 'Экспорт в PDF'}
-                </Button>
-                {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<AddIcon />}
-                    onClick={() => setCreatePaymentDialogOpen(true)}
-                    disabled={!selectedEventId}
-                    fullWidth={isMobile}
-                    size={isMobile ? 'medium' : 'medium'}
-                  >
-                    Добавить платеж
-                  </Button>
-                )}
-              </Box>
-            </Grid>
           </Grid>
 
           <Paper sx={{ overflow: 'hidden' }}>
             <Box sx={{ p: { xs: 1, sm: 2 }, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
-              <Typography variant="h6" sx={{ mb: 2, fontSize: { xs: '1rem', sm: '1.25rem' } }}>Все платежи</Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 2,
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: 2
+              }}>
+                <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Все платежи</Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 1, 
+                  flexWrap: 'wrap',
+                  width: { xs: '100%', sm: 'auto' }
+                }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={async () => {
+                      if (selectedEventId) {
+                        try {
+                          const response = await api.get('/api/accounting/export/excel', {
+                            params: { eventId: selectedEventId },
+                            responseType: 'blob',
+                          });
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', `accounting_${selectedEventId}_${Date.now()}.xlsx`);
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                          window.URL.revokeObjectURL(url);
+                          showSuccess('Excel файл успешно экспортирован');
+                        } catch (error: any) {
+                          showError(error.response?.data?.error || 'Ошибка экспорта в Excel');
+                        }
+                      }
+                    }}
+                    disabled={!selectedEventId}
+                    fullWidth={isMobile}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
+                    {isMobile ? 'Excel' : 'Excel'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={async () => {
+                      if (selectedEventId) {
+                        try {
+                          const response = await api.get('/api/accounting/export/csv', {
+                            params: { eventId: selectedEventId },
+                            responseType: 'blob',
+                          });
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', `accounting_${selectedEventId}_${Date.now()}.csv`);
+                          document.body.appendChild(link);
+                          link.click();
+                          link.remove();
+                          window.URL.revokeObjectURL(url);
+                          showSuccess('CSV файл успешно экспортирован');
+                        } catch (error: any) {
+                          showError(error.response?.data?.error || 'Ошибка экспорта в CSV');
+                        }
+                      }
+                    }}
+                    disabled={!selectedEventId}
+                    fullWidth={isMobile}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
+                    {isMobile ? 'CSV' : 'CSV'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={async () => {
+                      if (accountingData && selectedEventId) {
+                        try {
+                          const event = events.find((e) => e.id === selectedEventId);
+                          await exportAccountingToPDF(accountingData, event?.name || 'Неизвестное мероприятие', selectedEventId as number);
+                          showSuccess('PDF отчет успешно сгенерирован');
+                        } catch (error: any) {
+                          console.error('Error exporting PDF:', error);
+                          showError(error.message || 'Ошибка при создании PDF файла');
+                        }
+                      }
+                    }}
+                    disabled={!accountingData || !selectedEventId}
+                    fullWidth={isMobile}
+                    size={isMobile ? 'small' : 'medium'}
+                  >
+                    {isMobile ? 'PDF' : 'PDF'}
+                  </Button>
+                  {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<AddIcon />}
+                      onClick={() => setCreatePaymentDialogOpen(true)}
+                      disabled={!selectedEventId}
+                      fullWidth={isMobile}
+                      size={isMobile ? 'small' : 'medium'}
+                    >
+                      {isMobile ? 'Добавить' : 'Добавить платеж'}
+                    </Button>
+                  )}
+                </Box>
+              </Box>
               
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -713,6 +719,11 @@ export const Accounting: React.FC = () => {
                       if (item.type === 'group') {
                         const isExpanded = expandedGroups.has(item.groupId);
                         const paymentTime = formatTime(item.createdAt);
+                        const firstEntry = item.entries[0];
+                        const paymentMethods = item.entries.reduce((acc: any, e: any) => {
+                          acc[e.method] = (acc[e.method] || 0) + Number(e.amount);
+                          return acc;
+                        }, {});
                         
                         return (
                           <Card 
@@ -749,7 +760,7 @@ export const Accounting: React.FC = () => {
                                       {item.paymentGroupName}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
-                                      {paymentTime}
+                                      {formatDate(item.createdAt)} {paymentTime}
                                     </Typography>
                                   </Box>
                                 </Box>
@@ -759,14 +770,39 @@ export const Accounting: React.FC = () => {
                                 <Chip 
                                   label={`Сумма: ${formatCurrency(item.totalAmount)}`} 
                                   size="small" 
+                                  color="primary"
                                   sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
                                 />
-                                {item.hasPerformance && (
+                                {item.hasPerformance && item.totalDiscount > 0 && (
                                   <Chip 
                                     label={`Откат: ${formatCurrency(item.totalDiscount)}`} 
                                     size="small" 
                                     color="secondary"
                                     sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
+                                  />
+                                )}
+                                {paymentMethods.CASH > 0 && (
+                                  <Chip 
+                                    label={`Нал: ${formatCurrency(paymentMethods.CASH)}`} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
+                                  />
+                                )}
+                                {paymentMethods.CARD > 0 && (
+                                  <Chip 
+                                    label={`Карта: ${formatCurrency(paymentMethods.CARD)}`} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
+                                  />
+                                )}
+                                {paymentMethods.TRANSFER > 0 && (
+                                  <Chip 
+                                    label={`Перевод: ${formatCurrency(paymentMethods.TRANSFER)}`} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
                                   />
                                 )}
                               </Stack>
@@ -936,12 +972,24 @@ export const Accounting: React.FC = () => {
                         // Одиночная запись (включая ручные платежи)
                         const entry = item.entry;
                         const paymentName = entry.registrationId 
-                          ? (entry.paymentGroupName || `Платеж #${entry.id}`)
+                          ? (entry.paymentGroupName || entry.registration?.danceName || `Платеж #${entry.id}`)
                           : (entry.description || `Платеж #${entry.id}`);
                         const paymentTime = formatTime(entry.createdAt);
+                        const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
                         
                         return (
-                          <Card key={entry.id} sx={{ mb: 2, width: '100%', maxWidth: '100%' }}>
+                          <Card 
+                            key={entry.id} 
+                            sx={{ 
+                              mb: 2, 
+                              width: '100%', 
+                              maxWidth: '100%',
+                              border: '1px solid',
+                              borderColor: isDeleted ? 'error.main' : 'divider',
+                              backgroundColor: isDeleted ? 'error.light' : 'background.paper',
+                              opacity: isDeleted ? 0.7 : 1
+                            }}
+                          >
                             <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
                               <Box sx={{ mb: 0.5, width: '100%' }}>
                                 <Typography 
@@ -955,22 +1003,24 @@ export const Accounting: React.FC = () => {
                                   {paymentName}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
-                                  {paymentTime}
+                                  {formatDate(entry.createdAt)} {paymentTime}
                                 </Typography>
                               </Box>
                               
                               <Stack spacing={0.5} sx={{ mt: 1, width: '100%' }}>
-                                {entry.registrationId && (
+                                {entry.registrationId && entry.registration && (
                                   <>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
-                                      Номер: {formatRegistrationNumber(entry.registration || null)}
+                                      Номер: {formatRegistrationNumber(entry.registration)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
-                                      Коллектив: {entry.collective?.name || '-'}
+                                      Коллектив: {entry.collective?.name || entry.registration.collective?.name || '-'}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
-                                      Танец: {entry.registration?.danceName || '-'}
-                                    </Typography>
+                                    {entry.registration.danceName && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                        Танец: {entry.registration.danceName}
+                                      </Typography>
+                                    )}
                                   </>
                                 )}
                                 <Typography variant="body2" sx={{ fontWeight: 500, mt: 0.5, fontSize: { xs: '0.85rem', sm: '0.875rem' } }}>
@@ -990,10 +1040,11 @@ export const Accounting: React.FC = () => {
                                   <Chip 
                                     label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
                                     size="small" 
+                                    variant="outlined"
                                     sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
                                   />
                                 </Stack>
-                                <Box sx={{ display: 'flex', gap: 0.5, mt: 1 }}>
+                                <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
                                   <IconButton
                                     size="small"
                                     onClick={async () => {
@@ -1014,13 +1065,13 @@ export const Accounting: React.FC = () => {
                                   >
                                     <ReceiptIcon fontSize="small" />
                                   </IconButton>
-                                  {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                  {!isDeleted && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                     <>
-                                      <IconButton size="small" onClick={() => handleEdit(entry)} sx={{ p: 0.5 }}>
+                                      <IconButton size="small" onClick={() => handleEdit(entry)} sx={{ p: 0.5 }} title="Редактировать">
                                         <EditIcon fontSize="small" />
                                       </IconButton>
                                       {user?.role === 'ADMIN' && (
-                                        <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} sx={{ p: 0.5 }}>
+                                        <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} sx={{ p: 0.5 }} title="Удалить">
                                           <DeleteIcon fontSize="small" />
                                         </IconButton>
                                       )}
@@ -1116,27 +1167,42 @@ export const Accounting: React.FC = () => {
                                           {item.paymentGroupName}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                          {paymentTime}
+                                          {formatDate(item.createdAt)} {paymentTime}
                                         </Typography>
                                       </Box>
                                     </Box>
                                   </TableCell>
-                                  <TableCell colSpan={3}>
-                                    <Box sx={{ display: 'flex', gap: 2 }}>
-                                      <Typography variant="body2" color="text.secondary">
-                                        Сумма: {formatCurrency(item.totalAmount)}
-                                      </Typography>
-                                      {item.hasPerformance && (
-                                        <Typography variant="body2" color="text.secondary">
-                                          Откат: {formatCurrency(item.totalDiscount)}
-                                        </Typography>
+                                  <TableCell colSpan={2}>
+                                    <Typography variant="body2" color="text.secondary">
+                                      Группа ({item.entries.length} {item.entries.length === 1 ? 'запись' : 'записей'})
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>-</TableCell>
+                                  <TableCell sx={{ fontWeight: 500 }}>{formatCurrency(item.totalAmount)}</TableCell>
+                                  <TableCell>{item.hasPerformance && item.totalDiscount > 0 ? formatCurrency(item.totalDiscount) : '-'}</TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                      {item.entries.some((e: any) => e.paidFor === 'PERFORMANCE') && (
+                                        <Chip label="Выступление" size="small" sx={{ height: 24, fontSize: '0.7rem' }} />
+                                      )}
+                                      {item.entries.some((e: any) => e.paidFor === 'DIPLOMAS_MEDALS') && (
+                                        <Chip label="Дипломы" size="small" sx={{ height: 24, fontSize: '0.7rem' }} />
                                       )}
                                     </Box>
                                   </TableCell>
-                                  <TableCell>{formatCurrency(item.totalAmount)}</TableCell>
-                                  <TableCell>{formatCurrency(item.totalDiscount)}</TableCell>
-                                  <TableCell>-</TableCell>
-                                  <TableCell>-</TableCell>
+                                  <TableCell>
+                                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                      {item.entries.some((e: any) => e.method === 'CASH') && (
+                                        <Chip label="Нал" size="small" variant="outlined" sx={{ height: 22, fontSize: '0.65rem' }} />
+                                      )}
+                                      {item.entries.some((e: any) => e.method === 'CARD') && (
+                                        <Chip label="Карта" size="small" variant="outlined" sx={{ height: 22, fontSize: '0.65rem' }} />
+                                      )}
+                                      {item.entries.some((e: any) => e.method === 'TRANSFER') && (
+                                        <Chip label="Перевод" size="small" variant="outlined" sx={{ height: 22, fontSize: '0.65rem' }} />
+                                      )}
+                                    </Box>
+                                  </TableCell>
                                   <TableCell>
                                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                                       {item.isDeleted ? (
@@ -1213,30 +1279,43 @@ export const Accounting: React.FC = () => {
                                 {isExpanded && item.entries.map((entry: any) => (
                                   <TableRow key={entry.id} sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
                                     <TableCell sx={{ pl: 6 }}>
-                                      <Typography variant="body2" color="text.secondary">
+                                      <Typography variant="body2">
                                         {entry.registration?.danceName || entry.description || '-'}
                                       </Typography>
                                     </TableCell>
-                                    <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
-                                    <TableCell>{entry.collective?.name || entry.description || '-'}</TableCell>
-                                    <TableCell>{entry.registration?.danceName || '-'}</TableCell>
-                                    <TableCell>{formatCurrency(entry.amount)}</TableCell>
-                                    <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
                                     <TableCell>
-                                      {entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'}
+                                      {entry.registration ? formatRegistrationNumber(entry.registration) : '-'}
                                     </TableCell>
                                     <TableCell>
-                                      {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
+                                      {entry.collective?.name || entry.registration?.collective?.name || '-'}
+                                    </TableCell>
+                                    <TableCell>{entry.registration?.danceName || '-'}</TableCell>
+                                    <TableCell>{formatCurrency(entry.amount)}</TableCell>
+                                    <TableCell>{entry.discountAmount > 0 ? formatCurrency(entry.discountAmount) : '-'}</TableCell>
+                                    <TableCell>
+                                      <Chip 
+                                        label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
+                                        size="small" 
+                                        sx={{ height: 24, fontSize: '0.7rem' }}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip 
+                                        label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
+                                        size="small" 
+                                        variant="outlined"
+                                        sx={{ height: 22, fontSize: '0.65rem' }}
+                                      />
                                     </TableCell>
                                     <TableCell>
                                       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                                         {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                           <>
-                                            <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                            <IconButton size="small" onClick={() => handleEdit(entry)} title="Редактировать">
                                               <EditIcon fontSize="small" />
                                             </IconButton>
                                             {user?.role === 'ADMIN' && (
-                                              <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                              <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} title="Удалить">
                                                 <DeleteIcon fontSize="small" />
                                               </IconButton>
                                             )}
@@ -1251,42 +1330,56 @@ export const Accounting: React.FC = () => {
                           } else {
                             // Одиночная запись (включая ручные платежи)
                             const entry = item.entry;
+                            const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
                             // Для ручных платежей используем description, для остальных - paymentGroupName или номер
                             const paymentName = entry.registrationId 
-                              ? (entry.paymentGroupName || `Платеж #${entry.id}`)
+                              ? (entry.paymentGroupName || entry.registration?.danceName || `Платеж #${entry.id}`)
                               : (entry.description || `Платеж #${entry.id}`);
                             const paymentTime = formatTime(entry.createdAt);
                             
                             return (
-                              <TableRow key={entry.id}>
+                              <TableRow 
+                                key={entry.id}
+                                sx={{ 
+                                  backgroundColor: isDeleted ? 'error.light' : 'inherit',
+                                  opacity: isDeleted ? 0.7 : 1
+                                }}
+                              >
                                 <TableCell>
                                   <Box>
-                                    <Typography variant="body2">{paymentName}</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: entry.registrationId ? 400 : 500 }}>
+                                      {paymentName}
+                                    </Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                      {paymentTime}
+                                      {formatDate(entry.createdAt)} {paymentTime}
                                     </Typography>
                                   </Box>
                                 </TableCell>
-                                <TableCell>{formatRegistrationNumber(entry.registration || null)}</TableCell>
                                 <TableCell>
-                                  {entry.registrationId 
-                                    ? (entry.collective?.name || '-')
-                                    : (entry.description ? '-' : '-')
-                                  }
+                                  {entry.registration ? formatRegistrationNumber(entry.registration) : '-'}
                                 </TableCell>
                                 <TableCell>
-                                  {entry.registrationId 
-                                    ? (entry.registration?.danceName || '-')
-                                    : '-'
-                                  }
-                                </TableCell>
-                                <TableCell>{formatCurrency(entry.amount)}</TableCell>
-                                <TableCell>{formatCurrency(entry.discountAmount)}</TableCell>
-                                <TableCell>
-                                  {entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'}
+                                  {entry.collective?.name || entry.registration?.collective?.name || '-'}
                                 </TableCell>
                                 <TableCell>
-                                  {entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'}
+                                  {entry.registration?.danceName || '-'}
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 500 }}>{formatCurrency(entry.amount)}</TableCell>
+                                <TableCell>{entry.discountAmount > 0 ? formatCurrency(entry.discountAmount) : '-'}</TableCell>
+                                <TableCell>
+                                  <Chip 
+                                    label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
+                                    size="small" 
+                                    sx={{ height: 24, fontSize: '0.7rem' }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Chip 
+                                    label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ height: 22, fontSize: '0.65rem' }}
+                                  />
                                 </TableCell>
                                 <TableCell>
                                   <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
@@ -1309,13 +1402,13 @@ export const Accounting: React.FC = () => {
                                     >
                                       <ReceiptIcon fontSize="small" />
                                     </IconButton>
-                                    {(user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                    {!isDeleted && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                       <>
-                                        <IconButton size="small" onClick={() => handleEdit(entry)}>
+                                        <IconButton size="small" onClick={() => handleEdit(entry)} title="Редактировать">
                                           <EditIcon fontSize="small" />
                                         </IconButton>
                                         {user?.role === 'ADMIN' && (
-                                          <IconButton size="small" onClick={() => handleDeleteClick(entry.id)}>
+                                          <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} title="Удалить">
                                             <DeleteIcon fontSize="small" />
                                           </IconButton>
                                         )}
