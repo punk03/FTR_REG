@@ -26,7 +26,6 @@ import {
   DialogActions,
   TextField,
   CircularProgress,
-  TablePagination,
   Divider,
   InputAdornment,
   useMediaQuery,
