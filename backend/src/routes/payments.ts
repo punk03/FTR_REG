@@ -237,13 +237,12 @@ router.post(
         }
 
         // Рассчитываем суммы дипломов и медалей отдельно
-        const diplomasPrice = (regPaymentComponents?.payDiplomas ?? true) && reg.event.pricePerDiploma 
+        const regDiplomasPrice = (regPaymentComponents?.payDiplomas ?? true) && reg.event.pricePerDiploma 
           ? Number(reg.event.pricePerDiploma) * diplomasCount 
           : 0;
-        const medalsPrice = (regPaymentComponents?.payMedals ?? true) && reg.event.pricePerMedal 
+        const regMedalsPrice = (regPaymentComponents?.payMedals ?? true) && reg.event.pricePerMedal 
           ? Number(reg.event.pricePerMedal) * medalsCount 
           : 0;
-        const regDiplomasAmount = diplomasPrice + medalsPrice;
 
         // const regTotal = regPerformanceAmount + regDiplomasAmount;
         // const regProportion = totalRequired > 0 ? regTotal / totalRequired : 0;
