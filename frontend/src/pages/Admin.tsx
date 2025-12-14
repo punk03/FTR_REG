@@ -1086,7 +1086,7 @@ export const Admin: React.FC = () => {
     }
 
     try {
-      if (editingNomination) {
+      if (editingNomination && editingNomination.id) {
         await api.put(`/api/reference/nominations/${editingNomination.id}`, {
           name: nominationFormData.name,
         });
