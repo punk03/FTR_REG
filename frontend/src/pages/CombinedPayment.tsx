@@ -188,6 +188,30 @@ export const CombinedPayment: React.FC = () => {
         diplomasCount = baseDiplomasCount;
       }
 
+      // Проверяем уникальную цену выступления
+      const customPrice = customPerformancePrices[regId];
+      let performancePrice = 0;
+
+      if (customPrice?.enabled && customPrice?.price) {
+        performancePrice = parseFloat(customPrice.price) || 0;
+      } else {
+        try {
+          const response = await api.get(`/api/registrations/${regId}/calculate-price`, {
+            params: {
+              participantsCount: data.participantsCount || reg.participantsCount,
+              federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
+              diplomasCount,
+              medalsCount: data.medalsCount || reg.medalsCount,
+            },
+          });
+          performancePrice = response.data.performancePrice || 0;
+        } catch (error) {
+          console.error(`Error calculating price for registration ${regId}:`, error);
+          // Используем предыдущее значение, если есть
+          performancePrice = registrationPrices[regId]?.performancePrice || 0;
+        }
+      }
+
       try {
         const response = await api.get(`/api/registrations/${regId}/calculate-price`, {
           params: {
@@ -199,14 +223,21 @@ export const CombinedPayment: React.FC = () => {
         });
 
         prices[regId] = {
-          performancePrice: response.data.performancePrice || 0,
+          performancePrice,
           diplomasPrice: response.data.details?.diplomasPrice || 0,
           medalsPrice: response.data.details?.medalsPrice || 0,
-          total: response.data.total || 0,
+          total: performancePrice + (response.data.details?.diplomasPrice || 0) + (response.data.details?.medalsPrice || 0),
         };
       } catch (error) {
         console.error(`Error calculating price for registration ${regId}:`, error);
-        // Не перетираем предыдущие значения нулями, просто логируем ошибку
+        // Используем предыдущие значения, если есть
+        const prevPrice = registrationPrices[regId];
+        prices[regId] = {
+          performancePrice,
+          diplomasPrice: prevPrice?.diplomasPrice || 0,
+          medalsPrice: prevPrice?.medalsPrice || 0,
+          total: performancePrice + (prevPrice?.diplomasPrice || 0) + (prevPrice?.medalsPrice || 0),
+        };
       }
     }
 
@@ -755,6 +786,21 @@ export const CombinedPayment: React.FC = () => {
                       sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 20, sm: 24 } }}
                     />
                   </Stack>
+
+                  <Box sx={{ mt: 1, mb: 1 }}>
+                    {reg.paymentStatus === 'PAID' && (
+                      <Chip label="Оплачено" color="success" size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }} />
+                    )}
+                    {reg.paymentStatus === 'PERFORMANCE_PAID' && (
+                      <Chip label="Выступление оплачено" color="info" size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }} />
+                    )}
+                    {reg.paymentStatus === 'DIPLOMAS_PAID' && (
+                      <Chip label="Дипломы оплачены" color="warning" size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }} />
+                    )}
+                    {reg.paymentStatus === 'UNPAID' && (
+                      <Chip label="Не оплачено" color="default" size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }} />
+                    )}
+                  </Box>
 
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     {leaders !== '-' && (
