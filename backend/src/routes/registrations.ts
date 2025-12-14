@@ -220,6 +220,18 @@ router.post(
       // Get next registration number
       const number = await getNextRegistrationNumber(eventId);
 
+      // Handle diplomasList and diplomasCount
+      let finalDiplomasList = diplomasList || undefined;
+      let finalDiplomasCount = diplomasCount || 0;
+      
+      if (finalDiplomasList) {
+        // Auto-calculate count from list if not provided
+        const parsed = parseParticipants(finalDiplomasList);
+        if (parsed.count > 0) {
+          finalDiplomasCount = parsed.count;
+        }
+      }
+
       // Create registration
       const registration = await prisma.registration.create({
         data: {
@@ -242,6 +254,9 @@ router.post(
           notes: req.body.notes || undefined,
           status: status || 'PENDING',
           resume: status === 'REJECTED' ? resume : undefined,
+          diplomasList: finalDiplomasList,
+          diplomasCount: finalDiplomasCount,
+          medalsCount: medalsCount || 0,
         },
       });
 
