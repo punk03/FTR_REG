@@ -937,6 +937,16 @@ export const Accounting: React.FC = () => {
                                         <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                           Коллектив: {entry.collective?.name || entry.registration.collective?.name || '-'}
                                         </Typography>
+                                        {entry.registration.danceName && (
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                            Танец: {entry.registration.danceName}
+                                          </Typography>
+                                        )}
+                                        {entry.registration.notes && (
+                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word', fontStyle: 'italic' }}>
+                                            📝 {entry.registration.notes}
+                                          </Typography>
+                                        )}
                                       </>
                                     )}
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
@@ -1031,6 +1041,11 @@ export const Accounting: React.FC = () => {
                                   {entry.registration.danceName && (
                                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
                                       Танец: {entry.registration.danceName}
+                                    </Typography>
+                                  )}
+                                  {entry.registration.notes && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word', fontStyle: 'italic', mt: 0.5 }}>
+                                      📝 {entry.registration.notes}
                                     </Typography>
                                   )}
                                 </>

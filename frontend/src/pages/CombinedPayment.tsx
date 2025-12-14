@@ -705,6 +705,7 @@ export const CombinedPayment: React.FC = () => {
                           <TableCell>Дипломов</TableCell>
                           <TableCell>Медалей</TableCell>
                           <TableCell>Статус оплаты</TableCell>
+                          <TableCell>Заметки</TableCell>
                         </TableRow>
               </TableHead>
               <TableBody>
@@ -744,6 +745,15 @@ export const CombinedPayment: React.FC = () => {
                         )}
                         {reg.paymentStatus === 'UNPAID' && (
                           <Chip label="Не оплачено" color="default" size="small" />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {reg.notes ? (
+                          <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {reg.notes}
+                          </Typography>
+                        ) : (
+                          '-'
                         )}
                       </TableCell>
                     </TableRow>
@@ -839,6 +849,13 @@ export const CombinedPayment: React.FC = () => {
                       </Typography>
                     )}
                   </Box>
+                  {reg.notes && (
+                    <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                        📝 {reg.notes}
+                      </Typography>
+                    </Box>
+                  )}
                 </CardContent>
               </Card>
             );

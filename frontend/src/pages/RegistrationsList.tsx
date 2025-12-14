@@ -546,14 +546,14 @@ export const RegistrationsList: React.FC = () => {
             {loading ? (
               Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
                 <TableRow key={index}>
-                  <TableCell colSpan={9}>
+                  <TableCell colSpan={10}>
                     <Skeleton height={40} />
                   </TableCell>
                 </TableRow>
               ))
             ) : registrations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                   Нет регистраций
                 </TableCell>
               </TableRow>
@@ -619,6 +619,17 @@ export const RegistrationsList: React.FC = () => {
                       size="small"
                     />
                   </TableCell>
+                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>
+                    {reg.notes ? (
+                      <Tooltip title={reg.notes}>
+                        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {reg.notes}
+                        </Typography>
+                      </Tooltip>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -664,11 +675,18 @@ export const RegistrationsList: React.FC = () => {
                     №{formatRegistrationNumber(reg)} | {reg.discipline?.name || '-'} | {reg.nomination?.name || '-'}
                   </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: reg.notes ? 1 : 0 }}>
                   <Typography variant="body2">
                     Участники: {reg.participantsCount || 0}
                   </Typography>
                 </Box>
+                {reg.notes && (
+                  <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                      📝 {reg.notes}
+                    </Typography>
+                  </Box>
+                )}
               </Paper>
             ))}
           </>

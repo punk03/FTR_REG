@@ -156,8 +156,8 @@ docker-compose up -d --force-recreate backend
 **Решение:**
 1. Проверьте доступность портов с VM:
    ```bash
-   telnet IP_АДРЕС_DOCKER_СЕРВЕРА 3000
-   telnet IP_АДРЕС_DOCKER_СЕРВЕРА 3001
+   telnet 192.168.1.138 3000
+   telnet 192.168.1.138 3001
    ```
 
 2. Проверьте файрвол на Docker сервере:
@@ -250,4 +250,5 @@ sudo tail -f /var/log/nginx/ftr.lilfil.ru_error.log
    ```bash
    sudo apt update && sudo apt upgrade nginx
    ```
+
 

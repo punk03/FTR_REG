@@ -458,6 +458,7 @@ export const Diplomas: React.FC = () => {
               <TableCell>Медали</TableCell>
               <TableCell>Оплачено</TableCell>
               <TableCell>Печать</TableCell>
+              <TableCell>Заметки</TableCell>
               <TableCell>Действия</TableCell>
             </TableRow>
           </TableHead>
@@ -503,13 +504,22 @@ export const Diplomas: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>
+                      {reg.notes ? (
+                        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {reg.notes}
+                        </Typography>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <IconButton size="small" onClick={() => handleEdit(reg)}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell colSpan={12} sx={{ py: 0 }}>
+                    <TableCell colSpan={13} sx={{ py: 0 }}>
                       <Collapse in={isExpanded}>
                         <Box sx={{ p: 2, bgcolor: 'background.default' }}>
                           <Typography variant="subtitle2" gutterBottom>
@@ -525,6 +535,16 @@ export const Diplomas: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               Список пуст
                             </Typography>
+                          )}
+                          {reg.notes && (
+                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Заметки:
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                {reg.notes}
+                              </Typography>
+                            </Box>
                           )}
                         </Box>
                       </Collapse>

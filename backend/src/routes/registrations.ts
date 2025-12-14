@@ -236,6 +236,7 @@ router.post(
           songUrl,
           agreement: agreement || false,
           agreement2: agreement2 || false,
+          notes: req.body.notes || undefined,
           status: status || 'PENDING',
           resume: status === 'REJECTED' ? resume : undefined,
         },
@@ -377,6 +378,7 @@ router.patch(
         updateData.blockNumber = req.body.blockNumber === null || req.body.blockNumber === '' ? null : parseInt(String(req.body.blockNumber));
       }
       if (req.body.diplomasDataDeletedAt !== undefined) updateData.diplomasDataDeletedAt = req.body.diplomasDataDeletedAt ? new Date() : null;
+      if (req.body.notes !== undefined) updateData.notes = req.body.notes;
 
       // Only allow other fields if no payments
       if (!hasPayments) {

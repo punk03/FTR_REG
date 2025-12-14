@@ -82,6 +82,7 @@ export const RegistrationForm: React.FC = () => {
     songUrl: '',
     agreement: false,
     agreement2: false,
+    notes: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -148,6 +149,7 @@ export const RegistrationForm: React.FC = () => {
             songUrl: reg.songUrl || '',
             agreement: reg.agreement,
             agreement2: reg.agreement2,
+            notes: reg.notes || '',
           });
         } catch (error) {
           console.error('Error fetching registration:', error);
@@ -375,6 +377,7 @@ export const RegistrationForm: React.FC = () => {
         songUrl: formData.songUrl || undefined,
         agreement: formData.agreement,
         agreement2: formData.agreement2,
+        notes: formData.notes,
       };
 
       if (id) {

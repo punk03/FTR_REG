@@ -231,6 +231,7 @@ model Registration {
   songUrl                     String?
   agreement                   Boolean            @default(false)
   agreement2                  Boolean            @default(false)
+  notes                       String?            // Заметки к регистрации
   createdAt                   DateTime           @default(now())
   updatedAt                   DateTime           @updatedAt
 
