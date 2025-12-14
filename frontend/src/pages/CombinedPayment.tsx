@@ -133,7 +133,7 @@ export const CombinedPayment: React.FC = () => {
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount]);
+  }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount, customPerformancePrices]);
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -162,6 +162,23 @@ export const CombinedPayment: React.FC = () => {
         };
       });
       setRegistrationData(initialData);
+      
+      // Загружаем справочники для выпадающих списков
+      try {
+        const [disciplinesRes, nominationsRes, agesRes, categoriesRes] = await Promise.all([
+          api.get('/api/reference/disciplines'),
+          api.get('/api/reference/nominations'),
+          api.get('/api/reference/ages'),
+          api.get('/api/reference/categories'),
+        ]);
+        
+        setDisciplines(disciplinesRes.data || []);
+        setNominations(nominationsRes.data || []);
+        setAges(agesRes.data || []);
+        setCategories(categoriesRes.data || []);
+      } catch (error) {
+        console.error('Error loading reference data:', error);
+      }
     } catch (error) {
       console.error('Error fetching registrations:', error);
     } finally {

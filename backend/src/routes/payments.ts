@@ -198,22 +198,33 @@ router.post(
         }
 
         // Calculate amounts for this registration
-        const eventPrice = await prisma.eventPrice.findUnique({
-          where: {
-            eventId_nominationId: {
-              eventId: reg.eventId,
-              nominationId: reg.nominationId,
-            },
-          },
-        });
-
+        // Проверяем уникальную цену выступления
+        const customPerformancePrice = regData?.customPerformancePrice;
         let regPerformanceAmount = 0;
-        if (eventPrice && payingPerformance) {
-          const regularCount = Math.max(0, participantsCount - federationParticipantsCount);
-          const regularPrice = Number(eventPrice.pricePerParticipant) * regularCount;
-          const federationPrice =
-            Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant) * federationParticipantsCount;
-          regPerformanceAmount = regularPrice + federationPrice;
+        
+        if (payingPerformance) {
+          if (customPerformancePrice !== undefined && customPerformancePrice !== null) {
+            // Используем уникальную цену
+            regPerformanceAmount = Number(customPerformancePrice);
+          } else {
+            // Используем стандартный расчет
+            const eventPrice = await prisma.eventPrice.findUnique({
+              where: {
+                eventId_nominationId: {
+                  eventId: reg.eventId,
+                  nominationId: reg.nominationId,
+                },
+              },
+            });
+
+            if (eventPrice) {
+              const regularCount = Math.max(0, participantsCount - federationParticipantsCount);
+              const regularPrice = Number(eventPrice.pricePerParticipant) * regularCount;
+              const federationPrice =
+                Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant) * federationParticipantsCount;
+              regPerformanceAmount = regularPrice + federationPrice;
+            }
+          }
         }
 
         let regDiplomasAmount = 0;
