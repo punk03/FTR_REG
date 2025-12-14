@@ -1917,7 +1917,7 @@ export const Admin: React.FC = () => {
                       startIcon={<AddIcon />}
                       onClick={() => {
                         setNominationFormData({ name: '' });
-                        setEditingNomination({ id: 0, name: '' } as any);
+                        setEditingNomination(null);
                       }}
                     >
                       Добавить номинацию
