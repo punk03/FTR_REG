@@ -514,7 +514,8 @@ export const CombinedPayment: React.FC = () => {
           diplomasCount = baseDiplomasCount;
         }
         
-        return {
+        const customPrice = customPerformancePrices[id];
+        const result: any = {
           registrationId: id,
           participantsCount: parseInt(data.participantsCount || reg?.participantsCount || 0),
           federationParticipantsCount: parseInt(data.federationParticipantsCount || reg?.federationParticipantsCount || 0),
@@ -528,6 +529,13 @@ export const CombinedPayment: React.FC = () => {
           ageId: data.ageId !== undefined ? data.ageId : (reg?.ageId || null),
           categoryId: data.categoryId !== undefined ? data.categoryId : (reg?.categoryId || null),
         };
+        
+        // Добавляем уникальную цену выступления, если она установлена
+        if (customPrice?.enabled && customPrice?.price) {
+          result.customPerformancePrice = parseFloat(customPrice.price);
+        }
+        
+        return result;
       });
 
       await api.post('/api/payments/create', {
