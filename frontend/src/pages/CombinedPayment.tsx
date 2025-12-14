@@ -89,6 +89,7 @@ export const CombinedPayment: React.FC = () => {
   const [ages, setAges] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [collectives, setCollectives] = useState<any[]>([]);
+  const [customPerformancePrices, setCustomPerformancePrices] = useState<Record<number, { enabled: boolean; price: string }>>({});
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -236,19 +237,37 @@ export const CombinedPayment: React.FC = () => {
           diplomasCount = baseDiplomasCount;
         }
         
-        const response = await api.get(`/api/registrations/${reg.id}/calculate-price`, {
-          params: {
-            participantsCount: data.participantsCount || reg.participantsCount,
-            federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
-            diplomasCount,
-            medalsCount: data.medalsCount || reg.medalsCount,
-          },
-        });
-
-        if (payingPerformance) {
-          totalPerformance += response.data.performancePrice || (response.data.total - response.data.diplomasAndMedalsPrice);
+        // Проверяем уникальную цену выступления
+        const customPrice = customPerformancePrices[reg.id];
+        let performancePrice = 0;
+        
+        if (customPrice?.enabled && customPrice?.price) {
+          performancePrice = parseFloat(customPrice.price) || 0;
+        } else {
+          const response = await api.get(`/api/registrations/${reg.id}/calculate-price`, {
+            params: {
+              participantsCount: data.participantsCount || reg.participantsCount,
+              federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
+              diplomasCount,
+              medalsCount: data.medalsCount || reg.medalsCount,
+            },
+          });
+          performancePrice = response.data.performancePrice || (response.data.total - response.data.diplomasAndMedalsPrice);
         }
+        
+        if (payingPerformance) {
+          totalPerformance += performancePrice;
+        }
+        
         if (payingDiplomasAndMedals) {
+          const response = await api.get(`/api/registrations/${reg.id}/calculate-price`, {
+            params: {
+              participantsCount: data.participantsCount || reg.participantsCount,
+              federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
+              diplomasCount,
+              medalsCount: data.medalsCount || reg.medalsCount,
+            },
+          });
           totalDiplomas += response.data.diplomasAndMedalsPrice;
         }
       }
@@ -332,11 +351,37 @@ export const CombinedPayment: React.FC = () => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selectedRegistrations.size === 0) {
       showError('Выберите хотя бы одну регистрацию');
       return;
     }
+    
+    // Загружаем справочники при переходе на шаг редактирования
+    try {
+      const [disciplinesRes, nominationsRes, agesRes, categoriesRes] = await Promise.all([
+        api.get('/api/reference/disciplines'),
+        api.get('/api/reference/nominations'),
+        api.get('/api/reference/ages'),
+        api.get('/api/reference/categories'),
+      ]);
+      
+      setDisciplines(disciplinesRes.data || []);
+      setNominations(nominationsRes.data || []);
+      setAges(agesRes.data || []);
+      setCategories(categoriesRes.data || []);
+      
+      // Инициализируем уникальные цены для выбранных регистраций
+      const initialCustomPrices: Record<number, { enabled: boolean; price: string }> = {};
+      selectedRegistrations.forEach((regId) => {
+        initialCustomPrices[regId] = { enabled: false, price: '' };
+      });
+      setCustomPerformancePrices(initialCustomPrices);
+    } catch (error) {
+      console.error('Error loading reference data:', error);
+      showError('Ошибка загрузки справочников');
+    }
+    
     setCurrentStep('edit');
   };
 
@@ -594,16 +639,17 @@ export const CombinedPayment: React.FC = () => {
           <TableContainer sx={{ display: { xs: 'none', md: 'block' } }}>
             <Table size="small">
               <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox" />
-                  <TableCell>Коллектив</TableCell>
-                  <TableCell>Название номера</TableCell>
-                  <TableCell>Руководители</TableCell>
-                  <TableCell>Тренеры</TableCell>
-                  <TableCell>Участников</TableCell>
-                  <TableCell>Дипломов</TableCell>
-                  <TableCell>Медалей</TableCell>
-                </TableRow>
+                        <TableRow>
+                          <TableCell padding="checkbox" />
+                          <TableCell>Коллектив</TableCell>
+                          <TableCell>Название номера</TableCell>
+                          <TableCell>Руководители</TableCell>
+                          <TableCell>Тренеры</TableCell>
+                          <TableCell>Участников</TableCell>
+                          <TableCell>Дипломов</TableCell>
+                          <TableCell>Медалей</TableCell>
+                          <TableCell>Статус оплаты</TableCell>
+                        </TableRow>
               </TableHead>
               <TableBody>
                 {filteredRegistrations.map((reg) => {
@@ -630,6 +676,20 @@ export const CombinedPayment: React.FC = () => {
                       <TableCell>{reg.participantsCount}</TableCell>
                       <TableCell>{diplomasCount}</TableCell>
                       <TableCell>{reg.medalsCount || 0}</TableCell>
+                      <TableCell>
+                        {reg.paymentStatus === 'PAID' && (
+                          <Chip label="Оплачено" color="success" size="small" />
+                        )}
+                        {reg.paymentStatus === 'PERFORMANCE_PAID' && (
+                          <Chip label="Выступление оплачено" color="info" size="small" />
+                        )}
+                        {reg.paymentStatus === 'DIPLOMAS_PAID' && (
+                          <Chip label="Дипломы оплачены" color="warning" size="small" />
+                        )}
+                        {reg.paymentStatus === 'UNPAID' && (
+                          <Chip label="Не оплачено" color="default" size="small" />
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -1003,9 +1063,57 @@ export const CombinedPayment: React.FC = () => {
                       </Grid>
                     </Grid>
                     <Divider sx={{ my: 2 }} />
+                    <Box sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={customPerformancePrices[reg.id]?.enabled || false}
+                            onChange={(e) => {
+                              setCustomPerformancePrices({
+                                ...customPerformancePrices,
+                                [reg.id]: {
+                                  enabled: e.target.checked,
+                                  price: e.target.checked ? (customPerformancePrices[reg.id]?.price || '') : '',
+                                },
+                              });
+                            }}
+                            size={isMobile ? "small" : "medium"}
+                          />
+                        }
+                        label={<Typography sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>Уникальная цена выступления</Typography>}
+                      />
+                      {customPerformancePrices[reg.id]?.enabled && (
+                        <TextField
+                          fullWidth
+                          label="Цена выступления (₽)"
+                          type="number"
+                          value={customPerformancePrices[reg.id]?.price || ''}
+                          onChange={(e) => {
+                            setCustomPerformancePrices({
+                              ...customPerformancePrices,
+                              [reg.id]: {
+                                enabled: true,
+                                price: e.target.value,
+                              },
+                            });
+                          }}
+                          sx={{ mt: 1 }}
+                          size={isMobile ? "small" : "medium"}
+                          inputProps={{ min: 0, step: 0.01 }}
+                        />
+                      )}
+                    </Box>
+                    <Divider sx={{ my: 2 }} />
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2" color="text.secondary">
-                        Стоимость за номер: <strong>{formatCurrency(prices.performancePrice)}</strong>
+                        Стоимость за номер: <strong>{formatCurrency(
+                          customPerformancePrices[reg.id]?.enabled && customPerformancePrices[reg.id]?.price
+                            ? parseFloat(customPerformancePrices[reg.id].price) || 0
+                            : prices.performancePrice
+                        )}</strong>
+                        {customPerformancePrices[reg.id]?.enabled && (
+                          <Chip label="Уникальная" color="primary" size="small" sx={{ ml: 1 }} />
+                        )}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Дипломы: <strong>{formatCurrency(prices.diplomasPrice)}</strong>
@@ -1014,7 +1122,11 @@ export const CombinedPayment: React.FC = () => {
                         Медали: <strong>{formatCurrency(prices.medalsPrice)}</strong>
                       </Typography>
                       <Typography variant="body1" sx={{ mt: 1 }}>
-                        Итого за номер: <strong>{formatCurrency(prices.total)}</strong>
+                        Итого за номер: <strong>{formatCurrency(
+                          (customPerformancePrices[reg.id]?.enabled && customPerformancePrices[reg.id]?.price
+                            ? parseFloat(customPerformancePrices[reg.id].price) || 0
+                            : prices.performancePrice) + prices.diplomasPrice + prices.medalsPrice
+                        )}</strong>
                       </Typography>
                     </Box>
                   </CardContent>

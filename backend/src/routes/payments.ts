@@ -76,22 +76,32 @@ router.post(
         }
         const medalsCount = regData?.medalsCount ?? reg.medalsCount;
 
-        // Get event price
-        const eventPrice = await prisma.eventPrice.findUnique({
-          where: {
-            eventId_nominationId: {
-              eventId: reg.eventId,
-              nominationId: reg.nominationId,
-            },
-          },
-        });
+        // Проверяем уникальную цену выступления
+        const customPerformancePrice = regData?.customPerformancePrice;
+        
+        if (payingPerformance) {
+          if (customPerformancePrice !== undefined && customPerformancePrice !== null) {
+            // Используем уникальную цену
+            totalPerformanceRequired += Number(customPerformancePrice);
+          } else {
+            // Используем стандартный расчет
+            const eventPrice = await prisma.eventPrice.findUnique({
+              where: {
+                eventId_nominationId: {
+                  eventId: reg.eventId,
+                  nominationId: reg.nominationId,
+                },
+              },
+            });
 
-        if (eventPrice && payingPerformance) {
-          const regularCount = Math.max(0, participantsCount - federationParticipantsCount);
-          const regularPrice = Number(eventPrice.pricePerParticipant) * regularCount;
-          const federationPrice =
-            Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant) * federationParticipantsCount;
-          totalPerformanceRequired += regularPrice + federationPrice;
+            if (eventPrice) {
+              const regularCount = Math.max(0, participantsCount - federationParticipantsCount);
+              const regularPrice = Number(eventPrice.pricePerParticipant) * regularCount;
+              const federationPrice =
+                Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant) * federationParticipantsCount;
+              totalPerformanceRequired += regularPrice + federationPrice;
+            }
+          }
         }
 
         if (payingDiplomasAndMedals) {
