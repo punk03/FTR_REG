@@ -253,12 +253,23 @@ router.post(
           regDiscountAmount = (discountAmount * regPerformanceAmount) / totalPerformanceRequired;
         }
 
+        // Рассчитываем общую сумму, которая должна быть оплачена для этого танца
+        const regTotalRequired = 
+          (payingPerformance && (regPaymentComponents?.payPerformance ?? true) ? regPerformanceAmount - regDiscountAmount : 0) +
+          (payingDiplomasAndMedals && (regPaymentComponents?.payDiplomas ?? true) ? regDiplomasPrice : 0) +
+          (payingDiplomasAndMedals && (regPaymentComponents?.payMedals ?? true) ? regMedalsPrice : 0);
+
+        // Пропорция этого танца от общей суммы всех оплачиваемых компонентов
+        const regProportion = totalRequired > 0 ? regTotalRequired / totalRequired : 0;
+
         // Create accounting entries
         // Учитываем только если главный чекбокс включен И чекбокс для этого танца включен
         if (payingPerformance && (regPaymentComponents?.payPerformance ?? true) && regPerformanceAmount > 0) {
           const finalAmount = regPerformanceAmount - regDiscountAmount;
-          const cashAmount = Math.round(cash * (finalAmount / totalRequired));
-          const cardAmount = Math.round(card * (finalAmount / totalRequired));
+          // Распределяем платежи пропорционально доле этого танца от общей суммы
+          const performanceProportion = regTotalRequired > 0 ? finalAmount / regTotalRequired : 0;
+          const cashAmount = Math.round(cash * regProportion * performanceProportion);
+          const cardAmount = Math.round(card * regProportion * performanceProportion);
           const transferAmount = finalAmount - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
@@ -313,11 +324,11 @@ router.post(
         // Разделяем оплату дипломов и медалей на отдельные записи
         // Оплата дипломов
         if (payingDiplomasAndMedals && (regPaymentComponents?.payDiplomas ?? true) && regDiplomasPrice > 0) {
-          const diplomasProportion = totalDiplomasAndMedalsRequired > 0 ? regDiplomasPrice / totalDiplomasAndMedalsRequired : 0;
-          const totalDiplomasAmount = Math.round(totalDiplomasAndMedalsRequired * diplomasProportion);
-          const cashAmount = Math.round(cash * diplomasProportion);
-          const cardAmount = Math.round(card * diplomasProportion);
-          const transferAmount = totalDiplomasAmount - cashAmount - cardAmount;
+          // Распределяем платежи пропорционально доле дипломов этого танца от общей суммы танца
+          const diplomasProportion = regTotalRequired > 0 ? regDiplomasPrice / regTotalRequired : 0;
+          const cashAmount = Math.round(cash * regProportion * diplomasProportion);
+          const cardAmount = Math.round(card * regProportion * diplomasProportion);
+          const transferAmount = regDiplomasPrice - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
             await prisma.accountingEntry.create({
@@ -364,11 +375,11 @@ router.post(
 
         // Оплата медалей
         if (payingDiplomasAndMedals && (regPaymentComponents?.payMedals ?? true) && regMedalsPrice > 0) {
-          const medalsProportion = totalDiplomasAndMedalsRequired > 0 ? regMedalsPrice / totalDiplomasAndMedalsRequired : 0;
-          const totalMedalsAmount = Math.round(totalDiplomasAndMedalsRequired * medalsProportion);
-          const cashAmount = Math.round(cash * medalsProportion);
-          const cardAmount = Math.round(card * medalsProportion);
-          const transferAmount = totalMedalsAmount - cashAmount - cardAmount;
+          // Распределяем платежи пропорционально доле медалей этого танца от общей суммы танца
+          const medalsProportion = regTotalRequired > 0 ? regMedalsPrice / regTotalRequired : 0;
+          const cashAmount = Math.round(cash * regProportion * medalsProportion);
+          const cardAmount = Math.round(card * regProportion * medalsProportion);
+          const transferAmount = regMedalsPrice - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
             await prisma.accountingEntry.create({
