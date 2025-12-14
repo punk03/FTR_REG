@@ -1917,7 +1917,7 @@ export const Admin: React.FC = () => {
                       startIcon={<AddIcon />}
                       onClick={() => {
                         setNominationFormData({ name: '' });
-                        setEditingNomination(null);
+                        setEditingNomination({ id: undefined, name: '' } as any);
                       }}
                     >
                       Добавить номинацию
@@ -2298,7 +2298,7 @@ export const Admin: React.FC = () => {
       </Dialog>
 
       {/* Диалог редактирования номинации */}
-      <Dialog open={!!editingNomination} onClose={() => {
+      <Dialog open={editingNomination !== null} onClose={() => {
         setEditingNomination(null);
         setNominationFormData({ name: '' });
       }} maxWidth="sm" fullWidth>
