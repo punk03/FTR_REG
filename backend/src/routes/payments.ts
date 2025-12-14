@@ -147,6 +147,7 @@ router.post(
       const results = [];
       for (const reg of registrations) {
         const regData = registrationsData?.find((r: any) => r.registrationId === reg.id);
+        const regPaymentComponents = paymentComponents?.find((pc: any) => pc.registrationId === reg.id);
         const participantsCount = regData?.participantsCount ?? reg.participantsCount;
         const federationParticipantsCount = regData?.federationParticipantsCount ?? reg.federationParticipantsCount;
         // Если есть diplomasList, считаем количество строк, иначе используем diplomasCount
@@ -311,12 +312,9 @@ router.post(
         }
 
         // Разделяем оплату дипломов и медалей на отдельные записи
-        const diplomasPrice = reg.event.pricePerDiploma ? Number(reg.event.pricePerDiploma) * diplomasCount : 0;
-        const medalsPrice = reg.event.pricePerMedal ? Number(reg.event.pricePerMedal) * medalsCount : 0;
-        
         // Оплата дипломов
-        if (payingDiplomasAndMedals && (regPaymentComponents?.payDiplomas ?? true) && diplomasPrice > 0) {
-          const diplomasProportion = totalDiplomasAndMedalsRequired > 0 ? diplomasPrice / totalDiplomasAndMedalsRequired : 0;
+        if (payingDiplomasAndMedals && (regPaymentComponents?.payDiplomas ?? true) && regDiplomasPrice > 0) {
+          const diplomasProportion = totalDiplomasAndMedalsRequired > 0 ? regDiplomasPrice / totalDiplomasAndMedalsRequired : 0;
           const totalDiplomasAmount = Math.round(totalDiplomasAndMedalsRequired * diplomasProportion);
           const cashAmount = Math.round(cash * diplomasProportion);
           const cardAmount = Math.round(card * diplomasProportion);
@@ -366,8 +364,8 @@ router.post(
         }
 
         // Оплата медалей
-        if (payingDiplomasAndMedals && (regPaymentComponents?.payMedals ?? true) && medalsPrice > 0) {
-          const medalsProportion = totalDiplomasAndMedalsRequired > 0 ? medalsPrice / totalDiplomasAndMedalsRequired : 0;
+        if (payingDiplomasAndMedals && (regPaymentComponents?.payMedals ?? true) && regMedalsPrice > 0) {
+          const medalsProportion = totalDiplomasAndMedalsRequired > 0 ? regMedalsPrice / totalDiplomasAndMedalsRequired : 0;
           const totalMedalsAmount = Math.round(totalDiplomasAndMedalsRequired * medalsProportion);
           const cashAmount = Math.round(cash * medalsProportion);
           const cardAmount = Math.round(card * medalsProportion);
