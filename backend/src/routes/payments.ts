@@ -266,10 +266,11 @@ router.post(
         // Учитываем только если главный чекбокс включен И чекбокс для этого танца включен
         if (payingPerformance && (regPaymentComponents?.payPerformance ?? true) && regPerformanceAmount > 0) {
           const finalAmount = regPerformanceAmount - regDiscountAmount;
-          // Распределяем платежи пропорционально доле этого танца от общей суммы
+          // Распределяем платежи пропорционально доле выступления этого танца от общей суммы
           const performanceProportion = regTotalRequired > 0 ? finalAmount / regTotalRequired : 0;
           const cashAmount = Math.round(cash * regProportion * performanceProportion);
           const cardAmount = Math.round(card * regProportion * performanceProportion);
+          // Transfer получает остаток, чтобы сумма точно совпадала
           const transferAmount = finalAmount - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
@@ -328,6 +329,7 @@ router.post(
           const diplomasProportion = regTotalRequired > 0 ? regDiplomasPrice / regTotalRequired : 0;
           const cashAmount = Math.round(cash * regProportion * diplomasProportion);
           const cardAmount = Math.round(card * regProportion * diplomasProportion);
+          // Transfer получает остаток, чтобы сумма точно совпадала с regDiplomasPrice
           const transferAmount = regDiplomasPrice - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
@@ -379,6 +381,7 @@ router.post(
           const medalsProportion = regTotalRequired > 0 ? regMedalsPrice / regTotalRequired : 0;
           const cashAmount = Math.round(cash * regProportion * medalsProportion);
           const cardAmount = Math.round(card * regProportion * medalsProportion);
+          // Transfer получает остаток, чтобы сумма точно совпадала с regMedalsPrice
           const transferAmount = regMedalsPrice - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
