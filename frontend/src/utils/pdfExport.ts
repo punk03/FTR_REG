@@ -85,15 +85,28 @@ interface AccountingEntry {
 
 interface AccountingData {
   summary: {
-    totalAmount: number | string | null | undefined;
-    totalDiscount: number | string | null | undefined;
-    grandTotal: number | string | null | undefined;
+    totalAmount?: number | string | null | undefined;
+    totalDiscount?: number | string | null | undefined;
+    grandTotal?: number | string | null | undefined;
     performance: {
       cash: number | string | null | undefined;
       card: number | string | null | undefined;
       transfer: number | string | null | undefined;
+      total?: number | string | null | undefined;
     };
-    diplomasMedals: {
+    diplomasAndMedals?: {
+      cash: number | string | null | undefined;
+      card: number | string | null | undefined;
+      transfer: number | string | null | undefined;
+      total?: number | string | null | undefined;
+    };
+    diplomasMedals?: {
+      cash: number | string | null | undefined;
+      card: number | string | null | undefined;
+      transfer: number | string | null | undefined;
+      total?: number | string | null | undefined;
+    };
+    totalByMethod?: {
       cash: number | string | null | undefined;
       card: number | string | null | undefined;
       transfer: number | string | null | undefined;
@@ -151,10 +164,28 @@ export const exportAccountingToPDF = async (
     return paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы/Медали';
   };
 
+  // Нормализуем структуру summary для совместимости
+  const summary = data.summary || {};
+  const diplomasMedals = summary.diplomasAndMedals || summary.diplomasMedals || {
+    cash: 0,
+    card: 0,
+    transfer: 0,
+    total: 0,
+  };
+  const performance = summary.performance || {
+    cash: 0,
+    card: 0,
+    transfer: 0,
+    total: 0,
+  };
+  const totalAmount = summary.totalAmount || summary.grandTotal || 0;
+  const grandTotal = summary.grandTotal || totalAmount || 0;
+  const totalDiscount = summary.totalDiscount || 0;
+
   // Вычисляем реальные значения для проверки отката
-  const totalDiscountValue = typeof data.summary.totalDiscount === 'number' 
-    ? data.summary.totalDiscount 
-    : parseFloat(String(data.summary.totalDiscount || 0));
+  const totalDiscountValue = typeof totalDiscount === 'number' 
+    ? totalDiscount 
+    : parseFloat(String(totalDiscount || 0));
   const hasDiscount = !isNaN(totalDiscountValue) && totalDiscountValue > 0;
 
   const docDefinition: any = {
@@ -189,21 +220,21 @@ export const exportAccountingToPDF = async (
             width: '*',
             text: [
               { text: 'Общая сумма: ', bold: true },
-              { text: formatCurrency(data.summary.totalAmount) },
+              { text: formatCurrency(totalAmount) },
             ],
           },
           {
             width: '*',
             text: [
               { text: 'Откаты: ', bold: true },
-              { text: formatCurrency(data.summary.totalDiscount), color: 'red' },
+              { text: formatCurrency(totalDiscount), color: 'red' },
             ],
           },
           {
             width: '*',
             text: [
               { text: 'После откатов: ', bold: true },
-              { text: formatCurrency(data.summary.grandTotal) },
+              { text: formatCurrency(grandTotal) },
             ],
           },
         ] : [
@@ -211,14 +242,14 @@ export const exportAccountingToPDF = async (
             width: '*',
             text: [
               { text: 'Общая сумма: ', bold: true },
-              { text: formatCurrency(data.summary.totalAmount) },
+              { text: formatCurrency(totalAmount) },
             ],
           },
           {
             width: '*',
             text: [
               { text: 'Итого: ', bold: true },
-              { text: formatCurrency(data.summary.grandTotal) },
+              { text: formatCurrency(grandTotal) },
             ],
           },
         ],
@@ -233,17 +264,17 @@ export const exportAccountingToPDF = async (
         columns: [
           {
             width: '*',
-            text: `Наличные: ${formatCurrency(data.summary.performance.cash)}`,
+            text: `Наличные: ${formatCurrency(performance.cash || 0)}`,
             fontSize: 9,
           },
           {
             width: '*',
-            text: `Карта: ${formatCurrency(data.summary.performance.card)}`,
+            text: `Карта: ${formatCurrency(performance.card || 0)}`,
             fontSize: 9,
           },
           {
             width: '*',
-            text: `Перевод: ${formatCurrency(data.summary.performance.transfer)}`,
+            text: `Перевод: ${formatCurrency(performance.transfer || 0)}`,
             fontSize: 9,
           },
         ],
@@ -258,17 +289,17 @@ export const exportAccountingToPDF = async (
         columns: [
           {
             width: '*',
-            text: `Наличные: ${formatCurrency(data.summary.diplomasMedals.cash)}`,
+            text: `Наличные: ${formatCurrency(diplomasMedals.cash || 0)}`,
             fontSize: 9,
           },
           {
             width: '*',
-            text: `Карта: ${formatCurrency(data.summary.diplomasMedals.card)}`,
+            text: `Карта: ${formatCurrency(diplomasMedals.card || 0)}`,
             fontSize: 9,
           },
           {
             width: '*',
-            text: `Перевод: ${formatCurrency(data.summary.diplomasMedals.transfer)}`,
+            text: `Перевод: ${formatCurrency(diplomasMedals.transfer || 0)}`,
             fontSize: 9,
           },
         ],
