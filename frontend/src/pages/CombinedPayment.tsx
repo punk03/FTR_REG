@@ -219,6 +219,7 @@ export const CombinedPayment: React.FC = () => {
               federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
               diplomasCount,
               medalsCount: data.medalsCount || reg.medalsCount,
+              nominationId: data.nominationId !== undefined ? data.nominationId : reg.nominationId,
             },
           });
           performancePrice = response.data.performancePrice || 0;
@@ -236,6 +237,7 @@ export const CombinedPayment: React.FC = () => {
             federationParticipantsCount: data.federationParticipantsCount || reg.federationParticipantsCount,
             diplomasCount,
             medalsCount: data.medalsCount || reg.medalsCount,
+            nominationId: data.nominationId !== undefined ? data.nominationId : reg.nominationId,
           },
         });
 

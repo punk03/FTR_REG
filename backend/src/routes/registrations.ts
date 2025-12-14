@@ -513,13 +513,16 @@ router.get('/:id/calculate-price', authenticateToken, async (req: Request, res: 
     const medalsCount = req.query.medalsCount
       ? parseInt(req.query.medalsCount as string)
       : registration.medalsCount;
+    const nominationId = req.query.nominationId
+      ? parseInt(req.query.nominationId as string)
+      : registration.nominationId;
 
     // Get event price
     const eventPrice = await prisma.eventPrice.findUnique({
       where: {
         eventId_nominationId: {
           eventId: registration.eventId,
-          nominationId: registration.nominationId,
+          nominationId: nominationId,
         },
       },
     });
