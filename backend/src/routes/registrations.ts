@@ -183,6 +183,9 @@ router.post(
         agreement2,
         status,
         resume,
+        diplomasList,
+        diplomasCount,
+        medalsCount,
       } = req.body;
 
       // Get nomination for validation
