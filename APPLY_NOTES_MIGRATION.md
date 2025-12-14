@@ -1,5 +1,9 @@
 # Применение миграции для добавления поля notes в регистрации
 
+## ⚠️ ВАЖНО: Безопасное применение без потери данных
+
+Если Prisma предлагает reset базы данных - **НЕ СОГЛАШАЙТЕСЬ!** Это удалит все данные.
+
 ## Описание
 Добавлено поле `notes` (заметки) в модель `Registration`, которое позволяет добавлять заметки к каждому танцу. Эти заметки будут видны во всех меню, где отображаются регистрации:
 - Список регистраций
@@ -7,24 +11,35 @@
 - Дипломы
 - Бухгалтерия
 
-## Применение миграции
+## Применение миграции (БЕЗОПАСНЫЕ СПОСОБЫ)
 
-### Вариант 1: Автоматическое создание и применение миграции (рекомендуется)
+### ✅ Вариант 1: Ручное применение SQL (САМЫЙ БЕЗОПАСНЫЙ - РЕКОМЕНДУЕТСЯ)
+Этот способ гарантированно сохранит все данные:
+
+```bash
+docker-compose exec postgres psql -U ftr_user -d ftr_db -c "ALTER TABLE \"Registration\" ADD COLUMN IF NOT EXISTS \"notes\" TEXT;"
+```
+
+После этого пометим миграцию как примененную:
+```bash
+docker-compose exec backend npx prisma migrate resolve --applied add_notes_to_registration --schema=prisma/schema.prisma 2>/dev/null || true
+```
+
+### ✅ Вариант 2: Использование db push (безопасно)
+Синхронизирует схему без потери данных:
+
+```bash
+docker-compose exec backend npx prisma db push --schema=prisma/schema.prisma
+```
+
+### ⚠️ Вариант 3: Автоматическое создание миграции (только если нет drift)
+Используйте только если Prisma не показывает предупреждение о drift:
+
 ```bash
 docker-compose exec backend npx prisma migrate dev --name add_notes_to_registration --schema=prisma/schema.prisma
 ```
 
-### Вариант 2: Применение существующей миграции
-Если миграция уже создана, примените её:
-```bash
-docker-compose exec backend npx prisma migrate deploy --schema=prisma/schema.prisma
-```
-
-### Вариант 3: Ручное применение SQL
-Если автоматические миграции не работают, выполните SQL напрямую:
-```bash
-docker-compose exec postgres psql -U ftr_user -d ftr_db -c "ALTER TABLE \"Registration\" ADD COLUMN IF NOT EXISTS \"notes\" TEXT;"
-```
+**Если Prisma предлагает reset - нажмите N (нет) и используйте Вариант 1!**
 
 ## Проверка применения миграции
 После применения миграции проверьте, что поле добавлено:
