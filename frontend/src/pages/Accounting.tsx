@@ -76,8 +76,6 @@ export const Accounting: React.FC = () => {
   const [discountPercent, setDiscountPercent] = useState('');
   const [editGroupNameDialogOpen, setEditGroupNameDialogOpen] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
   const [editFormData, setEditFormData] = useState({
     amount: '',
     method: 'CASH' as 'CASH' | 'CARD' | 'TRANSFER',
@@ -114,7 +112,7 @@ export const Accounting: React.FC = () => {
     if (selectedEventId) {
       fetchAccounting();
     }
-  }, [selectedEventId, page, rowsPerPage, showDeletedGroups]);
+  }, [selectedEventId, showDeletedGroups]);
 
   const fetchAccounting = async () => {
     setLoading(true);
@@ -123,8 +121,8 @@ export const Accounting: React.FC = () => {
         params: {
           eventId: selectedEventId,
           includeDeleted: showDeletedGroups,
-          page: page + 1,
-          limit: rowsPerPage,
+          page: 1,
+          limit: 10000, // Получаем все записи сразу
         },
       });
       setAccountingData(response.data);
@@ -368,71 +366,80 @@ export const Accounting: React.FC = () => {
   const grouped = accountingData?.grouped || {};
   const ungrouped = accountingData?.ungrouped || [];
 
-  // Подготовить данные для отображения: все записи в едином списке
-  // Разворачиваем группы в отдельные записи с информацией о группе
-  const allEntries: any[] = [];
-  
-  // Добавляем записи из групп
-  Object.entries(grouped).forEach(([groupId, entries]: [string, any]) => {
+  // Подготовить данные для отображения: группы и одиночные записи
+  // Группы всегда развернуты (без возможности сворачивания)
+  const groupedArray = Object.entries(grouped).map(([groupId, entries]: [string, any]) => {
     const groupEntries = Array.isArray(entries) ? entries : [];
+    const totalAmount = groupEntries.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
+    const performanceEntries = groupEntries.filter((e: any) => e.paidFor === 'PERFORMANCE');
+    const totalDiscount = performanceEntries.reduce((sum: number, e: any) => sum + Number(e.discountAmount), 0);
     const firstEntry = groupEntries[0];
-    const paymentGroupName = firstEntry?.paymentGroupName || `Группа ${groupId.slice(0, 8)}`;
+    // Группа считается удалённой, если все её записи удалены (deletedAt не null)
+    const isDeleted = firstEntry?.deletedAt !== null && firstEntry?.deletedAt !== undefined;
     
-    groupEntries.forEach((entry: any) => {
-      const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
-      
-      // Фильтруем удалённые записи, если не включён показ удалённых
-      if (!showDeletedGroups && isDeleted) {
-        return;
+    // Фильтруем записи группы по статусу удаления
+    const filteredEntries = groupEntries.filter((entry: any) => {
+      const entryDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
+      if (!showDeletedGroups && entryDeleted) {
+        return false;
       }
-      // Если включён показ удалённых, показываем только удалённые
-      if (showDeletedGroups && !isDeleted) {
-        return;
+      if (showDeletedGroups && !entryDeleted) {
+        return false;
       }
-      
-      allEntries.push({
-        ...entry,
-        paymentGroupName,
-        groupId,
-        isGrouped: true,
-        isDeleted,
-      });
+      return true;
     });
-  });
-  
-  // Добавляем одиночные записи
-  ungrouped.forEach((entry: any) => {
-    const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
     
-    // Фильтруем удалённые записи, если не включён показ удалённых
-    if (!showDeletedGroups && isDeleted) {
-      return;
+    return {
+      type: 'group' as const,
+      groupId,
+      paymentGroupName: firstEntry?.paymentGroupName || `Группа ${groupId.slice(0, 8)}`,
+      createdAt: firstEntry?.createdAt || new Date(),
+      totalAmount,
+      totalDiscount,
+      entries: filteredEntries,
+      hasPerformance: performanceEntries.length > 0,
+      isDeleted,
+    };
+  }).filter((item) => {
+    // Фильтруем удалённые группы, если не включён показ удалённых
+    if (!showDeletedGroups && item.isDeleted) {
+      return false;
     }
     // Если включён показ удалённых, показываем только удалённые
-    if (showDeletedGroups && !isDeleted) {
-      return;
+    if (showDeletedGroups && !item.isDeleted) {
+      return false;
     }
-    
-    allEntries.push({
-      ...entry,
-      paymentGroupName: entry.paymentGroupName || entry.description || `Платеж #${entry.id}`,
-      groupId: null,
-      isGrouped: false,
-      isDeleted,
-    });
+    return true;
   });
 
-  // Сортировка
-  const sortedEntries = allEntries.sort((a: any, b: any) => {
+  // Одиночные записи
+  const ungroupedArray = ungrouped
+    .filter((entry: any) => {
+      const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
+      if (!showDeletedGroups && isDeleted) {
+        return false;
+      }
+      if (showDeletedGroups && !isDeleted) {
+        return false;
+      }
+      return true;
+    })
+    .map((entry: any) => ({
+      type: 'single' as const,
+      entry,
+    }));
+
+  // Объединить и отсортировать
+  const allItems = [...groupedArray, ...ungroupedArray].sort((a: any, b: any) => {
     let aValue: any;
     let bValue: any;
     
     if (sortBy === 'createdAt') {
-      aValue = new Date(a.createdAt).getTime();
-      bValue = new Date(b.createdAt).getTime();
+      aValue = new Date(a.type === 'group' ? a.createdAt : a.entry.createdAt).getTime();
+      bValue = new Date(b.type === 'group' ? b.createdAt : b.entry.createdAt).getTime();
     } else if (sortBy === 'amount') {
-      aValue = Number(a.amount);
-      bValue = Number(b.amount);
+      aValue = a.type === 'group' ? a.totalAmount : Number(a.entry.amount);
+      bValue = b.type === 'group' ? b.totalAmount : Number(b.entry.amount);
     } else {
       return 0;
     }
@@ -710,18 +717,278 @@ export const Accounting: React.FC = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                   <CircularProgress />
                 </Box>
-              ) : sortedEntries.length === 0 ? (
+              ) : allItems.length === 0 ? (
                 <Typography sx={{ p: 3 }}>Нет платежей</Typography>
               ) : isMobile ? (
                 // Мобильная версия с карточками
                 <Box>
-                  {sortedEntries
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((entry: any) => {
+                  {allItems.map((item: any) => {
+                    if (item.type === 'group') {
+                      const paymentTime = formatTime(item.createdAt);
+                      const paymentMethods = item.entries.reduce((acc: any, e: any) => {
+                        acc[e.method] = (acc[e.method] || 0) + Number(e.amount);
+                        return acc;
+                      }, {});
+                      
+                      return (
+                        <React.Fragment key={item.groupId}>
+                          {/* Заголовок группы */}
+                          <Card 
+                            sx={{ 
+                              mb: 1, 
+                              mt: 2,
+                              width: '100%', 
+                              maxWidth: '100%',
+                              border: '1px solid',
+                              borderColor: item.isDeleted ? 'error.main' : 'primary.main',
+                              backgroundColor: item.isDeleted ? 'error.light' : 'primary.light',
+                              opacity: item.isDeleted ? 0.7 : 1
+                            }}
+                          >
+                            <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                              <Box sx={{ mb: 1, width: '100%' }}>
+                                <Typography 
+                                  variant="body1" 
+                                  sx={{ 
+                                    fontWeight: 600, 
+                                    fontSize: { xs: '0.95rem', sm: '1rem' },
+                                    wordBreak: 'break-word',
+                                    color: 'primary.dark'
+                                  }}
+                                >
+                                  {item.paymentGroupName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
+                                  {formatDate(item.createdAt)} {paymentTime} • {item.entries.length} {item.entries.length === 1 ? 'запись' : 'записей'}
+                                </Typography>
+                              </Box>
+                              
+                              <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                                <Chip 
+                                  label={`Сумма: ${formatCurrency(item.totalAmount)}`} 
+                                  size="small" 
+                                  color="primary"
+                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
+                                />
+                                {item.hasPerformance && item.totalDiscount > 0 && (
+                                  <Chip 
+                                    label={`Откат: ${formatCurrency(item.totalDiscount)}`} 
+                                    size="small" 
+                                    color="secondary"
+                                    sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
+                                  />
+                                )}
+                                {paymentMethods.CASH > 0 && (
+                                  <Chip 
+                                    label={`Нал: ${formatCurrency(paymentMethods.CASH)}`} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
+                                  />
+                                )}
+                                {paymentMethods.CARD > 0 && (
+                                  <Chip 
+                                    label={`Карта: ${formatCurrency(paymentMethods.CARD)}`} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
+                                  />
+                                )}
+                                {paymentMethods.TRANSFER > 0 && (
+                                  <Chip 
+                                    label={`Перевод: ${formatCurrency(paymentMethods.TRANSFER)}`} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
+                                  />
+                                )}
+                              </Stack>
+                              
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1, width: '100%' }}>
+                                {item.isDeleted ? (
+                                  user?.role === 'ADMIN' && (
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      color="success"
+                                      onClick={() => handleRestoreGroupClick(item.groupId)}
+                                      sx={{ 
+                                        fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                        px: { xs: 0.75, sm: 1 },
+                                        py: { xs: 0.25, sm: 0.5 },
+                                        minWidth: 'auto'
+                                      }}
+                                    >
+                                      Восстановить
+                                    </Button>
+                                  )
+                                ) : (
+                                  <>
+                                    {user?.role === 'ADMIN' && (
+                                      <>
+                                        <Button
+                                          variant="outlined"
+                                          size="small"
+                                          onClick={() => handleEditGroupNameClick(item.groupId)}
+                                          sx={{ 
+                                            fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                            px: { xs: 0.75, sm: 1 },
+                                            py: { xs: 0.25, sm: 0.5 },
+                                            minWidth: 'auto'
+                                          }}
+                                        >
+                                          Редактировать
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          size="small"
+                                          color="error"
+                                          onClick={() => handleDeleteGroupClick(item.groupId)}
+                                          sx={{ 
+                                            fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                            px: { xs: 0.75, sm: 1 },
+                                            py: { xs: 0.25, sm: 0.5 },
+                                            minWidth: 'auto'
+                                          }}
+                                        >
+                                          Удалить
+                                        </Button>
+                                      </>
+                                    )}
+                                    {item.hasPerformance && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                      <Button
+                                        variant="outlined"
+                                        size="small"
+                                        color="secondary"
+                                        onClick={() => handleDiscountClick(item.groupId)}
+                                        sx={{ 
+                                          fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                          px: { xs: 0.75, sm: 1 },
+                                          py: { xs: 0.25, sm: 0.5 },
+                                          minWidth: 'auto'
+                                        }}
+                                      >
+                                        Откат
+                                      </Button>
+                                    )}
+                                    <IconButton
+                                      size="small"
+                                      onClick={async () => {
+                                        try {
+                                          const event = events.find((e) => e.id === selectedEventId);
+                                          await generatePaymentStatement(
+                                            item.entries,
+                                            event?.name || 'Неизвестное мероприятие',
+                                            item.paymentGroupName
+                                          );
+                                          showSuccess('Выписка успешно сформирована');
+                                        } catch (error: any) {
+                                          console.error('Error generating payment statement:', error);
+                                          showError(error.message || 'Ошибка при создании выписки');
+                                        }
+                                      }}
+                                      title="Сформировать выписку"
+                                    >
+                                      <ReceiptIcon fontSize="small" />
+                                    </IconButton>
+                                  </>
+                                )}
+                              </Box>
+                            </CardContent>
+                          </Card>
+                          
+                          {/* Записи группы (всегда развернуты) */}
+                          {item.entries.map((entry: any) => {
+                            const paymentName = entry.registration?.danceName || entry.description || '-';
+                            const entryTime = formatTime(entry.createdAt);
+                            
+                            return (
+                              <Card 
+                                key={entry.id} 
+                                variant="outlined"
+                                sx={{ 
+                                  mb: 1, 
+                                  ml: 2,
+                                  width: 'calc(100% - 16px)',
+                                  backgroundColor: entry.deletedAt ? 'error.light' : 'rgba(0, 0, 0, 0.02)',
+                                  opacity: entry.deletedAt ? 0.7 : 1
+                                }}
+                              >
+                                <CardContent sx={{ p: { xs: 1, sm: 1.5 }, '&:last-child': { pb: { xs: 1, sm: 1.5 } } }}>
+                                  <Typography 
+                                    variant="body2" 
+                                    sx={{ 
+                                      fontWeight: 500, 
+                                      mb: 0.5,
+                                      fontSize: { xs: '0.85rem', sm: '0.875rem' },
+                                      wordBreak: 'break-word'
+                                    }}
+                                  >
+                                    {paymentName}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.5 }}>
+                                    {formatDate(entry.createdAt)} {entryTime}
+                                  </Typography>
+                                  <Stack spacing={0.5} sx={{ width: '100%' }}>
+                                    {entry.registrationId && entry.registration && (
+                                      <>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                          Номер: {formatRegistrationNumber(entry.registration)}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                          Коллектив: {entry.collective?.name || entry.registration.collective?.name || '-'}
+                                        </Typography>
+                                      </>
+                                    )}
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                                      Сумма: {formatCurrency(entry.amount)}
+                                    </Typography>
+                                    {entry.discountAmount > 0 && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                                        Откат: {formatCurrency(entry.discountAmount)}
+                                      </Typography>
+                                    )}
+                                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                      <Chip 
+                                        label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
+                                        size="small" 
+                                        sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                      />
+                                      <Chip 
+                                        label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
+                                        size="small" 
+                                        sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                      />
+                                    </Stack>
+                                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                                      {!entry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                        <>
+                                          <IconButton size="small" onClick={() => handleEdit(entry)} sx={{ p: 0.5 }} title="Редактировать">
+                                            <EditIcon fontSize="small" />
+                                          </IconButton>
+                                          {user?.role === 'ADMIN' && (
+                                            <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} sx={{ p: 0.5 }} title="Удалить">
+                                              <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                          )}
+                                        </>
+                                      )}
+                                    </Box>
+                                  </Stack>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </React.Fragment>
+                      );
+                    } else {
+                      // Одиночная запись (включая ручные платежи)
+                      const entry = item.entry;
                       const paymentName = entry.registrationId 
-                        ? (entry.registration?.danceName || entry.paymentGroupName || `Платеж #${entry.id}`)
-                        : (entry.description || entry.paymentGroupName || `Платеж #${entry.id}`);
+                        ? (entry.paymentGroupName || entry.registration?.danceName || `Платеж #${entry.id}`)
+                        : (entry.description || `Платеж #${entry.id}`);
                       const paymentTime = formatTime(entry.createdAt);
+                      const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
                       
                       return (
                         <Card 
@@ -731,9 +998,9 @@ export const Accounting: React.FC = () => {
                             width: '100%', 
                             maxWidth: '100%',
                             border: '1px solid',
-                            borderColor: entry.isDeleted ? 'error.main' : 'divider',
-                            backgroundColor: entry.isDeleted ? 'error.light' : 'background.paper',
-                            opacity: entry.isDeleted ? 0.7 : 1
+                            borderColor: isDeleted ? 'error.main' : 'divider',
+                            backgroundColor: isDeleted ? 'error.light' : 'background.paper',
+                            opacity: isDeleted ? 0.7 : 1
                           }}
                         >
                           <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
@@ -748,11 +1015,6 @@ export const Accounting: React.FC = () => {
                               >
                                 {paymentName}
                               </Typography>
-                              {entry.isGrouped && (
-                                <Typography variant="caption" color="primary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
-                                  Группа: {entry.paymentGroupName}
-                                </Typography>
-                              )}
                               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mt: 0.5 }}>
                                 {formatDate(entry.createdAt)} {paymentTime}
                               </Typography>
@@ -803,8 +1065,7 @@ export const Accounting: React.FC = () => {
                                       const event = events.find((e) => e.id === selectedEventId);
                                       await generatePaymentStatement(
                                         [entry],
-                                        event?.name || 'Неизвестное мероприятие',
-                                        entry.isGrouped ? entry.paymentGroupName : undefined
+                                        event?.name || 'Неизвестное мероприятие'
                                       );
                                       showSuccess('Выписка успешно сформирована');
                                     } catch (error: any) {
@@ -817,7 +1078,7 @@ export const Accounting: React.FC = () => {
                                 >
                                   <ReceiptIcon fontSize="small" />
                                 </IconButton>
-                                {!entry.isDeleted && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                {!isDeleted && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                   <>
                                     <IconButton size="small" onClick={() => handleEdit(entry)} sx={{ p: 0.5 }} title="Редактировать">
                                       <EditIcon fontSize="small" />
@@ -834,28 +1095,8 @@ export const Accounting: React.FC = () => {
                           </CardContent>
                         </Card>
                       );
-                    })}
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, width: '100%', overflow: 'auto' }}>
-                    <TablePagination
-                      component="div"
-                      count={sortedEntries.length}
-                      page={page}
-                      onPageChange={(_, newPage) => setPage(newPage)}
-                      rowsPerPage={rowsPerPage}
-                      onRowsPerPageChange={(e) => {
-                        setRowsPerPage(parseInt(e.target.value, 10));
-                        setPage(0);
-                      }}
-                      rowsPerPageOptions={[10, 25, 50, 100]}
-                      labelRowsPerPage="На странице:"
-                      labelDisplayedRows={({ from, to, count }) => `${from}-${to} из ${count}`}
-                      sx={{
-                        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
-                        }
-                      }}
-                    />
-                  </Box>
+                    }
+                  })}
                 </Box>
               ) : (
                 // Десктопная версия с таблицей
@@ -872,7 +1113,6 @@ export const Accounting: React.FC = () => {
                             Название / Дата
                           </TableSortLabel>
                         </TableCell>
-                        <TableCell>Группа</TableCell>
                         <TableCell>Номер регистрации</TableCell>
                         <TableCell>Коллектив</TableCell>
                         <TableCell>Название танца</TableCell>
@@ -892,11 +1132,174 @@ export const Accounting: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {sortedEntries
-                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                        .map((entry: any) => {
+                      {allItems.map((item: any) => {
+                        if (item.type === 'group') {
+                          const paymentTime = formatTime(item.createdAt);
+                          
+                          return (
+                            <React.Fragment key={item.groupId}>
+                              {/* Заголовок группы */}
+                              <TableRow sx={{ 
+                                backgroundColor: item.isDeleted ? 'error.light' : 'primary.light',
+                                opacity: item.isDeleted ? 0.7 : 1
+                              }}>
+                                <TableCell colSpan={9}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.dark' }}>
+                                      {item.paymentGroupName}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                      {formatDate(item.createdAt)} {paymentTime} • {item.entries.length} {item.entries.length === 1 ? 'запись' : 'записей'} • 
+                                      Сумма: {formatCurrency(item.totalAmount)}
+                                      {item.hasPerformance && item.totalDiscount > 0 && ` • Откат: ${formatCurrency(item.totalDiscount)}`}
+                                    </Typography>
+                                    <Box sx={{ ml: 'auto', display: 'flex', gap: 0.5 }}>
+                                      {item.isDeleted ? (
+                                        user?.role === 'ADMIN' && (
+                                          <Button
+                                            variant="outlined"
+                                            size="small"
+                                            color="success"
+                                            onClick={() => handleRestoreGroupClick(item.groupId)}
+                                            sx={{ minWidth: 'auto', px: 1 }}
+                                          >
+                                            Восстановить
+                                          </Button>
+                                        )
+                                      ) : (
+                                        <>
+                                          {user?.role === 'ADMIN' && (
+                                            <>
+                                              <Button
+                                                variant="outlined"
+                                                size="small"
+                                                onClick={() => handleEditGroupNameClick(item.groupId)}
+                                                sx={{ minWidth: 'auto', px: 1 }}
+                                              >
+                                                Редактировать
+                                              </Button>
+                                              <Button
+                                                variant="outlined"
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDeleteGroupClick(item.groupId)}
+                                                sx={{ minWidth: 'auto', px: 1 }}
+                                              >
+                                                Удалить
+                                              </Button>
+                                            </>
+                                          )}
+                                          {item.hasPerformance && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                            <Button
+                                              variant="outlined"
+                                              size="small"
+                                              color="secondary"
+                                              onClick={() => handleDiscountClick(item.groupId)}
+                                              sx={{ minWidth: 'auto', px: 1 }}
+                                            >
+                                              Откат
+                                            </Button>
+                                          )}
+                                          <IconButton
+                                            size="small"
+                                            onClick={async () => {
+                                              try {
+                                                const event = events.find((e) => e.id === selectedEventId);
+                                                await generatePaymentStatement(
+                                                  item.entries,
+                                                  event?.name || 'Неизвестное мероприятие',
+                                                  item.paymentGroupName
+                                                );
+                                                showSuccess('Выписка успешно сформирована');
+                                              } catch (error: any) {
+                                                console.error('Error generating payment statement:', error);
+                                                showError(error.message || 'Ошибка при создании выписки');
+                                              }
+                                            }}
+                                            title="Сформировать выписку"
+                                          >
+                                            <ReceiptIcon fontSize="small" />
+                                          </IconButton>
+                                        </>
+                                      )}
+                                    </Box>
+                                  </Box>
+                                </TableCell>
+                              </TableRow>
+                              {/* Записи группы (всегда развернуты) */}
+                              {item.entries.map((entry: any) => {
+                                const paymentName = entry.registration?.danceName || entry.description || '-';
+                                const entryTime = formatTime(entry.createdAt);
+                                
+                                return (
+                                  <TableRow 
+                                    key={entry.id} 
+                                    sx={{ 
+                                      backgroundColor: entry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.02)',
+                                      opacity: entry.deletedAt ? 0.7 : 1
+                                    }}
+                                  >
+                                    <TableCell sx={{ pl: 6 }}>
+                                      <Box>
+                                        <Typography variant="body2">
+                                          {paymentName}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                          {formatDate(entry.createdAt)} {entryTime}
+                                        </Typography>
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell>
+                                      {entry.registration ? formatRegistrationNumber(entry.registration) : '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                      {entry.collective?.name || entry.registration?.collective?.name || '-'}
+                                    </TableCell>
+                                    <TableCell>{entry.registration?.danceName || '-'}</TableCell>
+                                    <TableCell>{formatCurrency(entry.amount)}</TableCell>
+                                    <TableCell>{entry.discountAmount > 0 ? formatCurrency(entry.discountAmount) : '-'}</TableCell>
+                                    <TableCell>
+                                      <Chip 
+                                        label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
+                                        size="small" 
+                                        sx={{ height: 24, fontSize: '0.7rem' }}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip 
+                                        label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
+                                        size="small" 
+                                        variant="outlined"
+                                        sx={{ height: 22, fontSize: '0.65rem' }}
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                        {!entry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                          <>
+                                            <IconButton size="small" onClick={() => handleEdit(entry)} title="Редактировать">
+                                              <EditIcon fontSize="small" />
+                                            </IconButton>
+                                            {user?.role === 'ADMIN' && (
+                                              <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} title="Удалить">
+                                                <DeleteIcon fontSize="small" />
+                                              </IconButton>
+                                            )}
+                                          </>
+                                        )}
+                                      </Box>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </React.Fragment>
+                          );
+                        } else {
+                          // Одиночная запись (включая ручные платежи)
+                          const entry = item.entry;
+                          const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
                           const paymentName = entry.registrationId 
-                            ? (entry.registration?.danceName || entry.description || `Платеж #${entry.id}`)
+                            ? (entry.paymentGroupName || entry.registration?.danceName || `Платеж #${entry.id}`)
                             : (entry.description || `Платеж #${entry.id}`);
                           const paymentTime = formatTime(entry.createdAt);
                           
@@ -904,8 +1307,8 @@ export const Accounting: React.FC = () => {
                             <TableRow 
                               key={entry.id}
                               sx={{ 
-                                backgroundColor: entry.isDeleted ? 'error.light' : 'inherit',
-                                opacity: entry.isDeleted ? 0.7 : 1
+                                backgroundColor: isDeleted ? 'error.light' : 'inherit',
+                                opacity: isDeleted ? 0.7 : 1
                               }}
                             >
                               <TableCell>
@@ -917,17 +1320,6 @@ export const Accounting: React.FC = () => {
                                     {formatDate(entry.createdAt)} {paymentTime}
                                   </Typography>
                                 </Box>
-                              </TableCell>
-                              <TableCell>
-                                {entry.isGrouped ? (
-                                  <Typography variant="body2" color="primary" sx={{ fontSize: '0.75rem' }}>
-                                    {entry.paymentGroupName}
-                                  </Typography>
-                                ) : (
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                    -
-                                  </Typography>
-                                )}
                               </TableCell>
                               <TableCell>
                                 {entry.registration ? formatRegistrationNumber(entry.registration) : '-'}
@@ -964,8 +1356,7 @@ export const Accounting: React.FC = () => {
                                         const event = events.find((e) => e.id === selectedEventId);
                                         await generatePaymentStatement(
                                           [entry],
-                                          event?.name || 'Неизвестное мероприятие',
-                                          entry.isGrouped ? entry.paymentGroupName : undefined
+                                          event?.name || 'Неизвестное мероприятие'
                                         );
                                         showSuccess('Выписка успешно сформирована');
                                       } catch (error: any) {
@@ -977,7 +1368,7 @@ export const Accounting: React.FC = () => {
                                   >
                                     <ReceiptIcon fontSize="small" />
                                   </IconButton>
-                                  {!entry.isDeleted && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                  {!isDeleted && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
                                     <>
                                       <IconButton size="small" onClick={() => handleEdit(entry)} title="Редактировать">
                                         <EditIcon fontSize="small" />
@@ -993,22 +1384,10 @@ export const Accounting: React.FC = () => {
                               </TableCell>
                             </TableRow>
                           );
-                        })}
+                        }
+                      })}
                     </TableBody>
                   </Table>
-                  <TablePagination
-                    component="div"
-                    count={sortedEntries.length}
-                    page={page}
-                    onPageChange={(_, newPage) => setPage(newPage)}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={(e) => {
-                      setRowsPerPage(parseInt(e.target.value, 10));
-                      setPage(0);
-                    }}
-                    rowsPerPageOptions={[10, 25, 50, 100]}
-                    labelRowsPerPage="Записей на странице:"
-                  />
                 </TableContainer>
               )}
             </Box>
