@@ -37,6 +37,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import AddIcon from '@mui/icons-material/Add';
+import PaymentIcon from '@mui/icons-material/Payment';
 import api from '../services/api';
 import { Event } from '../types';
 import { formatRegistrationNumber } from '../utils/format';
@@ -75,6 +77,30 @@ export const Diplomas: React.FC = () => {
     medalsCount: '',
     blockNumber: '',
   });
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [registrationToPay, setRegistrationToPay] = useState<any>(null);
+  const [singlePayment, setSinglePayment] = useState({
+    cash: '',
+    card: '',
+    transfer: '',
+  });
+  const [createFormData, setCreateFormData] = useState({
+    collectiveName: '',
+    disciplineId: '',
+    nominationId: '',
+    ageId: '',
+    categoryId: '',
+    danceName: '',
+    diplomasList: '',
+    diplomasCount: '',
+    medalsCount: '',
+  });
+  const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [nominations, setNominations] = useState<any[]>([]);
+  const [ages, setAges] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [collectives, setCollectives] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -257,6 +283,100 @@ export const Diplomas: React.FC = () => {
     } catch (error: any) {
       console.error('Error updating print status:', error);
       showError(error.response?.data?.error || 'Ошибка обновления статуса печати');
+    }
+  };
+
+  const handleCreateRegistration = async () => {
+    if (!selectedEventId) {
+      showError('Выберите событие');
+      return;
+    }
+
+    if (!createFormData.collectiveName.trim()) {
+      showError('Введите название коллектива');
+      return;
+    }
+
+    if (!createFormData.disciplineId || !createFormData.nominationId || !createFormData.ageId) {
+      showError('Заполните все обязательные поля');
+      return;
+    }
+
+    try {
+      const diplomasList = createFormData.diplomasList.trim();
+      const diplomasCount = diplomasList ? diplomasList.split('\n').filter((s: string) => s.trim()).length : 0;
+
+      await api.post('/api/registrations', {
+        eventId: selectedEventId,
+        collectiveName: createFormData.collectiveName,
+        disciplineId: parseInt(createFormData.disciplineId),
+        nominationId: parseInt(createFormData.nominationId),
+        ageId: parseInt(createFormData.ageId),
+        categoryId: createFormData.categoryId ? parseInt(createFormData.categoryId) : undefined,
+        danceName: createFormData.danceName || undefined,
+        participantsCount: 0, // Минимальное значение для заявки только на дипломы/медали
+        federationParticipantsCount: 0,
+        diplomasList: diplomasList || undefined,
+        diplomasCount: diplomasCount || parseInt(createFormData.diplomasCount) || 0,
+        medalsCount: parseInt(createFormData.medalsCount) || 0,
+        agreement: true,
+        agreement2: true,
+      });
+
+      setCreateDialogOpen(false);
+      setCreateFormData({
+        collectiveName: '',
+        disciplineId: '',
+        nominationId: '',
+        ageId: '',
+        categoryId: '',
+        danceName: '',
+        diplomasList: '',
+        diplomasCount: '',
+        medalsCount: '',
+      });
+      fetchRegistrations();
+      showSuccess('Заявка успешно создана');
+    } catch (error: any) {
+      console.error('Error creating registration:', error);
+      showError(error.response?.data?.error || 'Ошибка создания заявки');
+    }
+  };
+
+  const handleSinglePay = async () => {
+    if (!registrationToPay) return;
+
+    const totalPaid = parseFloat(singlePayment.cash || '0') +
+      parseFloat(singlePayment.card || '0') +
+      parseFloat(singlePayment.transfer || '0');
+
+    const event = events.find((e) => e.id === selectedEventId);
+    const diplomasPrice = (registrationToPay.diplomasCount || 0) * (event?.pricePerDiploma || 0);
+    const medalsPrice = (registrationToPay.medalsCount || 0) * (event?.pricePerMedal || 0);
+    const requiredAmount = diplomasPrice + medalsPrice;
+
+    if (Math.abs(totalPaid - requiredAmount) > 1) {
+      showError(`Сумма оплаты не совпадает с требуемой. Требуется: ${requiredAmount.toFixed(0)} руб.`);
+      return;
+    }
+
+    try {
+      await api.post('/api/diplomas/pay', {
+        registrationIds: [registrationToPay.id],
+        paymentsByMethod: {
+          cash: parseFloat(singlePayment.cash || '0'),
+          card: parseFloat(singlePayment.card || '0'),
+          transfer: parseFloat(singlePayment.transfer || '0'),
+        },
+      });
+      setPayDialogOpen(false);
+      setRegistrationToPay(null);
+      setSinglePayment({ cash: '', card: '', transfer: '' });
+      fetchRegistrations();
+      showSuccess('Оплата успешно создана');
+    } catch (error: any) {
+      console.error('Error creating payment:', error);
+      showError(error.response?.data?.error || 'Ошибка создания оплаты');
     }
   };
 
@@ -513,9 +633,33 @@ export const Diplomas: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <IconButton size="small" onClick={() => handleEdit(reg)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {!reg.diplomasAndMedalsPaid && (
+                          <IconButton 
+                            size="small" 
+                            onClick={() => {
+                              setRegistrationToPay(reg);
+                              const event = events.find((e) => e.id === selectedEventId);
+                              const diplomasPrice = (reg.diplomasCount || 0) * (event?.pricePerDiploma || 0);
+                              const medalsPrice = (reg.medalsCount || 0) * (event?.pricePerMedal || 0);
+                              const totalRequired = diplomasPrice + medalsPrice;
+                              setSinglePayment({
+                                cash: totalRequired > 0 ? totalRequired.toFixed(2) : '',
+                                card: '',
+                                transfer: '',
+                              });
+                              setPayDialogOpen(true);
+                            }}
+                            color="primary"
+                            title="Оплатить дипломы и медали"
+                          >
+                            <PaymentIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                        <IconButton size="small" onClick={() => handleEdit(reg)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
                     </TableCell>
                   </TableRow>
                   <TableRow>
@@ -790,6 +934,307 @@ export const Diplomas: React.FC = () => {
             sx={{ ml: { xs: 0, sm: 1 }, mt: { xs: 1, sm: 0 } }}
           >
             Отметить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог создания заявки на дипломы/медали */}
+      <Dialog 
+        open={createDialogOpen} 
+        onClose={() => setCreateDialogOpen(false)}
+        fullScreen={isMobile}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Создать заявку на дипломы и медали</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mt: { xs: 0, sm: 1 } }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Название коллектива *"
+                value={createFormData.collectiveName}
+                onChange={(e) => setCreateFormData({ ...createFormData, collectiveName: e.target.value })}
+                size={isMobile ? "small" : "medium"}
+                required
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                <InputLabel>Дисциплина *</InputLabel>
+                <Select
+                  value={createFormData.disciplineId}
+                  label="Дисциплина *"
+                  onChange={(e) => setCreateFormData({ ...createFormData, disciplineId: e.target.value })}
+                  required
+                >
+                  {disciplines.map((discipline) => (
+                    <MenuItem key={discipline.id} value={discipline.id}>
+                      {discipline.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                <InputLabel>Номинация *</InputLabel>
+                <Select
+                  value={createFormData.nominationId}
+                  label="Номинация *"
+                  onChange={(e) => setCreateFormData({ ...createFormData, nominationId: e.target.value })}
+                  required
+                >
+                  {nominations.map((nomination) => (
+                    <MenuItem key={nomination.id} value={nomination.id}>
+                      {nomination.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                <InputLabel>Возраст *</InputLabel>
+                <Select
+                  value={createFormData.ageId}
+                  label="Возраст *"
+                  onChange={(e) => setCreateFormData({ ...createFormData, ageId: e.target.value })}
+                  required
+                >
+                  {ages.map((age) => (
+                    <MenuItem key={age.id} value={age.id}>
+                      {age.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                <InputLabel>Категория</InputLabel>
+                <Select
+                  value={createFormData.categoryId}
+                  label="Категория"
+                  onChange={(e) => setCreateFormData({ ...createFormData, categoryId: e.target.value })}
+                >
+                  <MenuItem value="">Не выбрано</MenuItem>
+                  {categories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Название танца"
+                value={createFormData.danceName}
+                onChange={(e) => setCreateFormData({ ...createFormData, danceName: e.target.value })}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={isMobile ? 6 : 8}
+                label="Список ФИО для дипломов"
+                value={createFormData.diplomasList}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const count = value.split('\n').filter((s: string) => s.trim()).length;
+                  setCreateFormData({
+                    ...createFormData,
+                    diplomasList: value,
+                    diplomasCount: String(count),
+                  });
+                }}
+                helperText="Введите ФИО участников, каждое с новой строки"
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Количество дипломов"
+                type="number"
+                value={createFormData.diplomasCount}
+                onChange={(e) => setCreateFormData({ ...createFormData, diplomasCount: e.target.value })}
+                inputProps={{ min: 0 }}
+                disabled
+                helperText="Автоматически рассчитывается из списка"
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Количество медалей"
+                type="number"
+                value={createFormData.medalsCount}
+                onChange={(e) => setCreateFormData({ ...createFormData, medalsCount: e.target.value })}
+                inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: { xs: 1.5, sm: 2 }, pb: { xs: 1.5, sm: 2 } }}>
+          <Button 
+            onClick={() => setCreateDialogOpen(false)}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+          >
+            Отмена
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateRegistration}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+            sx={{ ml: { xs: 0, sm: 1 }, mt: { xs: 1, sm: 0 } }}
+          >
+            Создать
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог оплаты одной регистрации */}
+      <Dialog 
+        open={payDialogOpen} 
+        onClose={() => {
+          setPayDialogOpen(false);
+          setRegistrationToPay(null);
+          setSinglePayment({ cash: '', card: '', transfer: '' });
+        }}
+        maxWidth="sm" 
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Оплата дипломов и медалей</DialogTitle>
+        <DialogContent>
+          {registrationToPay && (
+            <>
+              <Typography variant="body2" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                Коллектив: {registrationToPay.collective?.name || '-'}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                Танец: {registrationToPay.danceName || '-'}
+              </Typography>
+              {(() => {
+                const event = events.find((e) => e.id === selectedEventId);
+                const diplomasPrice = (registrationToPay.diplomasCount || 0) * (event?.pricePerDiploma || 0);
+                const medalsPrice = (registrationToPay.medalsCount || 0) * (event?.pricePerMedal || 0);
+                const totalRequired = diplomasPrice + medalsPrice;
+                return (
+                  <Typography variant="body2" sx={{ mb: 2, fontSize: { xs: '0.875rem', sm: '1rem' }, fontWeight: 600 }}>
+                    К оплате: {totalRequired.toFixed(2)} руб.
+                    {diplomasPrice > 0 && ` (Дипломы: ${diplomasPrice.toFixed(2)} руб.)`}
+                    {medalsPrice > 0 && ` (Медали: ${medalsPrice.toFixed(2)} руб.)`}
+                  </Typography>
+                );
+              })()}
+            </>
+          )}
+          <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Наличные"
+                type="number"
+                value={singlePayment.cash}
+                onChange={(e) => setSinglePayment({ ...singlePayment, cash: e.target.value })}
+                inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Карта"
+                type="number"
+                value={singlePayment.card}
+                onChange={(e) => setSinglePayment({ ...singlePayment, card: e.target.value })}
+                inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Перевод"
+                type="number"
+                value={singlePayment.transfer}
+                onChange={(e) => setSinglePayment({ ...singlePayment, transfer: e.target.value })}
+                inputProps={{ min: 0 }}
+                size={isMobile ? "small" : "medium"}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '16px', sm: '1rem' }
+                  }
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions sx={{ px: { xs: 1.5, sm: 2 }, pb: { xs: 1.5, sm: 2 } }}>
+          <Button 
+            onClick={() => {
+              setPayDialogOpen(false);
+              setRegistrationToPay(null);
+              setSinglePayment({ cash: '', card: '', transfer: '' });
+            }}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+          >
+            Отмена
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleSinglePay}
+            size={isMobile ? "small" : "medium"}
+            fullWidth={isMobile}
+            sx={{ ml: { xs: 0, sm: 1 }, mt: { xs: 1, sm: 0 } }}
+          >
+            Оплатить
           </Button>
         </DialogActions>
       </Dialog>
