@@ -81,6 +81,12 @@ export const CombinedPayment: React.FC = () => {
   const [payingDiplomasAndMedals, setPayingDiplomasAndMedals] = useState(false);
   const [applyDiscount, setApplyDiscount] = useState(false);
   const [registrationData, setRegistrationData] = useState<Record<number, any>>({});
+  // Чекбоксы для каждого компонента оплаты в каждом танце
+  const [paymentComponents, setPaymentComponents] = useState<Record<number, {
+    performance: boolean;
+    diplomas: boolean;
+    medals: boolean;
+  }>>({});
   const [priceCalculation, setPriceCalculation] = useState<any>(null);
   const [registrationPrices, setRegistrationPrices] = useState<Record<number, any>>({});
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -133,7 +139,7 @@ export const CombinedPayment: React.FC = () => {
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount, customPerformancePrices]);
+  }, [currentStep, selectedRegistrations, registrationData, payingPerformance, payingDiplomasAndMedals, applyDiscount, customPerformancePrices, paymentComponents]);
 
   const fetchRegistrations = async () => {
     setLoading(true);
@@ -241,21 +247,36 @@ export const CombinedPayment: React.FC = () => {
           },
         });
 
+        const diplomasPrice = response.data.details?.diplomasPrice || 0;
+        const medalsPrice = response.data.details?.medalsPrice || 0;
+        const components = paymentComponents[regId] || { performance: true, diplomas: true, medals: true };
+        
+        // Рассчитываем итоговую стоимость с учётом чекбоксов
+        const total = 
+          (payingPerformance && components.performance ? performancePrice : 0) +
+          (payingDiplomasAndMedals && components.diplomas ? diplomasPrice : 0) +
+          (payingDiplomasAndMedals && components.medals ? medalsPrice : 0);
+
         prices[regId] = {
           performancePrice,
-          diplomasPrice: response.data.details?.diplomasPrice || 0,
-          medalsPrice: response.data.details?.medalsPrice || 0,
-          total: performancePrice + (response.data.details?.diplomasPrice || 0) + (response.data.details?.medalsPrice || 0),
+          diplomasPrice,
+          medalsPrice,
+          total,
         };
       } catch (error) {
         console.error(`Error calculating price for registration ${regId}:`, error);
         // Используем предыдущие значения, если есть
         const prevPrice = registrationPrices[regId];
+        const components = paymentComponents[regId] || { performance: true, diplomas: true, medals: true };
+        const total = 
+          (payingPerformance && components.performance ? performancePrice : 0) +
+          (payingDiplomasAndMedals && components.diplomas ? (prevPrice?.diplomasPrice || 0) : 0) +
+          (payingDiplomasAndMedals && components.medals ? (prevPrice?.medalsPrice || 0) : 0);
         prices[regId] = {
           performancePrice,
           diplomasPrice: prevPrice?.diplomasPrice || 0,
           medalsPrice: prevPrice?.medalsPrice || 0,
-          total: performancePrice + (prevPrice?.diplomasPrice || 0) + (prevPrice?.medalsPrice || 0),
+          total,
         };
       }
     }
@@ -280,6 +301,7 @@ export const CombinedPayment: React.FC = () => {
 
       for (const reg of selectedRegs) {
         const data = registrationData[reg.id] || {};
+        const components = paymentComponents[reg.id] || { performance: true, diplomas: true, medals: true };
         const diplomasList = data.diplomasList || reg.diplomasList || '';
         const baseDiplomasCount = data.diplomasCount ?? reg.diplomasCount ?? 0;
         let diplomasCount = countRussianLines(diplomasList);
@@ -305,7 +327,8 @@ export const CombinedPayment: React.FC = () => {
           performancePrice = response.data.performancePrice || (response.data.total - response.data.diplomasAndMedalsPrice);
         }
         
-        if (payingPerformance) {
+        // Учитываем только если главный чекбокс включен И чекбокс для этого танца включен
+        if (payingPerformance && components.performance) {
           totalPerformance += performancePrice;
         }
         
@@ -318,7 +341,16 @@ export const CombinedPayment: React.FC = () => {
               medalsCount: data.medalsCount || reg.medalsCount,
             },
           });
-          totalDiplomas += response.data.diplomasAndMedalsPrice;
+          const diplomasPrice = response.data.details?.diplomasPrice || 0;
+          const medalsPrice = response.data.details?.medalsPrice || 0;
+          
+          // Учитываем только если главный чекбокс включен И соответствующие чекбоксы для этого танца включены
+          if (components.diplomas) {
+            totalDiplomas += diplomasPrice;
+          }
+          if (components.medals) {
+            totalDiplomas += medalsPrice;
+          }
         }
       }
 
@@ -377,8 +409,21 @@ export const CombinedPayment: React.FC = () => {
     const newSelected = new Set(selectedRegistrations);
     if (newSelected.has(id)) {
       newSelected.delete(id);
+      // Удаляем чекбоксы при снятии выбора
+      const newComponents = { ...paymentComponents };
+      delete newComponents[id];
+      setPaymentComponents(newComponents);
     } else {
       newSelected.add(id);
+      // Инициализируем чекбоксы при добавлении танца (по умолчанию все включены)
+      setPaymentComponents({
+        ...paymentComponents,
+        [id]: {
+          performance: true,
+          diplomas: true,
+          medals: true,
+        },
+      });
     }
     setSelectedRegistrations(newSelected);
   };
@@ -540,6 +585,14 @@ export const CombinedPayment: React.FC = () => {
         return result;
       });
 
+      // Подготавливаем данные о компонентах оплаты для каждого танца
+      const paymentComponentsData = Array.from(selectedRegistrations).map((id) => ({
+        registrationId: id,
+        payPerformance: payingPerformance && (paymentComponents[id]?.performance ?? true),
+        payDiplomas: payingDiplomasAndMedals && (paymentComponents[id]?.diplomas ?? true),
+        payMedals: payingDiplomasAndMedals && (paymentComponents[id]?.medals ?? true),
+      }));
+
       await api.post('/api/payments/create', {
         registrationIds: Array.from(selectedRegistrations),
         paymentsByMethod: {
@@ -552,6 +605,7 @@ export const CombinedPayment: React.FC = () => {
         applyDiscount: applyDiscount && payingPerformance,
         paymentGroupName: paymentGroupName || undefined,
         registrationsData,
+        paymentComponents: paymentComponentsData,
       });
 
       showSuccess('Оплата успешно создана');
@@ -1195,27 +1249,100 @@ export const CombinedPayment: React.FC = () => {
                     </Box>
                     <Divider sx={{ my: 2 }} />
                     <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Стоимость за номер: <strong>{formatCurrency(
-                          customPerformancePrices[reg.id]?.enabled && customPerformancePrices[reg.id]?.price
-                            ? parseFloat(customPerformancePrices[reg.id].price) || 0
-                            : prices.performancePrice
-                        )}</strong>
+                      <Typography variant="subtitle2" gutterBottom sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, fontWeight: 600 }}>
+                        Компоненты оплаты:
+                      </Typography>
+                      <Box sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={payingPerformance && (paymentComponents[reg.id]?.performance ?? true)}
+                              onChange={(e) => {
+                                setPaymentComponents({
+                                  ...paymentComponents,
+                                  [reg.id]: {
+                                    ...(paymentComponents[reg.id] || { performance: true, diplomas: true, medals: true }),
+                                    performance: e.target.checked,
+                                  },
+                                });
+                              }}
+                              disabled={!payingPerformance}
+                              size={isMobile ? "small" : "medium"}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: !payingPerformance ? 'text.disabled' : 'text.primary' }}>
+                              Выступление: <strong>{formatCurrency(
+                                customPerformancePrices[reg.id]?.enabled && customPerformancePrices[reg.id]?.price
+                                  ? parseFloat(customPerformancePrices[reg.id].price) || 0
+                                  : prices.performancePrice
+                              )}</strong>
+                            </Typography>
+                          }
+                        />
                         {customPerformancePrices[reg.id]?.enabled && (
                           <Chip label="Уникальная" color="primary" size="small" sx={{ ml: 1 }} />
                         )}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Дипломы: <strong>{formatCurrency(prices.diplomasPrice)}</strong>
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Медали: <strong>{formatCurrency(prices.medalsPrice)}</strong>
-                      </Typography>
-                      <Typography variant="body1" sx={{ mt: 1 }}>
+                      </Box>
+                      <Box sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={payingDiplomasAndMedals && (paymentComponents[reg.id]?.diplomas ?? true)}
+                              onChange={(e) => {
+                                setPaymentComponents({
+                                  ...paymentComponents,
+                                  [reg.id]: {
+                                    ...(paymentComponents[reg.id] || { performance: true, diplomas: true, medals: true }),
+                                    diplomas: e.target.checked,
+                                  },
+                                });
+                              }}
+                              disabled={!payingDiplomasAndMedals}
+                              size={isMobile ? "small" : "medium"}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: !payingDiplomasAndMedals ? 'text.disabled' : 'text.primary' }}>
+                              Дипломы: <strong>{formatCurrency(prices.diplomasPrice)}</strong>
+                            </Typography>
+                          }
+                        />
+                      </Box>
+                      <Box sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={payingDiplomasAndMedals && (paymentComponents[reg.id]?.medals ?? true)}
+                              onChange={(e) => {
+                                setPaymentComponents({
+                                  ...paymentComponents,
+                                  [reg.id]: {
+                                    ...(paymentComponents[reg.id] || { performance: true, diplomas: true, medals: true }),
+                                    medals: e.target.checked,
+                                  },
+                                });
+                              }}
+                              disabled={!payingDiplomasAndMedals}
+                              size={isMobile ? "small" : "medium"}
+                            />
+                          }
+                          label={
+                            <Typography sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' }, color: !payingDiplomasAndMedals ? 'text.disabled' : 'text.primary' }}>
+                              Медали: <strong>{formatCurrency(prices.medalsPrice)}</strong>
+                            </Typography>
+                          }
+                        />
+                      </Box>
+                      <Typography variant="body1" sx={{ mt: 1, fontWeight: 600 }}>
                         Итого за номер: <strong>{formatCurrency(
-                          (customPerformancePrices[reg.id]?.enabled && customPerformancePrices[reg.id]?.price
-                            ? parseFloat(customPerformancePrices[reg.id].price) || 0
-                            : prices.performancePrice) + prices.diplomasPrice + prices.medalsPrice
+                          ((payingPerformance && (paymentComponents[reg.id]?.performance ?? true))
+                            ? (customPerformancePrices[reg.id]?.enabled && customPerformancePrices[reg.id]?.price
+                              ? parseFloat(customPerformancePrices[reg.id].price) || 0
+                              : prices.performancePrice)
+                            : 0) +
+                          ((payingDiplomasAndMedals && (paymentComponents[reg.id]?.diplomas ?? true)) ? prices.diplomasPrice : 0) +
+                          ((payingDiplomasAndMedals && (paymentComponents[reg.id]?.medals ?? true)) ? prices.medalsPrice : 0)
                         )}</strong>
                       </Typography>
                     </Box>

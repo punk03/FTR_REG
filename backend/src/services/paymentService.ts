@@ -74,14 +74,38 @@ export const recalculateRegistrationPaymentStatus = async (registrationId: numbe
   const performancePaidStatus = Math.abs(performancePaid - performanceRequired) < 0.01;
   const diplomasAndMedalsPaidStatus = Math.abs(diplomasAndMedalsPaid - diplomasAndMedalsRequired) < 0.01;
 
-  // Determine overall status
+  // Check if registration has diplomas or medals
+  const hasDiplomasOrMedals = (registration.diplomasCount > 0) || (registration.medalsCount > 0);
+
+  // Determine overall status according to new rules:
+  // - PAID (green): has diplomas/medals AND everything is paid
+  // - PERFORMANCE_PAID (yellow): performance paid BUT has unpaid diplomas/medals
+  // - DIPLOMAS_PAID (yellow): diplomas/medals paid BUT performance not paid
+  // - UNPAID (red): nothing is paid
   let paymentStatus: PaymentStatus = 'UNPAID';
+  
   if (performancePaidStatus && diplomasAndMedalsPaidStatus) {
-    paymentStatus = 'PAID';
+    // Everything is paid
+    if (hasDiplomasOrMedals) {
+      paymentStatus = 'PAID'; // Green: has diplomas/medals AND everything paid
+    } else {
+      // No diplomas/medals, but everything that exists is paid
+      paymentStatus = 'PAID';
+    }
   } else if (performancePaidStatus && !diplomasAndMedalsPaidStatus) {
-    paymentStatus = 'PERFORMANCE_PAID';
+    // Performance paid, but diplomas/medals not paid
+    if (hasDiplomasOrMedals) {
+      paymentStatus = 'PERFORMANCE_PAID'; // Yellow: performance paid BUT has unpaid diplomas/medals
+    } else {
+      // No diplomas/medals, performance paid
+      paymentStatus = 'PERFORMANCE_PAID';
+    }
   } else if (!performancePaidStatus && diplomasAndMedalsPaidStatus) {
-    paymentStatus = 'DIPLOMAS_PAID';
+    // Diplomas/medals paid, but performance not paid
+    paymentStatus = 'DIPLOMAS_PAID'; // Yellow: diplomas/medals paid BUT performance not paid
+  } else {
+    // Nothing is paid
+    paymentStatus = 'UNPAID'; // Red: nothing is paid
   }
 
   // Update registration

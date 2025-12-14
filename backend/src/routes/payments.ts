@@ -43,6 +43,7 @@ router.post(
         applyDiscount,
         paymentGroupName,
         registrationsData,
+        paymentComponents, // Массив объектов { registrationId, payPerformance, payDiplomas, payMedals }
       } = req.body;
 
       const cash = paymentsByMethod.cash || 0;
@@ -65,6 +66,7 @@ router.post(
 
       for (const reg of registrations) {
         const regData = registrationsData?.find((r: any) => r.registrationId === reg.id);
+        const regPaymentComponents = paymentComponents?.find((pc: any) => pc.registrationId === reg.id);
         const participantsCount = regData?.participantsCount ?? reg.participantsCount;
         const federationParticipantsCount = regData?.federationParticipantsCount ?? reg.federationParticipantsCount;
         // Если есть diplomasList, считаем количество строк, иначе используем diplomasCount
@@ -79,7 +81,8 @@ router.post(
         // Проверяем уникальную цену выступления
         const customPerformancePrice = regData?.customPerformancePrice;
         
-        if (payingPerformance) {
+        // Учитываем только если главный чекбокс включен И чекбокс для этого танца включен
+        if (payingPerformance && (regPaymentComponents?.payPerformance ?? true)) {
           if (customPerformancePrice !== undefined && customPerformancePrice !== null) {
             // Используем уникальную цену
             totalPerformanceRequired += Number(customPerformancePrice);
@@ -105,8 +108,12 @@ router.post(
         }
 
         if (payingDiplomasAndMedals) {
-          const diplomasPrice = reg.event.pricePerDiploma ? Number(reg.event.pricePerDiploma) * diplomasCount : 0;
-          const medalsPrice = reg.event.pricePerMedal ? Number(reg.event.pricePerMedal) * medalsCount : 0;
+          const diplomasPrice = (regPaymentComponents?.payDiplomas ?? true) && reg.event.pricePerDiploma 
+            ? Number(reg.event.pricePerDiploma) * diplomasCount 
+            : 0;
+          const medalsPrice = (regPaymentComponents?.payMedals ?? true) && reg.event.pricePerMedal 
+            ? Number(reg.event.pricePerMedal) * medalsCount 
+            : 0;
           totalDiplomasAndMedalsRequired += diplomasPrice + medalsPrice;
         }
       }
@@ -202,7 +209,8 @@ router.post(
         const customPerformancePrice = regData?.customPerformancePrice;
         let regPerformanceAmount = 0;
         
-        if (payingPerformance) {
+        // Учитываем только если главный чекбокс включен И чекбокс для этого танца включен
+        if (payingPerformance && (regPaymentComponents?.payPerformance ?? true)) {
           if (customPerformancePrice !== undefined && customPerformancePrice !== null) {
             // Используем уникальную цену
             regPerformanceAmount = Number(customPerformancePrice);
@@ -227,12 +235,14 @@ router.post(
           }
         }
 
-        let regDiplomasAmount = 0;
-        if (payingDiplomasAndMedals) {
-          const diplomasPrice = reg.event.pricePerDiploma ? Number(reg.event.pricePerDiploma) * diplomasCount : 0;
-          const medalsPrice = reg.event.pricePerMedal ? Number(reg.event.pricePerMedal) * medalsCount : 0;
-          regDiplomasAmount = diplomasPrice + medalsPrice;
-        }
+        // Рассчитываем суммы дипломов и медалей отдельно
+        const diplomasPrice = (regPaymentComponents?.payDiplomas ?? true) && reg.event.pricePerDiploma 
+          ? Number(reg.event.pricePerDiploma) * diplomasCount 
+          : 0;
+        const medalsPrice = (regPaymentComponents?.payMedals ?? true) && reg.event.pricePerMedal 
+          ? Number(reg.event.pricePerMedal) * medalsCount 
+          : 0;
+        const regDiplomasAmount = diplomasPrice + medalsPrice;
 
         // const regTotal = regPerformanceAmount + regDiplomasAmount;
         // const regProportion = totalRequired > 0 ? regTotal / totalRequired : 0;
@@ -244,7 +254,8 @@ router.post(
         }
 
         // Create accounting entries
-        if (payingPerformance && regPerformanceAmount > 0) {
+        // Учитываем только если главный чекбокс включен И чекбокс для этого танца включен
+        if (payingPerformance && (regPaymentComponents?.payPerformance ?? true) && regPerformanceAmount > 0) {
           const finalAmount = regPerformanceAmount - regDiscountAmount;
           const cashAmount = Math.round(cash * (finalAmount / totalRequired));
           const cardAmount = Math.round(card * (finalAmount / totalRequired));
@@ -299,10 +310,68 @@ router.post(
           }
         }
 
-        if (payingDiplomasAndMedals && regDiplomasAmount > 0) {
-          const cashAmount = Math.round(cash * (regDiplomasAmount / totalRequired));
-          const cardAmount = Math.round(card * (regDiplomasAmount / totalRequired));
-          const transferAmount = regDiplomasAmount - cashAmount - cardAmount;
+        // Разделяем оплату дипломов и медалей на отдельные записи
+        const diplomasPrice = reg.event.pricePerDiploma ? Number(reg.event.pricePerDiploma) * diplomasCount : 0;
+        const medalsPrice = reg.event.pricePerMedal ? Number(reg.event.pricePerMedal) * medalsCount : 0;
+        
+        // Оплата дипломов
+        if (payingDiplomasAndMedals && (regPaymentComponents?.payDiplomas ?? true) && diplomasPrice > 0) {
+          const diplomasProportion = totalDiplomasAndMedalsRequired > 0 ? diplomasPrice / totalDiplomasAndMedalsRequired : 0;
+          const totalDiplomasAmount = Math.round(totalDiplomasAndMedalsRequired * diplomasProportion);
+          const cashAmount = Math.round(cash * diplomasProportion);
+          const cardAmount = Math.round(card * diplomasProportion);
+          const transferAmount = totalDiplomasAmount - cashAmount - cardAmount;
+
+          if (cashAmount > 0) {
+            await prisma.accountingEntry.create({
+              data: {
+                registrationId: reg.id,
+                collectiveId: reg.collectiveId,
+                amount: cashAmount,
+                method: 'CASH',
+                paidFor: 'DIPLOMAS_MEDALS',
+                paymentGroupId,
+                paymentGroupName: paymentGroupName || null,
+              },
+            });
+          }
+
+          if (cardAmount > 0) {
+            await prisma.accountingEntry.create({
+              data: {
+                registrationId: reg.id,
+                collectiveId: reg.collectiveId,
+                amount: cardAmount,
+                method: 'CARD',
+                paidFor: 'DIPLOMAS_MEDALS',
+                paymentGroupId,
+                paymentGroupName: paymentGroupName || null,
+              },
+            });
+          }
+
+          if (transferAmount > 0) {
+            await prisma.accountingEntry.create({
+              data: {
+                registrationId: reg.id,
+                collectiveId: reg.collectiveId,
+                amount: transferAmount,
+                method: 'TRANSFER',
+                paidFor: 'DIPLOMAS_MEDALS',
+                paymentGroupId,
+                paymentGroupName: paymentGroupName || null,
+              },
+            });
+          }
+        }
+
+        // Оплата медалей
+        if (payingDiplomasAndMedals && (regPaymentComponents?.payMedals ?? true) && medalsPrice > 0) {
+          const medalsProportion = totalDiplomasAndMedalsRequired > 0 ? medalsPrice / totalDiplomasAndMedalsRequired : 0;
+          const totalMedalsAmount = Math.round(totalDiplomasAndMedalsRequired * medalsProportion);
+          const cashAmount = Math.round(cash * medalsProportion);
+          const cardAmount = Math.round(card * medalsProportion);
+          const transferAmount = totalMedalsAmount - cashAmount - cardAmount;
 
           if (cashAmount > 0) {
             await prisma.accountingEntry.create({

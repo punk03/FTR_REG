@@ -214,11 +214,11 @@ export const RegistrationsList: React.FC = () => {
   const getPaymentStatusLabel = (status: string) => {
     switch (status) {
       case 'PAID':
-        return 'Оплачено';
+        return 'Оплачено полностью';
       case 'PERFORMANCE_PAID':
-        return 'Выступление оплачено';
+        return 'Оплачено выступление';
       case 'DIPLOMAS_PAID':
-        return 'Дипломы оплачены';
+        return 'Оплачены Д/М';
       case 'UNPAID':
         return 'Не оплачено';
       default:
