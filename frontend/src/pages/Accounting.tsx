@@ -724,10 +724,6 @@ export const Accounting: React.FC = () => {
                   {allItems.map((item: any) => {
                     if (item.type === 'group') {
                       const paymentTime = formatTime(item.createdAt);
-                      const paymentMethods = item.entries.reduce((acc: any, e: any) => {
-                        acc[e.method] = (acc[e.method] || 0) + Number(e.amount);
-                        return acc;
-                      }, {});
                       
                       return (
                         <React.Fragment key={item.groupId}>
@@ -775,30 +771,6 @@ export const Accounting: React.FC = () => {
                                     size="small" 
                                     color="secondary"
                                     sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 22, sm: 24 } }}
-                                  />
-                                )}
-                                {paymentMethods.CASH > 0 && (
-                                  <Chip 
-                                    label={`Нал: ${formatCurrency(paymentMethods.CASH)}`} 
-                                    size="small" 
-                                    variant="outlined"
-                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
-                                  />
-                                )}
-                                {paymentMethods.CARD > 0 && (
-                                  <Chip 
-                                    label={`Карта: ${formatCurrency(paymentMethods.CARD)}`} 
-                                    size="small" 
-                                    variant="outlined"
-                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
-                                  />
-                                )}
-                                {paymentMethods.TRANSFER > 0 && (
-                                  <Chip 
-                                    label={`Перевод: ${formatCurrency(paymentMethods.TRANSFER)}`} 
-                                    size="small" 
-                                    variant="outlined"
-                                    sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 20, sm: 22 } }}
                                   />
                                 )}
                               </Stack>
