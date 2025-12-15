@@ -41,6 +41,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import LinkIcon from '@mui/icons-material/Link';
 import api from '../services/api';
 import { User, Event } from '../types';
 import { formatDate } from '../utils/format';
@@ -1351,17 +1353,64 @@ export const Admin: React.FC = () => {
                     <TableCell>Дата начала</TableCell>
                     <TableCell>Дата окончания</TableCell>
                     <TableCell>Статус</TableCell>
+                    <TableCell>Калькулятор</TableCell>
                     <TableCell>Действия</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {events.map((event) => (
-                    <TableRow key={event.id}>
-                      <TableCell>{event.name}</TableCell>
-                      <TableCell>{event.startDate ? formatDate(event.startDate) : '-'}</TableCell>
-                      <TableCell>{event.endDate ? formatDate(event.endDate) : '-'}</TableCell>
-                      <TableCell>{event.status}</TableCell>
-                      <TableCell>
+                  {events.map((event) => {
+                    const calculatorUrl = event.calculatorToken
+                      ? `${window.location.origin}/calculator/${event.calculatorToken}`
+                      : null;
+                    
+                    const handleCopyCalculatorLink = () => {
+                      if (calculatorUrl) {
+                        navigator.clipboard.writeText(calculatorUrl);
+                        showSuccess('Ссылка скопирована в буфер обмена');
+                      }
+                    };
+
+                    return (
+                      <TableRow key={event.id}>
+                        <TableCell>{event.name}</TableCell>
+                        <TableCell>{event.startDate ? formatDate(event.startDate) : '-'}</TableCell>
+                        <TableCell>{event.endDate ? formatDate(event.endDate) : '-'}</TableCell>
+                        <TableCell>{event.status}</TableCell>
+                        <TableCell>
+                          {calculatorUrl ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <LinkIcon fontSize="small" color="primary" />
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  maxWidth: 200,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'pointer',
+                                  color: 'primary.main',
+                                  textDecoration: 'underline',
+                                }}
+                                onClick={() => window.open(calculatorUrl, '_blank')}
+                                title={calculatorUrl}
+                              >
+                                Открыть
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={handleCopyCalculatorLink}
+                                title="Скопировать ссылку"
+                              >
+                                <ContentCopyIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              Не создан
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell>
                         <IconButton size="small" onClick={() => handleEditEvent(event)} title="Редактировать">
                           <EditIcon fontSize="small" />
                         </IconButton>

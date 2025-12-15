@@ -26,6 +26,7 @@ export interface Event {
   pricePerDiploma?: number;
   pricePerMedal?: number;
   discountTiers?: string;
+  calculatorToken?: string;
 }
 
 export interface Registration {
