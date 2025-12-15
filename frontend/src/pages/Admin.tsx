@@ -1334,6 +1334,22 @@ export const Admin: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Мероприятия</Typography>
             <Box>
+              <Button 
+                variant="outlined" 
+                onClick={async () => {
+                  try {
+                    const response = await api.post('/api/events/generate-all-calculator-tokens');
+                    showSuccess(`Создано токенов калькулятора: ${response.data.generated?.length || 0}`);
+                    fetchEvents();
+                  } catch (error: any) {
+                    showError(error.response?.data?.error || 'Ошибка создания токенов');
+                  }
+                }}
+                sx={{ mr: 1 }}
+                disabled={events.filter(e => !e.calculatorToken).length === 0}
+              >
+                Создать калькуляторы для всех
+              </Button>
               <Button variant="outlined" onClick={() => setExcelImportOpen(true)} sx={{ mr: 1 }}>
                 Импорт Excel
               </Button>

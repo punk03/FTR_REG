@@ -734,6 +734,49 @@ router.delete('/:id/registrations', authenticateToken, requireRole('ADMIN'), asy
   }
 });
 
+// POST /api/events/generate-all-calculator-tokens
+router.post('/generate-all-calculator-tokens', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Получаем все события без токена калькулятора
+    const eventsWithoutToken = await prisma.event.findMany({
+      where: {
+        calculatorToken: null,
+      },
+    });
+
+    const results = [];
+
+    // Генерируем токены для каждого события
+    for (const event of eventsWithoutToken) {
+      const calculatorToken = uuidv4();
+      const updatedEvent = await prisma.event.update({
+        where: { id: event.id },
+        data: { calculatorToken },
+      });
+
+      results.push({
+        eventId: event.id,
+        eventName: event.name,
+        calculatorToken: updatedEvent.calculatorToken,
+      });
+
+      await auditLog(req, 'GENERATE_CALCULATOR_TOKEN', {
+        action: 'GENERATE_CALCULATOR_TOKEN',
+        entityType: 'Event',
+        entityId: event.id,
+        newValue: { calculatorToken },
+      });
+    }
+
+    res.json({
+      message: `Generated ${results.length} calculator tokens`,
+      generated: results,
+    });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
 // POST /api/events/:id/generate-calculator-token
 router.post('/:id/generate-calculator-token', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
   try {
