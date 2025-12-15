@@ -5,6 +5,7 @@ import { authenticateToken } from '../middleware/auth';
 import { requireRole } from '../middleware/auth';
 import { auditLog } from '../middleware/auditLog';
 import { errorHandler } from '../middleware/errorHandler';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -496,6 +497,9 @@ router.post(
 
       const discountTiersString = discountTiers ? (typeof discountTiers === 'string' ? discountTiers : JSON.stringify(discountTiers)) : null;
 
+      // Генерируем уникальный токен для калькулятора
+      const calculatorToken = uuidv4();
+
       const event = await prisma.event.create({
         data: {
           name,
@@ -514,6 +518,7 @@ router.post(
           pricePerDiploma: pricePerDiploma ? parseFloat(pricePerDiploma) : null,
           pricePerMedal: pricePerMedal ? parseFloat(pricePerMedal) : null,
           discountTiers: discountTiersString,
+          calculatorToken,
         },
       });
 
@@ -620,6 +625,9 @@ router.post('/:id/duplicate', authenticateToken, requireRole('ADMIN'), async (re
       return;
     }
 
+    // Генерируем новый уникальный токен для калькулятора
+    const calculatorToken = uuidv4();
+
     // Create new event
     const newEvent = await prisma.event.create({
       data: {
@@ -639,6 +647,7 @@ router.post('/:id/duplicate', authenticateToken, requireRole('ADMIN'), async (re
         pricePerDiploma: originalEvent.pricePerDiploma,
         pricePerMedal: originalEvent.pricePerMedal,
         discountTiers: originalEvent.discountTiers,
+        calculatorToken,
       },
     });
 

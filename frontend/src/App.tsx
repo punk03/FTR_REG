@@ -14,6 +14,7 @@ import { Diplomas } from './pages/Diplomas';
 import { Statistics } from './pages/Statistics';
 import { Admin } from './pages/Admin';
 import { CombinedPayment } from './pages/CombinedPayment';
+import { Calculator } from './pages/Calculator';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { NotificationProvider } from './context/NotificationContext';
 import { createAppTheme } from './theme';
@@ -55,6 +56,7 @@ const AppRoutes: React.FC = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/calculator/:token" element={<Calculator />} />
           <Route
             path="/"
             element={

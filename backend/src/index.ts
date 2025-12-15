@@ -15,6 +15,7 @@ import diplomasRoutes from './routes/diplomas';
 import statisticsRoutes from './routes/statistics';
 import adminRoutes from './routes/admin';
 import excelImportRoutes from './routes/excelImport';
+import calculatorRoutes from './routes/calculator';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRateLimiter } from './middleware/rateLimit';
 import { cacheService } from './services/cacheService';
@@ -265,6 +266,9 @@ app.use('/api', (req, res, next) => {
 });
 
 // Routes
+// Публичные роуты (без авторизации)
+app.use('/api/public/calculator', calculatorRoutes);
+// Защищенные роуты
 app.use('/api/auth', authRoutes);
 app.use('/api/reference', referenceRoutes);
 app.use('/api/events', eventsRoutes);

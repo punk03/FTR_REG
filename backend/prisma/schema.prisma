@@ -91,6 +91,7 @@ model Event {
   pricePerDiploma              Decimal?    @db.Decimal(10, 2)
   pricePerMedal                Decimal?    @db.Decimal(10, 2)
   discountTiers                String? // JSON string
+  calculatorToken              String?     @unique // Уникальный токен для публичного калькулятора
   createdAt                    DateTime    @default(now())
   updatedAt                    DateTime    @updatedAt
 
@@ -100,6 +101,7 @@ model Event {
   importErrors      ImportError[]
 
   @@index([status])
+  @@index([calculatorToken])
 }
 
 model EventPrice {
