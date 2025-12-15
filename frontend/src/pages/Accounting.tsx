@@ -1608,12 +1608,28 @@ export const Accounting: React.FC = () => {
                                     {/* Ручные платежи (без регистрации) */}
                                     {manualPayments.map((entry: any) => {
                                       const entryTime = formatTime(entry.createdAt);
+                                      const getManualPaymentColor = () => {
+                                        if (entry.deletedAt) return { bg: 'rgba(211, 47, 47, 0.1)', border: 'error.main' };
+                                        if (entry.paidFor === 'PERFORMANCE') {
+                                          return { bg: 'rgba(25, 118, 210, 0.05)', border: 'primary.main' };
+                                        } else if (entry.paidFor === 'DIPLOMAS_MEDALS') {
+                                          return { bg: 'rgba(156, 39, 176, 0.05)', border: 'secondary.main' };
+                                        }
+                                        return { bg: 'rgba(0, 0, 0, 0.02)', border: 'divider' };
+                                      };
+                                      const manualColors = getManualPaymentColor();
                                       return (
                                         <TableRow 
                                           key={entry.id} 
                                           sx={{ 
-                                            backgroundColor: entry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.02)',
-                                            opacity: entry.deletedAt ? 0.7 : 1
+                                            backgroundColor: manualColors.bg,
+                                            borderLeft: '4px solid',
+                                            borderColor: manualColors.border,
+                                            opacity: entry.deletedAt ? 0.7 : 1,
+                                            transition: 'all 0.2s ease-in-out',
+                                            '&:hover': {
+                                              backgroundColor: entry.deletedAt ? manualColors.bg : 'rgba(0, 0, 0, 0.04)'
+                                            }
                                           }}
                                         >
                                           <TableCell sx={{ pl: 6 }}>
