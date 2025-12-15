@@ -789,10 +789,16 @@ export const Accounting: React.FC = () => {
                               mt: 2,
                               width: '100%', 
                               maxWidth: '100%',
-                              border: '1px solid',
+                              border: '2px solid',
                               borderColor: item.isDeleted ? 'error.main' : 'primary.main',
                               backgroundColor: item.isDeleted ? 'error.light' : 'primary.light',
-                              opacity: item.isDeleted ? 0.7 : 1
+                              opacity: item.isDeleted ? 0.7 : 1,
+                              boxShadow: item.isDeleted ? 'none' : '0 4px 12px rgba(25, 118, 210, 0.2)',
+                              transition: 'all 0.2s ease-in-out',
+                              '&:hover': {
+                                boxShadow: item.isDeleted ? 'none' : '0 6px 16px rgba(25, 118, 210, 0.3)',
+                                transform: item.isDeleted ? 'none' : 'translateY(-2px)'
+                              }
                             }}
                           >
                             <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
