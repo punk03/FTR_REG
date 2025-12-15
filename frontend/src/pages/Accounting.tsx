@@ -1392,10 +1392,11 @@ export const Accounting: React.FC = () => {
                                       const entryTime = formatTime(firstEntry.createdAt);
                                       
                                       return (
-                                        <React.Fragment key={regId}>
+                                        <React.Fragment key={`${regId}-fragment`}>
                                           {/* Выступление */}
                                           {performanceEntries.length > 0 && (
                                             <TableRow 
+                                              key={`${regId}-performance`}
                                               sx={{ 
                                                 backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(25, 118, 210, 0.05)',
                                                 opacity: firstEntry.deletedAt ? 0.7 : 1
@@ -1455,6 +1456,7 @@ export const Accounting: React.FC = () => {
                                           {/* Дипломы и медали */}
                                           {diplomasEntries.length > 0 && (
                                             <TableRow 
+                                              key={`${regId}-diplomas`}
                                               sx={{ 
                                                 backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(156, 39, 176, 0.05)',
                                                 opacity: firstEntry.deletedAt ? 0.7 : 1
