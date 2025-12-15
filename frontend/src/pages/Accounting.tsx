@@ -896,98 +896,241 @@ export const Accounting: React.FC = () => {
                             </CardContent>
                           </Card>
                           
-                          {/* Записи группы (всегда развернуты) */}
-                          {item.entries.map((entry: any) => {
-                            const paymentName = entry.registration?.danceName || entry.description || '-';
-                            const entryTime = formatTime(entry.createdAt);
+                          {/* Записи группы (группированные по регистрациям) */}
+                          {(() => {
+                            // Группируем записи по registrationId
+                            const groupedByRegistration: { [key: string]: any[] } = {};
+                            const manualPayments: any[] = [];
+                            
+                            item.entries.forEach((entry: any) => {
+                              if (entry.registrationId) {
+                                const regId = String(entry.registrationId);
+                                if (!groupedByRegistration[regId]) {
+                                  groupedByRegistration[regId] = [];
+                                }
+                                groupedByRegistration[regId].push(entry);
+                              } else {
+                                manualPayments.push(entry);
+                              }
+                            });
+                            
+                            // Вычисляем общее разбиение по способам оплаты для группы
+                            const groupPaymentMethods = item.entries.reduce((acc: any, e: any) => {
+                              acc[e.method] = (acc[e.method] || 0) + Number(e.amount);
+                              return acc;
+                            }, {});
                             
                             return (
-                              <Card 
-                                key={entry.id} 
-                                variant="outlined"
-                                sx={{ 
-                                  mb: 1, 
-                                  ml: 2,
-                                  width: 'calc(100% - 16px)',
-                                  backgroundColor: entry.deletedAt ? 'error.light' : 'rgba(0, 0, 0, 0.02)',
-                                  opacity: entry.deletedAt ? 0.7 : 1
-                                }}
-                              >
-                                <CardContent sx={{ p: { xs: 1, sm: 1.5 }, '&:last-child': { pb: { xs: 1, sm: 1.5 } } }}>
-                                  <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                      fontWeight: 500, 
-                                      mb: 0.5,
-                                      fontSize: { xs: '0.85rem', sm: '0.875rem' },
-                                      wordBreak: 'break-word'
-                                    }}
-                                  >
-                                    {paymentName}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.5 }}>
-                                    {formatDate(entry.createdAt)} {entryTime}
-                                  </Typography>
-                                  <Stack spacing={0.5} sx={{ width: '100%' }}>
-                                    {entry.registrationId && entry.registration && (
-                                      <>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
-                                          Номер: {formatRegistrationNumber(entry.registration)}
+                              <>
+                                {/* Записи по регистрациям */}
+                                {Object.entries(groupedByRegistration).map(([regId, entries]: [string, any[]]) => {
+                                  const firstEntry = entries[0];
+                                  const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+                                  const totalDiscount = entries.reduce((sum, e) => sum + Number(e.discountAmount || 0), 0);
+                                  const performanceEntries = entries.filter((e: any) => e.paidFor === 'PERFORMANCE');
+                                  const diplomasEntries = entries.filter((e: any) => e.paidFor === 'DIPLOMAS_MEDALS');
+                                  const entryTime = formatTime(firstEntry.createdAt);
+                                  
+                                  return (
+                                    <Card 
+                                      key={regId} 
+                                      variant="outlined"
+                                      sx={{ 
+                                        mb: 1, 
+                                        ml: 2,
+                                        width: 'calc(100% - 16px)',
+                                        backgroundColor: firstEntry.deletedAt ? 'error.light' : 'rgba(0, 0, 0, 0.02)',
+                                        opacity: firstEntry.deletedAt ? 0.7 : 1
+                                      }}
+                                    >
+                                      <CardContent sx={{ p: { xs: 1, sm: 1.5 }, '&:last-child': { pb: { xs: 1, sm: 1.5 } } }}>
+                                        <Typography 
+                                          variant="body2" 
+                                          sx={{ 
+                                            fontWeight: 500, 
+                                            mb: 0.5,
+                                            fontSize: { xs: '0.85rem', sm: '0.875rem' },
+                                            wordBreak: 'break-word'
+                                          }}
+                                        >
+                                          {firstEntry.registration?.danceName || '-'}
                                         </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
-                                          Коллектив: {entry.collective?.name || entry.registration.collective?.name || '-'}
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.5 }}>
+                                          {formatDate(firstEntry.createdAt)} {entryTime}
                                         </Typography>
-                                        {entry.registration.danceName && (
-                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
-                                            Танец: {entry.registration.danceName}
-                                          </Typography>
-                                        )}
-                                        {entry.registration.notes && (
-                                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word', fontStyle: 'italic' }}>
-                                            📝 {entry.registration.notes}
-                                          </Typography>
-                                        )}
-                                      </>
-                                    )}
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                                      Сумма: {formatCurrency(entry.amount)}
-                                    </Typography>
-                                    {entry.discountAmount > 0 && (
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                                        Откат: {formatCurrency(entry.discountAmount)}
-                                      </Typography>
-                                    )}
-                                    <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                                      <Chip 
-                                        label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
-                                        size="small" 
-                                        sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                                      />
-                                      <Chip 
-                                        label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
-                                        size="small" 
-                                        sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                                      />
-                                    </Stack>
-                                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
-                                      {!entry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                                        <>
-                                          <IconButton size="small" onClick={() => handleEdit(entry)} sx={{ p: 0.5 }} title="Редактировать">
-                                            <EditIcon fontSize="small" />
-                                          </IconButton>
-                                          {user?.role === 'ADMIN' && (
-                                            <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} sx={{ p: 0.5 }} title="Удалить">
-                                              <DeleteIcon fontSize="small" />
-                                            </IconButton>
+                                        <Stack spacing={0.5} sx={{ width: '100%' }}>
+                                          {firstEntry.registrationId && firstEntry.registration && (
+                                            <>
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                                Номер: {formatRegistrationNumber(firstEntry.registration)}
+                                              </Typography>
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                                Коллектив: {firstEntry.collective?.name || firstEntry.registration.collective?.name || '-'}
+                                              </Typography>
+                                              {firstEntry.registration.danceName && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word' }}>
+                                                  Танец: {firstEntry.registration.danceName}
+                                                </Typography>
+                                              )}
+                                              {firstEntry.registration.notes && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, wordBreak: 'break-word', fontStyle: 'italic' }}>
+                                                  📝 {firstEntry.registration.notes}
+                                                </Typography>
+                                              )}
+                                            </>
                                           )}
-                                        </>
+                                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.85rem', sm: '0.9rem' }, mt: 0.5 }}>
+                                            Сумма: {formatCurrency(totalAmount)}
+                                          </Typography>
+                                          {totalDiscount > 0 && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                                              Откат: {formatCurrency(totalDiscount)}
+                                            </Typography>
+                                          )}
+                                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                            {performanceEntries.length > 0 && (
+                                              <Chip 
+                                                label="Выступление" 
+                                                size="small" 
+                                                sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                              />
+                                            )}
+                                            {diplomasEntries.length > 0 && (
+                                              <Chip 
+                                                label="Дипломы и медали" 
+                                                size="small" 
+                                                sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                              />
+                                            )}
+                                          </Stack>
+                                        </Stack>
+                                      </CardContent>
+                                    </Card>
+                                  );
+                                })}
+                                
+                                {/* Ручные платежи (без регистрации) */}
+                                {manualPayments.map((entry: any) => {
+                                  const entryTime = formatTime(entry.createdAt);
+                                  return (
+                                    <Card 
+                                      key={entry.id} 
+                                      variant="outlined"
+                                      sx={{ 
+                                        mb: 1, 
+                                        ml: 2,
+                                        width: 'calc(100% - 16px)',
+                                        backgroundColor: entry.deletedAt ? 'error.light' : 'rgba(0, 0, 0, 0.02)',
+                                        opacity: entry.deletedAt ? 0.7 : 1
+                                      }}
+                                    >
+                                      <CardContent sx={{ p: { xs: 1, sm: 1.5 }, '&:last-child': { pb: { xs: 1, sm: 1.5 } } }}>
+                                        <Typography 
+                                          variant="body2" 
+                                          sx={{ 
+                                            fontWeight: 500, 
+                                            mb: 0.5,
+                                            fontSize: { xs: '0.85rem', sm: '0.875rem' },
+                                            wordBreak: 'break-word'
+                                          }}
+                                        >
+                                          {entry.description || `Платеж #${entry.id}`}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', display: 'block', mb: 0.5 }}>
+                                          {formatDate(entry.createdAt)} {entryTime}
+                                        </Typography>
+                                        <Stack spacing={0.5} sx={{ width: '100%' }}>
+                                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.85rem', sm: '0.9rem' }, mt: 0.5 }}>
+                                            Сумма: {formatCurrency(entry.amount)}
+                                          </Typography>
+                                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                                            <Chip 
+                                              label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
+                                              size="small" 
+                                              sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                            />
+                                            <Chip 
+                                              label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
+                                              size="small" 
+                                              sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                            />
+                                          </Stack>
+                                          <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                                            {!entry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                              <>
+                                                <IconButton size="small" onClick={() => handleEdit(entry)} sx={{ p: 0.5 }} title="Редактировать">
+                                                  <EditIcon fontSize="small" />
+                                                </IconButton>
+                                                {user?.role === 'ADMIN' && (
+                                                  <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} sx={{ p: 0.5 }} title="Удалить">
+                                                    <DeleteIcon fontSize="small" />
+                                                  </IconButton>
+                                                )}
+                                              </>
+                                            )}
+                                          </Box>
+                                        </Stack>
+                                      </CardContent>
+                                    </Card>
+                                  );
+                                })}
+                                
+                                {/* Общее разбиение по способам оплаты для группы */}
+                                <Card 
+                                  variant="outlined"
+                                  sx={{ 
+                                    mb: 1, 
+                                    ml: 2,
+                                    mt: 1,
+                                    width: 'calc(100% - 16px)',
+                                    backgroundColor: 'primary.light',
+                                    border: '2px solid',
+                                    borderColor: 'primary.main'
+                                  }}
+                                >
+                                  <CardContent sx={{ p: { xs: 1, sm: 1.5 }, '&:last-child': { pb: { xs: 1, sm: 1.5 } } }}>
+                                    <Typography 
+                                      variant="body2" 
+                                      sx={{ 
+                                        fontWeight: 600, 
+                                        mb: 1,
+                                        fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                                        color: 'primary.dark'
+                                      }}
+                                    >
+                                      Разбиение по способам оплаты:
+                                    </Typography>
+                                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                                      {groupPaymentMethods.CASH > 0 && (
+                                        <Chip 
+                                          label={`Наличные: ${formatCurrency(groupPaymentMethods.CASH)}`} 
+                                          size="small" 
+                                          color="primary"
+                                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 24, sm: 26 }, fontWeight: 600 }}
+                                        />
                                       )}
-                                    </Box>
-                                  </Stack>
-                                </CardContent>
-                              </Card>
+                                      {groupPaymentMethods.CARD > 0 && (
+                                        <Chip 
+                                          label={`Карта: ${formatCurrency(groupPaymentMethods.CARD)}`} 
+                                          size="small" 
+                                          color="primary"
+                                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 24, sm: 26 }, fontWeight: 600 }}
+                                        />
+                                      )}
+                                      {groupPaymentMethods.TRANSFER > 0 && (
+                                        <Chip 
+                                          label={`Перевод: ${formatCurrency(groupPaymentMethods.TRANSFER)}`} 
+                                          size="small" 
+                                          color="primary"
+                                          sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, height: { xs: 24, sm: 26 }, fontWeight: 600 }}
+                                        />
+                                      )}
+                                    </Stack>
+                                  </CardContent>
+                                </Card>
+                              </>
                             );
-                          })}
+                          })()}
                         </React.Fragment>
                       );
                     } else {
@@ -1240,72 +1383,216 @@ export const Accounting: React.FC = () => {
                                   </Box>
                                 </TableCell>
                               </TableRow>
-                              {/* Записи группы (всегда развернуты) */}
-                              {item.entries.map((entry: any) => {
-                                const paymentName = entry.registration?.danceName || entry.description || '-';
-                                const entryTime = formatTime(entry.createdAt);
+                              {/* Записи группы (группированные по регистрациям) */}
+                              {(() => {
+                                // Группируем записи по registrationId
+                                const groupedByRegistration: { [key: string]: any[] } = {};
+                                const manualPayments: any[] = [];
+                                
+                                item.entries.forEach((entry: any) => {
+                                  if (entry.registrationId) {
+                                    const regId = String(entry.registrationId);
+                                    if (!groupedByRegistration[regId]) {
+                                      groupedByRegistration[regId] = [];
+                                    }
+                                    groupedByRegistration[regId].push(entry);
+                                  } else {
+                                    manualPayments.push(entry);
+                                  }
+                                });
+                                
+                                // Вычисляем общее разбиение по способам оплаты для группы
+                                const groupPaymentMethods = item.entries.reduce((acc: any, e: any) => {
+                                  acc[e.method] = (acc[e.method] || 0) + Number(e.amount);
+                                  return acc;
+                                }, {});
                                 
                                 return (
-                                  <TableRow 
-                                    key={entry.id} 
-                                    sx={{ 
-                                      backgroundColor: entry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.02)',
-                                      opacity: entry.deletedAt ? 0.7 : 1
-                                    }}
-                                  >
-                                    <TableCell sx={{ pl: 6 }}>
-                                      <Box>
-                                        <Typography variant="body2">
-                                          {paymentName}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                          {formatDate(entry.createdAt)} {entryTime}
-                                        </Typography>
-                                      </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                      {entry.registration ? formatRegistrationNumber(entry.registration) : '-'}
-                                    </TableCell>
-                                    <TableCell>
-                                      {entry.collective?.name || entry.registration?.collective?.name || '-'}
-                                    </TableCell>
-                                    <TableCell>{entry.registration?.danceName || '-'}</TableCell>
-                                    <TableCell>{formatCurrency(entry.amount)}</TableCell>
-                                    <TableCell>{entry.discountAmount > 0 ? formatCurrency(entry.discountAmount) : '-'}</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
-                                        size="small" 
-                                        sx={{ height: 24, fontSize: '0.7rem' }}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
-                                        size="small" 
-                                        variant="outlined"
-                                        sx={{ height: 22, fontSize: '0.65rem' }}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                        {!entry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                                          <>
-                                            <IconButton size="small" onClick={() => handleEdit(entry)} title="Редактировать">
-                                              <EditIcon fontSize="small" />
-                                            </IconButton>
-                                            {user?.role === 'ADMIN' && (
-                                              <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} title="Удалить">
-                                                <DeleteIcon fontSize="small" />
-                                              </IconButton>
-                                            )}
-                                          </>
-                                        )}
-                                      </Box>
-                                    </TableCell>
-                                  </TableRow>
+                                  <>
+                                    {/* Записи по регистрациям */}
+                                    {Object.entries(groupedByRegistration).map(([regId, entries]: [string, any[]]) => {
+                                      const firstEntry = entries[0];
+                                      const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
+                                      const totalDiscount = entries.reduce((sum, e) => sum + Number(e.discountAmount || 0), 0);
+                                      const performanceEntries = entries.filter((e: any) => e.paidFor === 'PERFORMANCE');
+                                      const diplomasEntries = entries.filter((e: any) => e.paidFor === 'DIPLOMAS_MEDALS');
+                                      const entryTime = formatTime(firstEntry.createdAt);
+                                      
+                                      return (
+                                        <TableRow 
+                                          key={regId} 
+                                          sx={{ 
+                                            backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.02)',
+                                            opacity: firstEntry.deletedAt ? 0.7 : 1
+                                          }}
+                                        >
+                                          <TableCell sx={{ pl: 6 }}>
+                                            <Box>
+                                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                {firstEntry.registration?.danceName || '-'}
+                                              </Typography>
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                {formatDate(firstEntry.createdAt)} {entryTime}
+                                              </Typography>
+                                            </Box>
+                                          </TableCell>
+                                          <TableCell>
+                                            {firstEntry.registration ? formatRegistrationNumber(firstEntry.registration) : '-'}
+                                          </TableCell>
+                                          <TableCell>
+                                            {firstEntry.collective?.name || firstEntry.registration?.collective?.name || '-'}
+                                          </TableCell>
+                                          <TableCell>{firstEntry.registration?.danceName || '-'}</TableCell>
+                                          <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totalAmount)}</TableCell>
+                                          <TableCell>{totalDiscount > 0 ? formatCurrency(totalDiscount) : '-'}</TableCell>
+                                          <TableCell>
+                                            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                                              {performanceEntries.length > 0 && (
+                                                <Chip 
+                                                  label="Выступление" 
+                                                  size="small" 
+                                                  sx={{ height: 24, fontSize: '0.7rem' }}
+                                                />
+                                              )}
+                                              {diplomasEntries.length > 0 && (
+                                                <Chip 
+                                                  label="Дипломы и медали" 
+                                                  size="small" 
+                                                  sx={{ height: 24, fontSize: '0.7rem' }}
+                                                />
+                                              )}
+                                            </Stack>
+                                          </TableCell>
+                                          <TableCell>
+                                            {/* Способ оплаты не показываем для отдельных регистраций */}
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                              -
+                                            </Typography>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                              {!firstEntry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                                <>
+                                                  <IconButton size="small" onClick={() => handleEdit(firstEntry)} title="Редактировать">
+                                                    <EditIcon fontSize="small" />
+                                                  </IconButton>
+                                                  {user?.role === 'ADMIN' && (
+                                                    <IconButton size="small" onClick={() => handleDeleteClick(firstEntry.id)} title="Удалить">
+                                                      <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                  )}
+                                                </>
+                                              )}
+                                            </Box>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                    
+                                    {/* Ручные платежи (без регистрации) */}
+                                    {manualPayments.map((entry: any) => {
+                                      const entryTime = formatTime(entry.createdAt);
+                                      return (
+                                        <TableRow 
+                                          key={entry.id} 
+                                          sx={{ 
+                                            backgroundColor: entry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.02)',
+                                            opacity: entry.deletedAt ? 0.7 : 1
+                                          }}
+                                        >
+                                          <TableCell sx={{ pl: 6 }}>
+                                            <Box>
+                                              <Typography variant="body2">
+                                                {entry.description || `Платеж #${entry.id}`}
+                                              </Typography>
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                {formatDate(entry.createdAt)} {entryTime}
+                                              </Typography>
+                                            </Box>
+                                          </TableCell>
+                                          <TableCell>-</TableCell>
+                                          <TableCell>-</TableCell>
+                                          <TableCell>-</TableCell>
+                                          <TableCell>{formatCurrency(entry.amount)}</TableCell>
+                                          <TableCell>{entry.discountAmount > 0 ? formatCurrency(entry.discountAmount) : '-'}</TableCell>
+                                          <TableCell>
+                                            <Chip 
+                                              label={entry.paidFor === 'PERFORMANCE' ? 'Выступление' : 'Дипломы и медали'} 
+                                              size="small" 
+                                              sx={{ height: 24, fontSize: '0.7rem' }}
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Chip 
+                                              label={entry.method === 'CASH' ? 'Наличные' : entry.method === 'CARD' ? 'Карта' : 'Перевод'} 
+                                              size="small" 
+                                              variant="outlined"
+                                              sx={{ height: 22, fontSize: '0.65rem' }}
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                              {!entry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                                <>
+                                                  <IconButton size="small" onClick={() => handleEdit(entry)} title="Редактировать">
+                                                    <EditIcon fontSize="small" />
+                                                  </IconButton>
+                                                  {user?.role === 'ADMIN' && (
+                                                    <IconButton size="small" onClick={() => handleDeleteClick(entry.id)} title="Удалить">
+                                                      <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                  )}
+                                                </>
+                                              )}
+                                            </Box>
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })}
+                                    
+                                    {/* Общее разбиение по способам оплаты для группы */}
+                                    <TableRow 
+                                      sx={{ 
+                                        backgroundColor: 'primary.light',
+                                        borderTop: '2px solid',
+                                        borderColor: 'primary.main'
+                                      }}
+                                    >
+                                      <TableCell colSpan={4} sx={{ fontWeight: 600, color: 'primary.dark' }}>
+                                        Разбиение по способам оплаты:
+                                      </TableCell>
+                                      <TableCell colSpan={5}>
+                                        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                                          {groupPaymentMethods.CASH > 0 && (
+                                            <Chip 
+                                              label={`Наличные: ${formatCurrency(groupPaymentMethods.CASH)}`} 
+                                              size="small" 
+                                              color="primary"
+                                              sx={{ fontSize: '0.75rem', height: 26, fontWeight: 600 }}
+                                            />
+                                          )}
+                                          {groupPaymentMethods.CARD > 0 && (
+                                            <Chip 
+                                              label={`Карта: ${formatCurrency(groupPaymentMethods.CARD)}`} 
+                                              size="small" 
+                                              color="primary"
+                                              sx={{ fontSize: '0.75rem', height: 26, fontWeight: 600 }}
+                                            />
+                                          )}
+                                          {groupPaymentMethods.TRANSFER > 0 && (
+                                            <Chip 
+                                              label={`Перевод: ${formatCurrency(groupPaymentMethods.TRANSFER)}`} 
+                                              size="small" 
+                                              color="primary"
+                                              sx={{ fontSize: '0.75rem', height: 26, fontWeight: 600 }}
+                                            />
+                                          )}
+                                        </Stack>
+                                      </TableCell>
+                                    </TableRow>
+                                  </>
                                 );
-                              })}
+                              })()}
                             </React.Fragment>
                           );
                         } else {
