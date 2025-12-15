@@ -970,8 +970,8 @@ export const Accounting: React.FC = () => {
                                           {/* Дипломы и медали */}
                                           {diplomasEntries.length > 0 && (
                                             <Box sx={{ mt: performanceEntries.length > 0 ? 0.5 : 1, p: 1, backgroundColor: 'rgba(156, 39, 176, 0.08)', borderRadius: 1 }}>
-                                              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.85rem' }}>
-                                                Дипломы и медали: {formatCurrency(diplomasAmount)}
+                                              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.85rem' } }}>
+                                                {'Дипломы и медали: '}{formatCurrency(diplomasAmount)}
                                               </Typography>
                                             </Box>
                                           )}
