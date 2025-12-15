@@ -179,38 +179,74 @@ install_updates() {
     echo -e "${BLUE}⚠ Используется команда 'docker-compose down' БЕЗ флага -v${NC}"
     echo ""
     
-    echo -e "${YELLOW}Остановка контейнеров БЕЗ удаления (volumes гарантированно сохраняются)...${NC}"
-    # КРИТИЧЕСКИ ВАЖНО: Используем 'stop' вместо 'down', чтобы НЕ удалять контейнеры и volumes
-    # 'stop' только останавливает контейнеры, но НЕ удаляет их и volumes
-    docker-compose stop 2>/dev/null || docker compose stop
+    # КРИТИЧЕСКИ ВАЖНО: НЕ останавливаем postgres контейнер вообще!
+    # Пересобираем и перезапускаем только backend и frontend, postgres остаётся работать
     
-    echo ""
-    echo -e "${GREEN}✓ Контейнеры остановлены, данные БД гарантированно сохранены${NC}"
+    echo -e "${YELLOW}Проверка состояния контейнера PostgreSQL...${NC}"
+    if docker ps --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
+        echo -e "${GREEN}✓ Контейнер PostgreSQL работает, НЕ будет остановлен${NC}"
+        postgres_running=true
+    elif docker ps -a --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
+        echo -e "${YELLOW}⚠ Контейнер PostgreSQL остановлен, запускаем его...${NC}"
+        docker-compose up -d postgres 2>/dev/null || docker compose up -d postgres
+        sleep 5
+        postgres_running=true
+    else
+        echo -e "${YELLOW}⚠ Контейнер PostgreSQL не найден, будет создан заново${NC}"
+        postgres_running=false
+    fi
     
-    # Проверяем, что volumes всё ещё существуют после остановки
+    # Проверяем, что volume существует
     if [ $volume_exists -eq 0 ]; then
-        if ! docker volume ls --format '{{.Name}}' | grep -q "^ftr_reg_postgres_data$"; then
-            echo -e "${RED}✗ КРИТИЧЕСКАЯ ОШИБКА: Volume PostgreSQL был удалён!${NC}"
-            echo -e "${RED}✗ Это не должно было произойти при использовании 'docker-compose stop'${NC}"
-            read -p "Нажмите Enter для продолжения..."
-            return 1
-        fi
-        echo -e "${GREEN}✓ Volume PostgreSQL подтверждён после остановки${NC}"
+        echo -e "${GREEN}✓ Volume PostgreSQL существует: ftr_reg_postgres_data${NC}"
+    else
+        echo -e "${YELLOW}⚠ Volume PostgreSQL не найден, будет создан новый${NC}"
     fi
     
     echo ""
-    echo -e "${YELLOW}Пересборка и запуск контейнеров (БД контейнер будет переиспользован)...${NC}"
-    # Используем --no-deps для backend/frontend, чтобы не трогать postgres
-    # Сначала пересобираем backend и frontend
+    echo -e "${YELLOW}Остановка только backend и frontend контейнеров...${NC}"
+    docker-compose stop backend frontend 2>/dev/null || docker compose stop backend frontend
+    
+    echo ""
+    echo -e "${GREEN}✓ Backend и Frontend остановлены, PostgreSQL продолжает работать${NC}"
+    
+    echo ""
+    echo -e "${YELLOW}Пересборка backend и frontend (PostgreSQL НЕ трогается)...${NC}"
+    # Пересобираем только backend и frontend, postgres не трогаем
     docker-compose build backend frontend 2>/dev/null || docker compose build backend frontend
     
-    # Затем запускаем все сервисы (postgres будет переиспользован, если уже существует)
-    docker-compose up -d 2>/dev/null || docker compose up -d
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}✗ Ошибка при пересборке контейнеров!${NC}"
+        read -p "Нажмите Enter для продолжения..."
+        return 1
+    fi
     
-    # Если postgres контейнер не запустился, запускаем его отдельно
-    if ! docker ps --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
-        echo -e "${YELLOW}Запуск контейнера PostgreSQL...${NC}"
-        docker-compose up -d postgres 2>/dev/null || docker compose up -d postgres
+    echo ""
+    echo -e "${YELLOW}Запуск backend и frontend (PostgreSQL уже работает)...${NC}"
+    # Запускаем backend и frontend с --no-deps, чтобы не трогать зависимости (postgres, redis)
+    docker-compose up -d --no-deps backend frontend 2>/dev/null || docker compose up -d --no-deps backend frontend
+    
+    # Убеждаемся, что postgres всё ещё работает
+    if [ "$postgres_running" = true ]; then
+        if ! docker ps --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
+            echo -e "${RED}✗ КРИТИЧЕСКАЯ ОШИБКА: Контейнер PostgreSQL был остановлен!${NC}"
+            echo -e "${YELLOW}Запускаем PostgreSQL...${NC}"
+            docker-compose up -d postgres 2>/dev/null || docker compose up -d postgres
+            sleep 5
+        else
+            echo -e "${GREEN}✓ Контейнер PostgreSQL продолжает работать${NC}"
+        fi
+    fi
+    
+    # Финальная проверка volumes
+    if [ $volume_exists -eq 0 ]; then
+        if ! docker volume ls --format '{{.Name}}' | grep -q "^ftr_reg_postgres_data$"; then
+            echo -e "${RED}✗ КРИТИЧЕСКАЯ ОШИБКА: Volume PostgreSQL был удалён!${NC}"
+            echo -e "${RED}✗ Немедленно проверьте состояние БД!${NC}"
+            read -p "Нажмите Enter для продолжения..."
+            return 1
+        fi
+        echo -e "${GREEN}✓ Volume PostgreSQL подтверждён после обновления${NC}"
     fi
     
     if [ $? -eq 0 ]; then

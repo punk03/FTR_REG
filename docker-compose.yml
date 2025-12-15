@@ -79,8 +79,14 @@ services:
       sh -c "
         echo 'Waiting for database...' &&
         sleep 5 &&
-        echo 'Running Prisma migrations...' &&
-        npx prisma migrate deploy || (echo 'Migration failed, continuing...' && true) &&
+        echo 'Checking database connection...' &&
+        until npx prisma db execute --stdin <<< 'SELECT 1' 2>/dev/null; do
+          echo 'Database not ready, waiting...' &&
+          sleep 2
+        done &&
+        echo 'Database is ready!' &&
+        echo 'Running Prisma migrations (safe mode - no data loss)...' &&
+        npx prisma migrate deploy || (echo 'Migration failed, but continuing...' && true) &&
         echo 'Generating Prisma Client...' &&
         npx prisma generate &&
         echo 'Starting backend server...' &&
