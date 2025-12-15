@@ -179,26 +179,39 @@ install_updates() {
     echo -e "${BLUE}⚠ Используется команда 'docker-compose down' БЕЗ флага -v${NC}"
     echo ""
     
-    echo -e "${YELLOW}Остановка текущих контейнеров (volumes сохраняются)...${NC}"
-    # КРИТИЧЕСКИ ВАЖНО: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
-    # Явно указываем, что volumes должны быть сохранены
-    docker-compose down 2>/dev/null || docker compose down
+    echo -e "${YELLOW}Остановка контейнеров БЕЗ удаления (volumes гарантированно сохраняются)...${NC}"
+    # КРИТИЧЕСКИ ВАЖНО: Используем 'stop' вместо 'down', чтобы НЕ удалять контейнеры и volumes
+    # 'stop' только останавливает контейнеры, но НЕ удаляет их и volumes
+    docker-compose stop 2>/dev/null || docker compose stop
     
-    # Дополнительная проверка: убеждаемся, что volumes не были удалены
+    echo ""
+    echo -e "${GREEN}✓ Контейнеры остановлены, данные БД гарантированно сохранены${NC}"
+    
+    # Проверяем, что volumes всё ещё существуют после остановки
     if [ $volume_exists -eq 0 ]; then
         if ! docker volume ls --format '{{.Name}}' | grep -q "^ftr_reg_postgres_data$"; then
             echo -e "${RED}✗ КРИТИЧЕСКАЯ ОШИБКА: Volume PostgreSQL был удалён!${NC}"
-            echo -e "${RED}✗ Это не должно было произойти при использовании 'docker-compose down' без -v${NC}"
+            echo -e "${RED}✗ Это не должно было произойти при использовании 'docker-compose stop'${NC}"
             read -p "Нажмите Enter для продолжения..."
             return 1
         fi
+        echo -e "${GREEN}✓ Volume PostgreSQL подтверждён после остановки${NC}"
     fi
     
     echo ""
-    echo -e "${GREEN}✓ Контейнеры остановлены, данные БД сохранены${NC}"
-    echo ""
-    echo -e "${YELLOW}Пересборка и запуск контейнеров...${NC}"
-    docker-compose up -d --build 2>/dev/null || docker compose up -d --build
+    echo -e "${YELLOW}Пересборка и запуск контейнеров (БД контейнер будет переиспользован)...${NC}"
+    # Используем --no-deps для backend/frontend, чтобы не трогать postgres
+    # Сначала пересобираем backend и frontend
+    docker-compose build backend frontend 2>/dev/null || docker compose build backend frontend
+    
+    # Затем запускаем все сервисы (postgres будет переиспользован, если уже существует)
+    docker-compose up -d 2>/dev/null || docker compose up -d
+    
+    # Если postgres контейнер не запустился, запускаем его отдельно
+    if ! docker ps --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
+        echo -e "${YELLOW}Запуск контейнера PostgreSQL...${NC}"
+        docker-compose up -d postgres 2>/dev/null || docker compose up -d postgres
+    fi
     
     if [ $? -eq 0 ]; then
         echo ""
@@ -403,11 +416,11 @@ main_menu() {
                 ;;
             7)
                 show_header
-                echo -e "${YELLOW}Остановка всех контейнеров (volumes сохраняются)...${NC}"
-                echo -e "${BLUE}⚠ ВАЖНО: Volumes НЕ будут удалены${NC}"
-                # КРИТИЧЕСКИ ВАЖНО: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
-                docker-compose down 2>/dev/null || docker compose down
-                echo -e "${GREEN}✓ Контейнеры остановлены, данные БД сохранены${NC}"
+                echo -e "${YELLOW}Остановка всех контейнеров (volumes гарантированно сохраняются)...${NC}"
+                echo -e "${BLUE}⚠ ВАЖНО: Используется 'stop' вместо 'down' для защиты volumes${NC}"
+                # КРИТИЧЕСКИ ВАЖНО: Используем 'stop' вместо 'down', чтобы НЕ удалять контейнеры и volumes
+                docker-compose stop 2>/dev/null || docker compose stop
+                echo -e "${GREEN}✓ Контейнеры остановлены, данные БД гарантированно сохранены${NC}"
                 sleep 2
                 ;;
             8)

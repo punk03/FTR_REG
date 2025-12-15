@@ -112,8 +112,14 @@ services:
 
 volumes:
   postgres_data:
+    name: ftr_reg_postgres_data
+    driver: local
   redis_data:
+    name: ftr_reg_redis_data
+    driver: local
   backend_uploads:
+    name: ftr_reg_backend_uploads
+    driver: local
 
 networks:
   ftr_network:
