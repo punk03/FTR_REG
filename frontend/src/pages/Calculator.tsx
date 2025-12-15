@@ -19,7 +19,10 @@ import {
   Alert,
   useTheme,
   useMediaQuery,
+  ThemeProvider,
+  CssBaseline,
 } from '@mui/material';
+import { createAppTheme } from '../theme';
 import axios from 'axios';
 
 // API URL - use environment variable or default to relative path
@@ -40,8 +43,9 @@ const getNominationByParticipants = (count: number): string => {
 
 export const Calculator: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // Используем светлую тему для калькулятора (публичная страница)
+  const calculatorTheme = createAppTheme(false);
+  const isMobile = useMediaQuery(calculatorTheme.breakpoints.down('sm'));
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,28 +142,37 @@ export const Calculator: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <CircularProgress />
-      </Container>
+      <ThemeProvider theme={calculatorTheme}>
+        <CssBaseline />
+        <Container maxWidth="md" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Container>
+      </ThemeProvider>
     );
   }
 
   if (error && !eventData) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
+      <ThemeProvider theme={calculatorTheme}>
+        <CssBaseline />
+        <Container maxWidth="md" sx={{ mt: 4 }}>
+          <Alert severity="error">{error}</Alert>
+        </Container>
+      </ThemeProvider>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
+    <ThemeProvider theme={calculatorTheme}>
+      <CssBaseline />
+      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
       <Paper
         elevation={3}
         sx={{
           p: { xs: 2, sm: 4 },
           borderRadius: 2,
-          background: 'linear-gradient(to bottom, rgba(255,255,255,0.95), rgba(255,255,255,1))',
+          backgroundColor: 'background.paper',
+          color: 'text.primary',
         }}
       >
         <Typography
@@ -357,6 +370,7 @@ export const Calculator: React.FC = () => {
         )}
       </Paper>
     </Container>
+    </ThemeProvider>
   );
 };
 
