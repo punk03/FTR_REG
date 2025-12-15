@@ -33,12 +33,10 @@ const API_URL = import.meta.env?.VITE_API_URL || '';
 const getNominationByParticipants = (count: number): string => {
   if (count === 1) return 'Соло';
   if (count === 2) return 'Дуэт';
-  if (count === 3) return 'Трио';
-  if (count === 4) return 'Квартет';
-  if (count === 5) return 'Квинтет';
-  if (count >= 6 && count <= 12) return 'Малая форма';
-  if (count >= 13 && count <= 24) return 'Продакшен';
-  return 'Формейшен';
+  if (count >= 3 && count <= 7) return 'Малая группа';
+  if (count >= 8 && count <= 24) return 'Формейшен';
+  if (count >= 25) return 'Продакшен';
+  return 'Соло'; // По умолчанию
 };
 
 export const Calculator: React.FC = () => {
@@ -75,13 +73,32 @@ export const Calculator: React.FC = () => {
         // Автоматически определяем номинацию по количеству участников
         if (response.data.eventPrices && response.data.eventPrices.length > 0) {
           const autoNomination = getNominationByParticipants(participantsCount);
-          const foundNomination = response.data.eventPrices.find(
+          
+          // Ищем точное совпадение
+          let foundNomination = response.data.eventPrices.find(
             (price: any) => price.nominationName === autoNomination
           );
+          
+          // Если точное совпадение не найдено, ищем похожие варианты
+          if (!foundNomination) {
+            const alternativeNames: { [key: string]: string[] } = {
+              'Малая группа': ['Малая группа', 'Малая форма', 'Малая'],
+              'Формейшен': ['Формейшен', 'Формейшн', 'Formation'],
+              'Продакшен': ['Продакшен', 'Продакшн', 'Production'],
+              'Соло': ['Соло', 'Solo'],
+              'Дуэт': ['Дуэт', 'Duet'],
+            };
+            
+            const alternatives = alternativeNames[autoNomination] || [autoNomination];
+            foundNomination = response.data.eventPrices.find((price: any) =>
+              alternatives.some(alt => price.nominationName.toLowerCase().includes(alt.toLowerCase()))
+            );
+          }
+          
           if (foundNomination) {
             setSelectedNominationId(foundNomination.nominationId);
-          } else {
-            // Если не найдена автоматическая номинация, выбираем первую доступную
+          } else if (response.data.eventPrices.length > 0) {
+            // Если ничего не найдено, используем первую доступную номинацию
             setSelectedNominationId(response.data.eventPrices[0].nominationId);
           }
         }
@@ -100,11 +117,33 @@ export const Calculator: React.FC = () => {
   useEffect(() => {
     if (eventData && eventData.eventPrices) {
       const autoNomination = getNominationByParticipants(participantsCount);
-      const foundNomination = eventData.eventPrices.find(
+      
+      // Ищем точное совпадение
+      let foundNomination = eventData.eventPrices.find(
         (price: any) => price.nominationName === autoNomination
       );
-      if (foundNomination && !selectedNominationId) {
+      
+      // Если точное совпадение не найдено, ищем похожие варианты
+      if (!foundNomination) {
+        const alternativeNames: { [key: string]: string[] } = {
+          'Малая группа': ['Малая группа', 'Малая форма', 'Малая'],
+          'Формейшен': ['Формейшен', 'Формейшн', 'Formation'],
+          'Продакшен': ['Продакшен', 'Продакшн', 'Production'],
+          'Соло': ['Соло', 'Solo'],
+          'Дуэт': ['Дуэт', 'Duet'],
+        };
+        
+        const alternatives = alternativeNames[autoNomination] || [autoNomination];
+        foundNomination = eventData.eventPrices.find((price: any) =>
+          alternatives.some(alt => price.nominationName.toLowerCase().includes(alt.toLowerCase()))
+        );
+      }
+      
+      if (foundNomination) {
         setSelectedNominationId(foundNomination.nominationId);
+      } else if (eventData.eventPrices.length > 0) {
+        // Если ничего не найдено, используем первую доступную номинацию
+        setSelectedNominationId(eventData.eventPrices[0].nominationId);
       }
     }
   }, [participantsCount, eventData]);
@@ -231,7 +270,18 @@ export const Calculator: React.FC = () => {
                     setParticipantsCount(Math.max(1, value));
                   }}
                   inputProps={{ min: 1 }}
-                  helperText={`Автоматически определена номинация: ${getNominationByParticipants(participantsCount)}`}
+                  helperText={`Номинация определяется автоматически: ${getNominationByParticipants(participantsCount)}`}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      color: 'text.primary',
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'text.secondary',
+                    },
+                    '& .MuiFormHelperText-root': {
+                      color: 'text.secondary',
+                    },
+                  }}
                 />
               </Grid>
 
@@ -251,20 +301,27 @@ export const Calculator: React.FC = () => {
               </Grid>
 
               <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Номинация</InputLabel>
-                  <Select
-                    value={selectedNominationId}
-                    label="Номинация"
-                    onChange={(e) => setSelectedNominationId(e.target.value as number)}
-                  >
-                    {eventData.eventPrices.map((price: any) => (
-                      <MenuItem key={price.nominationId} value={price.nominationId}>
-                        {price.nominationName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                <TextField
+                  fullWidth
+                  label="Номинация"
+                  value={getNominationByParticipants(participantsCount)}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  helperText="Определяется автоматически по количеству участников"
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      color: 'text.primary',
+                      fontWeight: 500,
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'text.secondary',
+                    },
+                    '& .MuiFormHelperText-root': {
+                      color: 'text.secondary',
+                    },
+                  }}
+                />
               </Grid>
 
               <Grid item xs={12} sm={6}>
