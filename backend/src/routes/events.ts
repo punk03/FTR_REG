@@ -734,6 +734,44 @@ router.delete('/:id/registrations', authenticateToken, requireRole('ADMIN'), asy
   }
 });
 
+// POST /api/events/:id/generate-calculator-token
+router.post('/:id/generate-calculator-token', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    // Генерируем новый уникальный токен для калькулятора
+    const calculatorToken = uuidv4();
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { calculatorToken },
+    });
+
+    await auditLog(req, 'GENERATE_CALCULATOR_TOKEN', {
+      action: 'GENERATE_CALCULATOR_TOKEN',
+      entityType: 'Event',
+      entityId: id,
+      newValue: { calculatorToken },
+    });
+
+    res.json({
+      message: 'Calculator token generated successfully',
+      calculatorToken: updatedEvent.calculatorToken,
+    });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
 // DELETE /api/events/:id
 router.delete('/:id', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
   try {

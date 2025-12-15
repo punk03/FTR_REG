@@ -1405,9 +1405,26 @@ export const Admin: React.FC = () => {
                               </IconButton>
                             </Box>
                           ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              Не создан
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                Не создан
+                              </Typography>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={async () => {
+                                  try {
+                                    const response = await api.post(`/api/events/${event.id}/generate-calculator-token`);
+                                    showSuccess('Токен калькулятора успешно создан');
+                                    fetchEvents();
+                                  } catch (error: any) {
+                                    showError(error.response?.data?.error || 'Ошибка создания токена');
+                                  }
+                                }}
+                              >
+                                Создать
+                              </Button>
+                            </Box>
                           )}
                         </TableCell>
                         <TableCell>
