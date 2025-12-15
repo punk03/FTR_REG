@@ -1303,35 +1303,37 @@ export const Accounting: React.FC = () => {
                 </Box>
               ) : (
                 // Десктопная версия с таблицей
-                <TableContainer sx={{ width: '100%', overflowX: 'auto' }}>
-                  <Table size="small">
+                <TableContainer sx={{ width: '100%', overflowX: 'auto', borderRadius: 1 }}>
+                  <Table size="small" sx={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                     <TableHead>
-                      <TableRow>
-                        <TableCell>
+                      <TableRow sx={{ backgroundColor: 'primary.dark' }}>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>
                           <TableSortLabel
                             active={sortBy === 'createdAt'}
                             direction={sortBy === 'createdAt' ? sortOrder : 'asc'}
                             onClick={() => handleSort('createdAt')}
+                            sx={{ color: 'white !important', '& .MuiTableSortLabel-icon': { color: 'white !important' } }}
                           >
                             Название / Дата
                           </TableSortLabel>
                         </TableCell>
-                        <TableCell>Номер регистрации</TableCell>
-                        <TableCell>Коллектив</TableCell>
-                        <TableCell>Название танца</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Номер регистрации</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Коллектив</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Название танца</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>
                           <TableSortLabel
                             active={sortBy === 'amount'}
                             direction={sortBy === 'amount' ? sortOrder : 'asc'}
                             onClick={() => handleSort('amount')}
+                            sx={{ color: 'white !important', '& .MuiTableSortLabel-icon': { color: 'white !important' } }}
                           >
                             Сумма
                           </TableSortLabel>
                         </TableCell>
-                        <TableCell>Откат</TableCell>
-                        <TableCell>Категория</TableCell>
-                        <TableCell>Способ оплаты</TableCell>
-                        <TableCell>Действия</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Откат</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Категория</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Способ оплаты</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 600, borderBottom: 'none', py: 1.5 }}>Действия</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
