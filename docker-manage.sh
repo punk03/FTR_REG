@@ -249,19 +249,67 @@ install_updates() {
         echo -e "${GREEN}✓ Volume PostgreSQL подтверждён после обновления${NC}"
     fi
     
-    if [ $? -eq 0 ]; then
-        echo ""
-        echo -e "${GREEN}✓ Контейнеры успешно пересобраны и запущены${NC}"
-        echo ""
-        echo -e "${YELLOW}Статус контейнеров:${NC}"
-        docker-compose ps 2>/dev/null || docker compose ps
+    echo ""
+    echo -e "${GREEN}✓ Контейнеры успешно пересобраны и запущены${NC}"
+    echo ""
+    echo -e "${YELLOW}Статус контейнеров:${NC}"
+    docker-compose ps 2>/dev/null || docker compose ps
+    
+    # Проверяем, что postgres работает и данные доступны
+    echo ""
+    echo -e "${YELLOW}Проверка доступности БД...${NC}"
+    sleep 5  # Даём время БД на полную инициализацию
+    
+    if docker ps --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
+        echo -e "${GREEN}✓ Контейнер PostgreSQL запущен${NC}"
         
-        echo ""
-        echo -e "${YELLOW}Логи последних 20 строк:${NC}"
-        docker-compose logs --tail=20 2>/dev/null || docker compose logs --tail=20
+        # Ждём, пока БД станет доступной
+        db_available=false
+        for i in {1..10}; do
+            if docker exec ftr_postgres psql -U ${POSTGRES_USER:-ftr_user} -d ${POSTGRES_DB:-ftr_db} -c "SELECT 1" > /dev/null 2>&1; then
+                echo -e "${GREEN}✓ База данных доступна и работает${NC}"
+                db_available=true
+                
+                # Проверяем наличие таблиц
+                table_count=$(docker exec ftr_postgres psql -U ${POSTGRES_USER:-ftr_user} -d ${POSTGRES_DB:-ftr_db} -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ')
+                if [ -n "$table_count" ] && [ "$table_count" -gt "0" ]; then
+                    echo -e "${GREEN}✓ В базе данных найдено таблиц: ${table_count}${NC}"
+                    
+                    # Проверяем наличие данных в основных таблицах
+                    event_count=$(docker exec ftr_postgres psql -U ${POSTGRES_USER:-ftr_user} -d ${POSTGRES_DB:-ftr_db} -t -c "SELECT COUNT(*) FROM \"Event\";" 2>/dev/null | tr -d ' ')
+                    if [ -n "$event_count" ]; then
+                        echo -e "${GREEN}✓ Событий в БД: ${event_count}${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⚠ В базе данных нет таблиц (возможно, БД пустая или миграции не применены)${NC}"
+                    echo -e "${YELLOW}⚠ Проверьте логи backend для информации о миграциях${NC}"
+                fi
+                break
+            else
+                if [ $i -eq 10 ]; then
+                    echo -e "${RED}✗ База данных недоступна после 10 попыток!${NC}"
+                    echo -e "${YELLOW}Проверьте логи PostgreSQL:${NC}"
+                    docker-compose logs --tail=30 postgres 2>/dev/null || docker compose logs --tail=30 postgres
+                else
+                    sleep 2
+                fi
+            fi
+        done
+        
+        if [ "$db_available" = false ]; then
+            echo -e "${RED}✗ ВНИМАНИЕ: База данных недоступна!${NC}"
+            echo -e "${YELLOW}Проверьте логи PostgreSQL выше${NC}"
+        fi
     else
-        echo -e "${RED}✗ Ошибка при пересборке контейнеров!${NC}"
+        echo -e "${RED}✗ Контейнер PostgreSQL не запущен!${NC}"
+        echo -e "${YELLOW}Попытка запуска...${NC}"
+        docker-compose up -d postgres 2>/dev/null || docker compose up -d postgres
+        sleep 5
     fi
+    
+    echo ""
+    echo -e "${YELLOW}Логи последних 20 строк backend:${NC}"
+    docker-compose logs --tail=20 backend 2>/dev/null || docker compose logs --tail=20 backend
     
     echo ""
     read -p "Нажмите Enter для продолжения..."
