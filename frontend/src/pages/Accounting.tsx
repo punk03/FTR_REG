@@ -1344,7 +1344,10 @@ export const Accounting: React.FC = () => {
                               {/* Заголовок группы */}
                               <TableRow sx={{ 
                                 backgroundColor: item.isDeleted ? 'error.light' : 'primary.light',
-                                opacity: item.isDeleted ? 0.7 : 1
+                                opacity: item.isDeleted ? 0.7 : 1,
+                                borderLeft: item.isDeleted ? '4px solid' : '4px solid',
+                                borderColor: item.isDeleted ? 'error.main' : 'primary.main',
+                                boxShadow: item.isDeleted ? 'none' : '0 2px 4px rgba(0,0,0,0.1)'
                               }}>
                                 <TableCell colSpan={9}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1473,7 +1476,13 @@ export const Accounting: React.FC = () => {
                                               key={`${regId}-performance`}
                                               sx={{ 
                                                 backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(25, 118, 210, 0.05)',
-                                                opacity: firstEntry.deletedAt ? 0.7 : 1
+                                                borderLeft: '4px solid',
+                                                borderColor: firstEntry.deletedAt ? 'error.main' : 'primary.main',
+                                                opacity: firstEntry.deletedAt ? 0.7 : 1,
+                                                transition: 'all 0.2s ease-in-out',
+                                                '&:hover': {
+                                                  backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(25, 118, 210, 0.08)'
+                                                }
                                               }}
                                             >
                                               <TableCell sx={{ pl: 6 }}>
