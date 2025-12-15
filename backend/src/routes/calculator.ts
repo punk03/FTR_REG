@@ -82,12 +82,16 @@ router.post('/:token/calculate', async (req: Request, res: Response): Promise<vo
     }
 
     const regularCount = Math.max(0, (participantsCount || 0) - (federationParticipantsCount || 0));
-    const regularPrice = Number(eventPrice.pricePerParticipant) * regularCount;
-    const federationPrice = Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant) * (federationParticipantsCount || 0);
+    const pricePerRegularParticipant = Number(eventPrice.pricePerParticipant);
+    const pricePerFederationParticipant = Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant);
+    const regularPrice = pricePerRegularParticipant * regularCount;
+    const federationPrice = pricePerFederationParticipant * (federationParticipantsCount || 0);
     const performancePrice = regularPrice + federationPrice;
 
-    const diplomasPrice = event.pricePerDiploma && diplomasCount ? Number(event.pricePerDiploma) * diplomasCount : 0;
-    const medalsPrice = event.pricePerMedal && medalsCount ? Number(event.pricePerMedal) * medalsCount : 0;
+    const pricePerDiploma = event.pricePerDiploma ? Number(event.pricePerDiploma) : 0;
+    const pricePerMedal = event.pricePerMedal ? Number(event.pricePerMedal) : 0;
+    const diplomasPrice = pricePerDiploma && diplomasCount ? pricePerDiploma * diplomasCount : 0;
+    const medalsPrice = pricePerMedal && medalsCount ? pricePerMedal * medalsCount : 0;
 
     const totalPrice = performancePrice + diplomasPrice + medalsPrice;
 
@@ -99,12 +103,18 @@ router.post('/:token/calculate', async (req: Request, res: Response): Promise<vo
       breakdown: {
         regularParticipants: regularCount,
         regularPrice,
+        pricePerRegularParticipant,
         federationParticipants: federationParticipantsCount || 0,
         federationPrice,
+        pricePerFederationParticipant,
         diplomasCount: diplomasCount || 0,
         diplomasPrice,
+        pricePerDiploma,
         medalsCount: medalsCount || 0,
         medalsPrice,
+        pricePerMedal,
+        nominationName: eventPrice.nomination.name,
+        totalParticipants: participantsCount || 0,
       },
     });
   } catch (error) {
