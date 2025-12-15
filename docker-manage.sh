@@ -107,6 +107,52 @@ update_repository() {
     read -p "Нажмите Enter для продолжения..."
 }
 
+# Функция для создания резервной копии БД
+backup_database() {
+    local backup_dir="./backups"
+    local timestamp=$(date +"%Y%m%d_%H%M%S")
+    local backup_file="${backup_dir}/db_backup_${timestamp}.sql"
+    
+    mkdir -p "$backup_dir"
+    
+    echo -e "${YELLOW}Создание резервной копии БД...${NC}"
+    
+    # Проверяем, запущен ли контейнер PostgreSQL
+    if docker ps --format '{{.Names}}' | grep -q "^ftr_postgres$"; then
+        # Создаём резервную копию через pg_dump
+        docker exec ftr_postgres pg_dump -U ${POSTGRES_USER:-ftr_user} -d ${POSTGRES_DB:-ftr_db} > "$backup_file" 2>/dev/null
+        
+        if [ $? -eq 0 ] && [ -s "$backup_file" ]; then
+            echo -e "${GREEN}✓ Резервная копия создана: ${backup_file}${NC}"
+            # Удаляем старые резервные копии (оставляем последние 5)
+            ls -t "${backup_dir}"/db_backup_*.sql 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null
+            return 0
+        else
+            echo -e "${YELLOW}⚠ Не удалось создать резервную копию (БД может быть пустой или контейнер не готов)${NC}"
+            rm -f "$backup_file" 2>/dev/null
+            return 1
+        fi
+    else
+        echo -e "${YELLOW}⚠ Контейнер PostgreSQL не запущен, резервная копия не создана${NC}"
+        return 1
+    fi
+}
+
+# Функция для проверки существования volumes
+check_volumes() {
+    local postgres_volume="ftr_reg_postgres_data"
+    local redis_volume="ftr_reg_redis_data"
+    
+    # Проверяем существование volume для PostgreSQL
+    if docker volume ls --format '{{.Name}}' | grep -q "^${postgres_volume}$"; then
+        echo -e "${GREEN}✓ Volume PostgreSQL найден: ${postgres_volume}${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}⚠ Volume PostgreSQL не найден: ${postgres_volume}${NC}"
+        return 1
+    fi
+}
+
 # Функция 3: Установка обновлений
 install_updates() {
     show_header
@@ -120,9 +166,33 @@ install_updates() {
         return
     fi
     
+    # Проверяем существование volumes перед обновлением
+    echo -e "${YELLOW}Проверка volumes БД...${NC}"
+    check_volumes
+    volume_exists=$?
+    
+    # Создаём резервную копию БД перед обновлением
+    backup_database
+    
+    echo ""
+    echo -e "${BLUE}⚠ ВАЖНО: При обновлении volumes НЕ будут удалены${NC}"
+    echo -e "${BLUE}⚠ Используется команда 'docker-compose down' БЕЗ флага -v${NC}"
+    echo ""
+    
     echo -e "${YELLOW}Остановка текущих контейнеров (volumes сохраняются)...${NC}"
-    # Важно: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
+    # КРИТИЧЕСКИ ВАЖНО: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
+    # Явно указываем, что volumes должны быть сохранены
     docker-compose down 2>/dev/null || docker compose down
+    
+    # Дополнительная проверка: убеждаемся, что volumes не были удалены
+    if [ $volume_exists -eq 0 ]; then
+        if ! docker volume ls --format '{{.Name}}' | grep -q "^ftr_reg_postgres_data$"; then
+            echo -e "${RED}✗ КРИТИЧЕСКАЯ ОШИБКА: Volume PostgreSQL был удалён!${NC}"
+            echo -e "${RED}✗ Это не должно было произойти при использовании 'docker-compose down' без -v${NC}"
+            read -p "Нажмите Enter для продолжения..."
+            return 1
+        fi
+    fi
     
     echo ""
     echo -e "${GREEN}✓ Контейнеры остановлены, данные БД сохранены${NC}"
@@ -249,6 +319,15 @@ quick_update() {
     echo -e "${GREEN}=== Быстрое обновление ===${NC}"
     echo ""
     echo -e "${BLUE}⚠ ВАЖНО: Данные БД будут сохранены (volumes не удаляются)${NC}"
+    echo -e "${BLUE}⚠ Перед обновлением будет создана резервная копия БД${NC}"
+    echo ""
+    read -p "Продолжить обновление? (y/n): " confirm
+    if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+        echo -e "${YELLOW}Обновление отменено${NC}"
+        sleep 2
+        return
+    fi
+    
     echo ""
     echo -e "${YELLOW}Шаг 1: Обновление репозитория...${NC}"
     update_repository_silent
@@ -325,7 +404,8 @@ main_menu() {
             7)
                 show_header
                 echo -e "${YELLOW}Остановка всех контейнеров (volumes сохраняются)...${NC}"
-                # Важно: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
+                echo -e "${BLUE}⚠ ВАЖНО: Volumes НЕ будут удалены${NC}"
+                # КРИТИЧЕСКИ ВАЖНО: НЕ используем флаг -v или --volumes, чтобы сохранить данные БД
                 docker-compose down 2>/dev/null || docker compose down
                 echo -e "${GREEN}✓ Контейнеры остановлены, данные БД сохранены${NC}"
                 sleep 2
