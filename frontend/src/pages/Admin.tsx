@@ -2637,6 +2637,50 @@ export const Admin: React.FC = () => {
                 helperText="Настройте уровни откатов в зависимости от общей суммы выступлений"
               />
             </Grid>
+            {selectedEvent && selectedEvent.calculatorToken && (
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                    Ссылка на калькулятор:
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <LinkIcon fontSize="small" color="primary" />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        flex: 1,
+                        minWidth: 200,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                      }}
+                      onClick={() => {
+                        const url = `${window.location.origin}/calculator/${selectedEvent.calculatorToken}`;
+                        window.open(url, '_blank');
+                      }}
+                      title={`${window.location.origin}/calculator/${selectedEvent.calculatorToken}`}
+                    >
+                      {`${window.location.origin}/calculator/${selectedEvent.calculatorToken}`}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        const url = `${window.location.origin}/calculator/${selectedEvent.calculatorToken}`;
+                        navigator.clipboard.writeText(url);
+                        showSuccess('Ссылка скопирована в буфер обмена');
+                      }}
+                      title="Скопировать ссылку"
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </Grid>
+            )}
           </Grid>
         </DialogContent>
         <DialogActions>
