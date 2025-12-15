@@ -668,7 +668,14 @@ export const RegistrationsList: React.FC = () => {
           ))
         ) : registrations.length === 0 ? (
           <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography>Нет регистраций</Typography>
+            <Typography variant="body1" color="text.secondary">
+              {selectedEventId ? `Нет регистраций для выбранного события` : 'Выберите событие для просмотра регистраций'}
+            </Typography>
+            {selectedEventId && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Проверьте фильтры или выберите другое событие
+              </Typography>
+            )}
           </Paper>
         ) : (
           <>
