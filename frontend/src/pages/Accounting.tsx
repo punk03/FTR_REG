@@ -1533,7 +1533,13 @@ export const Accounting: React.FC = () => {
                                               key={`${regId}-diplomas`}
                                               sx={{ 
                                                 backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(156, 39, 176, 0.05)',
-                                                opacity: firstEntry.deletedAt ? 0.7 : 1
+                                                borderLeft: '4px solid',
+                                                borderColor: firstEntry.deletedAt ? 'error.main' : 'secondary.main',
+                                                opacity: firstEntry.deletedAt ? 0.7 : 1,
+                                                transition: 'all 0.2s ease-in-out',
+                                                '&:hover': {
+                                                  backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(156, 39, 176, 0.08)'
+                                                }
                                               }}
                                             >
                                               <TableCell sx={{ pl: 6 }}>
@@ -1705,12 +1711,31 @@ export const Accounting: React.FC = () => {
                             : (entry.description || `Платеж #${entry.id}`);
                           const paymentTime = formatTime(entry.createdAt);
                           
+                          // Определяем цвет в зависимости от типа оплаты
+                          const getRowColor = () => {
+                            if (isDeleted) return { bg: 'rgba(211, 47, 47, 0.1)', border: 'error.main' };
+                            if (entry.paidFor === 'PERFORMANCE') {
+                              return { bg: 'rgba(25, 118, 210, 0.05)', border: 'primary.light' };
+                            } else if (entry.paidFor === 'DIPLOMAS_MEDALS') {
+                              return { bg: 'rgba(156, 39, 176, 0.05)', border: 'secondary.light' };
+                            }
+                            return { bg: 'inherit', border: 'transparent' };
+                          };
+                          
+                          const rowColors = getRowColor();
+                          
                           return (
                             <TableRow 
                               key={entry.id}
                               sx={{ 
-                                backgroundColor: isDeleted ? 'error.light' : 'inherit',
-                                opacity: isDeleted ? 0.7 : 1
+                                backgroundColor: rowColors.bg,
+                                borderLeft: `4px solid ${rowColors.border}`,
+                                opacity: isDeleted ? 0.7 : 1,
+                                transition: 'all 0.2s ease-in-out',
+                                '&:hover': {
+                                  backgroundColor: isDeleted ? rowColors.bg : 'rgba(0,0,0,0.02)',
+                                  boxShadow: isDeleted ? 'none' : '0 2px 8px rgba(0,0,0,0.1)'
+                                }
                               }}
                             >
                               <TableCell>
