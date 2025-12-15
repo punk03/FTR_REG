@@ -67,6 +67,9 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
       ];
     }
 
+    console.log('[Registrations API] Query params:', { eventId, search, paymentStatus, registrationStatus, dateFrom, dateTo, page, limit });
+    console.log('[Registrations API] Where clause:', JSON.stringify(where, null, 2));
+
     const [registrations, total] = await Promise.all([
       prisma.registration.findMany({
         where,
@@ -88,6 +91,8 @@ router.get('/', authenticateToken, async (req: Request, res: Response): Promise<
       }),
       prisma.registration.count({ where }),
     ]);
+
+    console.log(`[Registrations API] Found ${total} total registrations, returning ${registrations.length} (eventId: ${eventId || 'all'})`);
 
     res.json({
       registrations,

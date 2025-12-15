@@ -115,13 +115,17 @@ export const RegistrationsList: React.FC = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await api.get('/api/reference/events?status=ACTIVE');
+        // Загружаем все события (ACTIVE, DRAFT, ARCHIVED), чтобы видеть все регистрации
+        const response = await api.get('/api/reference/events');
         setEvents(response.data);
         if (response.data.length > 0 && !selectedEventId) {
-          setSelectedEventId(response.data[0].id);
+          // Предпочитаем ACTIVE события, но если их нет, выбираем первое доступное
+          const activeEvent = response.data.find((e: Event) => e.status === 'ACTIVE');
+          setSelectedEventId(activeEvent ? activeEvent.id : response.data[0].id);
         }
       } catch (error) {
         console.error('Error fetching events:', error);
+        showError('Не удалось загрузить список событий');
       }
     };
     fetchEvents();
@@ -161,9 +165,26 @@ export const RegistrationsList: React.FC = () => {
 
       const response = await api.get('/api/registrations', { params });
       const regs = response.data.registrations || [];
+      console.log(`[RegistrationsList] Loaded ${regs.length} registrations for event ${selectedEventId}`);
+      console.log('[RegistrationsList] Response data:', response.data);
       setRegistrations(regs);
-    } catch (error) {
+      
+      if (regs.length === 0 && selectedEventId) {
+        console.warn(`[RegistrationsList] No registrations found for event ${selectedEventId}`);
+        // Показываем предупреждение только если событие выбрано и данных нет
+        if (response.data.pagination?.total === 0) {
+          console.warn('[RegistrationsList] Total registrations in response: 0');
+        }
+      }
+    } catch (error: any) {
       console.error('Error fetching registrations:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      showError(error.response?.data?.error || 'Не удалось загрузить регистрации');
+      setRegistrations([]);
     } finally {
       setLoading(false);
     }
