@@ -897,10 +897,11 @@ export const Accounting: React.FC = () => {
                                 {/* Записи по регистрациям */}
                                 {Object.entries(groupedByRegistration).map(([regId, entries]: [string, any[]]) => {
                                   const firstEntry = entries[0];
-                                  const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
-                                  const totalDiscount = entries.reduce((sum, e) => sum + Number(e.discountAmount || 0), 0);
                                   const performanceEntries = entries.filter((e: any) => e.paidFor === 'PERFORMANCE');
                                   const diplomasEntries = entries.filter((e: any) => e.paidFor === 'DIPLOMAS_MEDALS');
+                                  const performanceAmount = performanceEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+                                  const diplomasAmount = diplomasEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+                                  const performanceDiscount = performanceEntries.reduce((sum, e) => sum + Number(e.discountAmount || 0), 0);
                                   const entryTime = formatTime(firstEntry.createdAt);
                                   
                                   return (
@@ -951,30 +952,29 @@ export const Accounting: React.FC = () => {
                                               )}
                                             </>
                                           )}
-                                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.85rem', sm: '0.9rem' }, mt: 0.5 }}>
-                                            Сумма: {formatCurrency(totalAmount)}
-                                          </Typography>
-                                          {totalDiscount > 0 && (
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
-                                              Откат: {formatCurrency(totalDiscount)}
-                                            </Typography>
+                                          
+                                          {/* Выступление */}
+                                          {performanceEntries.length > 0 && (
+                                            <Box sx={{ mt: 1, p: 1, backgroundColor: 'rgba(25, 118, 210, 0.08)', borderRadius: 1 }}>
+                                              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.85rem' }, mb: 0.5 }}>
+                                                Выступление: {formatCurrency(performanceAmount)}
+                                              </Typography>
+                                              {performanceDiscount > 0 && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+                                                  Откат: {formatCurrency(performanceDiscount)}
+                                                </Typography>
+                                              )}
+                                            </Box>
                                           )}
-                                          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                                            {performanceEntries.length > 0 && (
-                                              <Chip 
-                                                label="Выступление" 
-                                                size="small" 
-                                                sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                                              />
-                                            )}
-                                            {diplomasEntries.length > 0 && (
-                                              <Chip 
-                                                label="Дипломы и медали" 
-                                                size="small" 
-                                                sx={{ height: { xs: 20, sm: 22 }, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                                              />
-                                            )}
-                                          </Stack>
+                                          
+                                          {/* Дипломы и медали */}
+                                          {diplomasEntries.length > 0 && (
+                                            <Box sx={{ mt: performanceEntries.length > 0 ? 0.5 : 1, p: 1, backgroundColor: 'rgba(156, 39, 176, 0.08)', borderRadius: 1 }}>
+                                              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.8rem', sm: '0.85rem' }}>
+                                                Дипломы и медали: {formatCurrency(diplomasAmount)}
+                                              </Typography>
+                                            </Box>
+                                          )}
                                         </Stack>
                                       </CardContent>
                                     </Card>
@@ -1384,80 +1384,133 @@ export const Accounting: React.FC = () => {
                                     {/* Записи по регистрациям */}
                                     {Object.entries(groupedByRegistration).map(([regId, entries]: [string, any[]]) => {
                                       const firstEntry = entries[0];
-                                      const totalAmount = entries.reduce((sum, e) => sum + Number(e.amount), 0);
-                                      const totalDiscount = entries.reduce((sum, e) => sum + Number(e.discountAmount || 0), 0);
                                       const performanceEntries = entries.filter((e: any) => e.paidFor === 'PERFORMANCE');
                                       const diplomasEntries = entries.filter((e: any) => e.paidFor === 'DIPLOMAS_MEDALS');
+                                      const performanceAmount = performanceEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+                                      const diplomasAmount = diplomasEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+                                      const performanceDiscount = performanceEntries.reduce((sum, e) => sum + Number(e.discountAmount || 0), 0);
                                       const entryTime = formatTime(firstEntry.createdAt);
                                       
                                       return (
-                                        <TableRow 
-                                          key={regId} 
-                                          sx={{ 
-                                            backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(0, 0, 0, 0.02)',
-                                            opacity: firstEntry.deletedAt ? 0.7 : 1
-                                          }}
-                                        >
-                                          <TableCell sx={{ pl: 6 }}>
-                                            <Box>
-                                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                                {firstEntry.registration?.danceName || '-'}
-                                              </Typography>
-                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                                {formatDate(firstEntry.createdAt)} {entryTime}
-                                              </Typography>
-                                            </Box>
-                                          </TableCell>
-                                          <TableCell>
-                                            {firstEntry.registration ? formatRegistrationNumber(firstEntry.registration) : '-'}
-                                          </TableCell>
-                                          <TableCell>
-                                            {firstEntry.collective?.name || firstEntry.registration?.collective?.name || '-'}
-                                          </TableCell>
-                                          <TableCell>{firstEntry.registration?.danceName || '-'}</TableCell>
-                                          <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(totalAmount)}</TableCell>
-                                          <TableCell>{totalDiscount > 0 ? formatCurrency(totalDiscount) : '-'}</TableCell>
-                                          <TableCell>
-                                            <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
-                                              {performanceEntries.length > 0 && (
+                                        <React.Fragment key={regId}>
+                                          {/* Выступление */}
+                                          {performanceEntries.length > 0 && (
+                                            <TableRow 
+                                              sx={{ 
+                                                backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(25, 118, 210, 0.05)',
+                                                opacity: firstEntry.deletedAt ? 0.7 : 1
+                                              }}
+                                            >
+                                              <TableCell sx={{ pl: 6 }}>
+                                                <Box>
+                                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    {firstEntry.registration?.danceName || '-'}
+                                                  </Typography>
+                                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                    {formatDate(firstEntry.createdAt)} {entryTime}
+                                                  </Typography>
+                                                </Box>
+                                              </TableCell>
+                                              <TableCell>
+                                                {firstEntry.registration ? formatRegistrationNumber(firstEntry.registration) : '-'}
+                                              </TableCell>
+                                              <TableCell>
+                                                {firstEntry.collective?.name || firstEntry.registration?.collective?.name || '-'}
+                                              </TableCell>
+                                              <TableCell>{firstEntry.registration?.danceName || '-'}</TableCell>
+                                              <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(performanceAmount)}</TableCell>
+                                              <TableCell>{performanceDiscount > 0 ? formatCurrency(performanceDiscount) : '-'}</TableCell>
+                                              <TableCell>
                                                 <Chip 
                                                   label="Выступление" 
                                                   size="small" 
+                                                  color="primary"
                                                   sx={{ height: 24, fontSize: '0.7rem' }}
                                                 />
-                                              )}
-                                              {diplomasEntries.length > 0 && (
+                                              </TableCell>
+                                              <TableCell>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                  -
+                                                </Typography>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                                  {!firstEntry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                                    <>
+                                                      <IconButton size="small" onClick={() => handleEdit(firstEntry)} title="Редактировать">
+                                                        <EditIcon fontSize="small" />
+                                                      </IconButton>
+                                                      {user?.role === 'ADMIN' && (
+                                                        <IconButton size="small" onClick={() => handleDeleteClick(firstEntry.id)} title="Удалить">
+                                                          <DeleteIcon fontSize="small" />
+                                                        </IconButton>
+                                                      )}
+                                                    </>
+                                                  )}
+                                                </Box>
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                          
+                                          {/* Дипломы и медали */}
+                                          {diplomasEntries.length > 0 && (
+                                            <TableRow 
+                                              sx={{ 
+                                                backgroundColor: firstEntry.deletedAt ? 'rgba(211, 47, 47, 0.1)' : 'rgba(156, 39, 176, 0.05)',
+                                                opacity: firstEntry.deletedAt ? 0.7 : 1
+                                              }}
+                                            >
+                                              <TableCell sx={{ pl: 6 }}>
+                                                <Box>
+                                                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                                    {firstEntry.registration?.danceName || '-'}
+                                                  </Typography>
+                                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                    {formatDate(firstEntry.createdAt)} {entryTime}
+                                                  </Typography>
+                                                </Box>
+                                              </TableCell>
+                                              <TableCell>
+                                                {firstEntry.registration ? formatRegistrationNumber(firstEntry.registration) : '-'}
+                                              </TableCell>
+                                              <TableCell>
+                                                {firstEntry.collective?.name || firstEntry.registration?.collective?.name || '-'}
+                                              </TableCell>
+                                              <TableCell>{firstEntry.registration?.danceName || '-'}</TableCell>
+                                              <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(diplomasAmount)}</TableCell>
+                                              <TableCell>-</TableCell>
+                                              <TableCell>
                                                 <Chip 
                                                   label="Дипломы и медали" 
                                                   size="small" 
+                                                  color="secondary"
                                                   sx={{ height: 24, fontSize: '0.7rem' }}
                                                 />
-                                              )}
-                                            </Stack>
-                                          </TableCell>
-                                          <TableCell>
-                                            {/* Способ оплаты не показываем для отдельных регистраций */}
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                              -
-                                            </Typography>
-                                          </TableCell>
-                                          <TableCell>
-                                            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                                              {!firstEntry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
-                                                <>
-                                                  <IconButton size="small" onClick={() => handleEdit(firstEntry)} title="Редактировать">
-                                                    <EditIcon fontSize="small" />
-                                                  </IconButton>
-                                                  {user?.role === 'ADMIN' && (
-                                                    <IconButton size="small" onClick={() => handleDeleteClick(firstEntry.id)} title="Удалить">
-                                                      <DeleteIcon fontSize="small" />
-                                                    </IconButton>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                                  -
+                                                </Typography>
+                                              </TableCell>
+                                              <TableCell>
+                                                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                                                  {!firstEntry.deletedAt && (user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT') && (
+                                                    <>
+                                                      <IconButton size="small" onClick={() => handleEdit(firstEntry)} title="Редактировать">
+                                                        <EditIcon fontSize="small" />
+                                                      </IconButton>
+                                                      {user?.role === 'ADMIN' && (
+                                                        <IconButton size="small" onClick={() => handleDeleteClick(firstEntry.id)} title="Удалить">
+                                                          <DeleteIcon fontSize="small" />
+                                                        </IconButton>
+                                                      )}
+                                                    </>
                                                   )}
-                                                </>
-                                              )}
-                                            </Box>
-                                          </TableCell>
-                                        </TableRow>
+                                                </Box>
+                                              </TableCell>
+                                            </TableRow>
+                                          )}
+                                        </React.Fragment>
                                       );
                                     })}
                                     
