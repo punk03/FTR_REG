@@ -371,49 +371,144 @@ export const Calculator: React.FC = () => {
             {calculationResult && (
               <>
                 <Divider sx={{ my: 4 }} />
+                
+                {/* Детальная информация о стоимости */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+                    Детальный расчет стоимости
+                  </Typography>
+                  
+                  {/* Выступление */}
+                  <Card sx={{ mb: 2, backgroundColor: 'primary.light', color: 'white' }}>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        Выступление: {formatCurrency(calculationResult.performancePrice)}
+                      </Typography>
+                      
+                      <Box sx={{ pl: 2 }}>
+                        {calculationResult.breakdown.regularParticipants > 0 && (
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                              Обычные участники: {calculationResult.breakdown.regularParticipants} чел. ×{' '}
+                              {formatCurrency(
+                                calculationResult.breakdown.regularPrice / calculationResult.breakdown.regularParticipants
+                              )}{' '}
+                              = {formatCurrency(calculationResult.breakdown.regularPrice)}
+                            </Typography>
+                          </Box>
+                        )}
+                        {calculationResult.breakdown.federationParticipants > 0 && (
+                          <Box sx={{ mb: 1 }}>
+                            <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                              Федеральные участники: {calculationResult.breakdown.federationParticipants} чел. ×{' '}
+                              {formatCurrency(
+                                calculationResult.breakdown.federationPrice / calculationResult.breakdown.federationParticipants
+                              )}{' '}
+                              = {formatCurrency(calculationResult.breakdown.federationPrice)}
+                            </Typography>
+                          </Box>
+                        )}
+                        <Typography variant="body2" sx={{ mt: 1, fontWeight: 500, opacity: 0.95 }}>
+                          Номинация: {getNominationByParticipants(participantsCount)}
+                        </Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                          Всего участников: {participantsCount} чел.
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+
+                  {/* Дипломы */}
+                  {calculationResult.diplomasPrice > 0 && (
+                    <Card sx={{ mb: 2, backgroundColor: 'info.light', color: 'white' }}>
+                      <CardContent>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          Дипломы: {formatCurrency(calculationResult.diplomasPrice)}
+                        </Typography>
+                        <Box sx={{ pl: 2 }}>
+                          <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                            Количество: {calculationResult.breakdown.diplomasCount} шт. ×{' '}
+                            {formatCurrency(calculationResult.breakdown.pricePerDiploma || 0)} ={' '}
+                            {formatCurrency(calculationResult.diplomasPrice)}
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Медали */}
+                  {calculationResult.medalsPrice > 0 && (
+                    <Card sx={{ mb: 2, backgroundColor: 'warning.light', color: 'white' }}>
+                      <CardContent>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          Медали: {formatCurrency(calculationResult.medalsPrice)}
+                        </Typography>
+                        <Box sx={{ pl: 2 }}>
+                          <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                            Количество: {calculationResult.breakdown.medalsCount} шт. ×{' '}
+                            {formatCurrency(calculationResult.breakdown.pricePerMedal || 0)} ={' '}
+                            {formatCurrency(calculationResult.medalsPrice)}
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  )}
+                </Box>
+
+                {/* Итоговая сумма */}
                 <Card
                   sx={{
-                    backgroundColor: 'success.light',
+                    backgroundColor: 'success.main',
                     color: 'white',
-                    boxShadow: '0 4px 20px rgba(76, 175, 80, 0.3)',
+                    boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)',
                   }}
                 >
                   <CardContent>
-                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
-                      Итого: {formatCurrency(calculationResult.totalPrice)}
+                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
+                      Итого к оплате
                     </Typography>
-
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
-                        Выступление: {formatCurrency(calculationResult.performancePrice)}
-                      </Typography>
-                      {calculationResult.breakdown.regularParticipants > 0 && (
-                        <Typography variant="body2" sx={{ pl: 2, opacity: 0.9 }}>
-                          Обычные участники ({calculationResult.breakdown.regularParticipants}):{' '}
-                          {formatCurrency(calculationResult.breakdown.regularPrice)}
-                        </Typography>
-                      )}
-                      {calculationResult.breakdown.federationParticipants > 0 && (
-                        <Typography variant="body2" sx={{ pl: 2, opacity: 0.9 }}>
-                          Федеральные участники ({calculationResult.breakdown.federationParticipants}):{' '}
-                          {formatCurrency(calculationResult.breakdown.federationPrice)}
-                        </Typography>
-                      )}
-
+                    <Typography variant="h3" sx={{ fontWeight: 700, textAlign: 'center', color: 'white' }}>
+                      {formatCurrency(calculationResult.totalPrice)}
+                    </Typography>
+                    
+                    <Divider sx={{ my: 2, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                    
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12} sm={4}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                            Выступление
+                          </Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            {formatCurrency(calculationResult.performancePrice)}
+                          </Typography>
+                        </Box>
+                      </Grid>
                       {calculationResult.diplomasPrice > 0 && (
-                        <Typography variant="body1" sx={{ mt: 2, fontWeight: 500 }}>
-                          Дипломы ({calculationResult.breakdown.diplomasCount} шт.):{' '}
-                          {formatCurrency(calculationResult.diplomasPrice)}
-                        </Typography>
+                        <Grid item xs={12} sm={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                              Дипломы
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {formatCurrency(calculationResult.diplomasPrice)}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       )}
-
                       {calculationResult.medalsPrice > 0 && (
-                        <Typography variant="body1" sx={{ mt: 2, fontWeight: 500 }}>
-                          Медали ({calculationResult.breakdown.medalsCount} шт.):{' '}
-                          {formatCurrency(calculationResult.medalsPrice)}
-                        </Typography>
+                        <Grid item xs={12} sm={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                              Медали
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {formatCurrency(calculationResult.medalsPrice)}
+                            </Typography>
+                          </Box>
+                        </Grid>
                       )}
-                    </Box>
+                    </Grid>
                   </CardContent>
                 </Card>
               </>
