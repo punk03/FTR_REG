@@ -541,74 +541,129 @@ export const Accounting: React.FC = () => {
 
       {selectedEventId && (
         <>
-          <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ mb: 3, width: '100%' }}>
+          <Grid container spacing={{ xs: 1.5, sm: 2 }} sx={{ mb: 4, width: '100%' }}>
             <Grid item xs={6} sm={6} md={3}>
-              <Card>
+              <Card 
+                sx={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': { transform: 'translateY(-4px)' }
+                }}
+              >
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, opacity: 0.9, mb: 0.5 }}>
                     Итого получено
                   </Typography>
-                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, fontWeight: 700 }}>
                     {formatCurrency(summary.grandTotal + summary.totalDiscount)}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
             <Grid item xs={6} sm={6} md={3}>
-              <Card>
+              <Card 
+                sx={{ 
+                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  color: 'white',
+                  boxShadow: '0 4px 20px rgba(245, 87, 108, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': { transform: 'translateY(-4px)' }
+                }}
+              >
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, opacity: 0.9, mb: 0.5 }}>
                     После откатов
                   </Typography>
-                  <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, fontWeight: 700 }}>
                     {formatCurrency(summary.grandTotal)}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
             <Grid item xs={6} sm={6} md={3}>
-              <Card>
+              <Card 
+                sx={{ 
+                  background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                  color: 'white',
+                  boxShadow: '0 4px 20px rgba(250, 112, 154, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': { transform: 'translateY(-4px)' }
+                }}
+              >
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, opacity: 0.9, mb: 0.5 }}>
                     Выданные откаты
                   </Typography>
-                  <Typography variant="h6" color="error" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                  <Typography variant="h5" sx={{ fontSize: { xs: '1.1rem', sm: '1.5rem' }, fontWeight: 700 }}>
                     {formatCurrency(summary.totalDiscount)}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
             <Grid item xs={12} sm={12} md={3}>
-              <Card>
+              <Card 
+                sx={{ 
+                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                  color: 'white',
+                  boxShadow: '0 4px 20px rgba(79, 172, 254, 0.3)',
+                  transition: 'transform 0.2s ease-in-out',
+                  '&:hover': { transform: 'translateY(-4px)' }
+                }}
+              >
                 <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: 0.5 }}>
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, opacity: 0.9, mb: 1 }}>
                     Выступления
                   </Typography>
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                    Наличные: {formatCurrency(summary.performance.cash)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                    Карта: {formatCurrency(summary.performance.card)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                    Перевод: {formatCurrency(summary.performance.transfer)}
-                  </Typography>
+                  <Stack spacing={0.5}>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
+                      Наличные: {formatCurrency(summary.performance.cash)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
+                      Карта: {formatCurrency(summary.performance.card)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, fontWeight: 500 }}>
+                      Перевод: {formatCurrency(summary.performance.transfer)}
+                    </Typography>
+                  </Stack>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
 
-          <Paper sx={{ overflow: 'hidden' }}>
-            <Box sx={{ p: { xs: 1, sm: 2 }, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+          <Paper 
+            sx={{ 
+              overflow: 'hidden',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider'
+            }}
+          >
+            <Box sx={{ p: { xs: 1.5, sm: 3 }, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                mb: 2,
+                mb: 3,
+                pb: 2,
+                borderBottom: '2px solid',
+                borderColor: 'divider',
                 flexDirection: { xs: 'column', sm: 'row' },
                 gap: 2
               }}>
-                <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>Все платежи</Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontSize: { xs: '1.1rem', sm: '1.5rem' },
+                    fontWeight: 600,
+                    color: 'primary.main',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  Все платежи
+                </Typography>
                 <Box sx={{ 
                   display: 'flex', 
                   gap: 1, 
@@ -1114,6 +1169,19 @@ export const Accounting: React.FC = () => {
                       const paymentTime = formatTime(entry.createdAt);
                       const isDeleted = entry.deletedAt !== null && entry.deletedAt !== undefined;
                       
+                      // Определяем цвет в зависимости от типа оплаты
+                      const getCardColor = () => {
+                        if (isDeleted) return { border: 'error.main', bg: 'error.light' };
+                        if (entry.paidFor === 'PERFORMANCE') {
+                          return { border: 'primary.main', bg: 'rgba(25, 118, 210, 0.05)' };
+                        } else if (entry.paidFor === 'DIPLOMAS_MEDALS') {
+                          return { border: 'secondary.main', bg: 'rgba(156, 39, 176, 0.05)' };
+                        }
+                        return { border: 'divider', bg: 'background.paper' };
+                      };
+                      
+                      const cardColors = getCardColor();
+                      
                       return (
                         <Card 
                           key={entry.id} 
@@ -1121,10 +1189,16 @@ export const Accounting: React.FC = () => {
                             mb: 2, 
                             width: '100%', 
                             maxWidth: '100%',
-                            border: '1px solid',
-                            borderColor: isDeleted ? 'error.main' : 'divider',
-                            backgroundColor: isDeleted ? 'error.light' : 'background.paper',
-                            opacity: isDeleted ? 0.7 : 1
+                            border: '2px solid',
+                            borderColor: cardColors.border,
+                            backgroundColor: cardColors.bg,
+                            opacity: isDeleted ? 0.7 : 1,
+                            boxShadow: isDeleted ? 'none' : '0 2px 8px rgba(0,0,0,0.1)',
+                            transition: 'all 0.2s ease-in-out',
+                            '&:hover': {
+                              boxShadow: isDeleted ? 'none' : '0 4px 12px rgba(0,0,0,0.15)',
+                              transform: isDeleted ? 'none' : 'translateY(-2px)'
+                            }
                           }}
                         >
                           <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
