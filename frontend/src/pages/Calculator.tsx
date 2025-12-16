@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Container,
@@ -77,6 +77,7 @@ export const Calculator: React.FC = () => {
   const [customMedalsCounts, setCustomMedalsCounts] = useState<Record<number, number>>({});
   const [combinedCalculationResult, setCombinedCalculationResult] = useState<any>(null);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Загрузка данных события
   useEffect(() => {
@@ -170,10 +171,10 @@ export const Calculator: React.FC = () => {
   }, [participantsCount, eventData]);
 
   // Загрузка регистраций для вкладки списка номеров
-  const fetchRegistrations = useCallback(async (searchQuery?: string) => {
+  const fetchRegistrations = useCallback(async (searchQuery?: string): Promise<void> => {
     if (!token) {
       console.error('No token provided for fetching registrations');
-      return;
+      return Promise.resolve();
     }
     
     setRegistrationsLoading(true);
@@ -704,6 +705,7 @@ export const Calculator: React.FC = () => {
                         ← Вернуться к калькулятору
                       </Button>
                       <TextField
+                        inputRef={searchInputRef}
                         fullWidth
                         size="small"
                         label="Поиск (по названию, коллективу, фамилии руководителя или тренера)"
@@ -725,6 +727,13 @@ export const Calculator: React.FC = () => {
                           }, 500);
                           
                           setSearchDebounceTimer(timer);
+                        }}
+                        onKeyDown={(e) => {
+                          // Предотвращаем submit формы при нажатии Enter
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }
                         }}
                         sx={{ maxWidth: { xs: '100%', sm: '400px' } }}
                       />
