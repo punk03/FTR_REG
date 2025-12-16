@@ -50,8 +50,8 @@ const getNominationByParticipants = (count: number): string => {
 
 export const Calculator: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  // Используем светлую тему для калькулятора (публичная страница)
-  const calculatorTheme = createAppTheme(false);
+  // Используем светлую тему для калькулятора (публичная страница) - мемоизируем
+  const calculatorTheme = useMemo(() => createAppTheme(false), []);
   const isMobile = useMediaQuery(calculatorTheme.breakpoints.down('sm'));
 
   const [currentTab, setCurrentTab] = useState<number>(0);
@@ -315,6 +315,17 @@ export const Calculator: React.FC = () => {
     );
   }
 
+  // Отфильтрованные регистрации для отображения (должно быть до раннего возврата)
+  const filteredRegistrations = useMemo(() => {
+    if (!search) return registrations;
+    const searchLower = search.toLowerCase();
+    return registrations.filter((reg: any) => {
+      const danceName = (reg.danceName || '').toLowerCase();
+      const collectiveName = (reg.collective?.name || '').toLowerCase();
+      return danceName.includes(searchLower) || collectiveName.includes(searchLower);
+    });
+  }, [registrations, search]);
+
   if (error && !eventData) {
     return (
       <ThemeProvider theme={calculatorTheme}>
@@ -325,17 +336,6 @@ export const Calculator: React.FC = () => {
       </ThemeProvider>
     );
   }
-
-  // Отфильтрованные регистрации для отображения
-  const filteredRegistrations = useMemo(() => {
-    if (!search) return registrations;
-    const searchLower = search.toLowerCase();
-    return registrations.filter((reg: any) => {
-      const danceName = (reg.danceName || '').toLowerCase();
-      const collectiveName = (reg.collective?.name || '').toLowerCase();
-      return danceName.includes(searchLower) || collectiveName.includes(searchLower);
-    });
-  }, [registrations, search]);
 
   return (
     <ThemeProvider theme={calculatorTheme}>
