@@ -122,5 +122,152 @@ router.post('/:token/calculate', async (req: Request, res: Response): Promise<vo
   }
 });
 
+// Публичный endpoint для получения списка регистраций события (без авторизации)
+// GET /api/public/calculator/:token/registrations
+router.get('/:token/registrations', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+
+    const event = await prisma.event.findUnique({
+      where: { calculatorToken: token },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    const registrations = await prisma.registration.findMany({
+      where: { eventId: event.id },
+      include: {
+        collective: true,
+        discipline: true,
+        nomination: true,
+        age: true,
+        category: true,
+        leaders: { include: { person: true } },
+        trainers: { include: { person: true } },
+      },
+      orderBy: [
+        { collective: { name: 'asc' } },
+        { createdAt: 'desc' },
+      ],
+    });
+
+    res.json({ registrations });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// Публичный endpoint для расчета объединённой оплаты (без авторизации, только расчет)
+// POST /api/public/calculator/:token/calculate-combined
+router.post('/:token/calculate-combined', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+    const { registrationIds, customDiplomasCounts, customMedalsCounts } = req.body;
+
+    const event = await prisma.event.findUnique({
+      where: { calculatorToken: token },
+      include: {
+        eventPrices: {
+          include: {
+            nomination: true,
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    if (!registrationIds || !Array.isArray(registrationIds) || registrationIds.length === 0) {
+      res.status(400).json({ error: 'Registration IDs are required' });
+      return;
+    }
+
+    // Получаем регистрации
+    const registrations = await prisma.registration.findMany({
+      where: {
+        id: { in: registrationIds.map((id: any) => parseInt(id)) },
+        eventId: event.id,
+      },
+      include: {
+        nomination: true,
+      },
+    });
+
+    if (registrations.length !== registrationIds.length) {
+      res.status(400).json({ error: 'Some registrations not found' });
+      return;
+    }
+
+    const pricePerDiploma = event.pricePerDiploma ? Number(event.pricePerDiploma) : 0;
+    const pricePerMedal = event.pricePerMedal ? Number(event.pricePerMedal) : 0;
+
+    let totalPerformancePrice = 0;
+    let totalDiplomasPrice = 0;
+    let totalMedalsPrice = 0;
+
+    const breakdown: any[] = [];
+
+    for (const reg of registrations) {
+      // Находим цену для номинации регистрации
+      const eventPrice = event.eventPrices.find((price: any) => price.nominationId === reg.nominationId);
+      
+      if (!eventPrice) {
+        continue;
+      }
+
+      const regularCount = Math.max(0, (reg.participantsCount || 0) - (reg.federationParticipantsCount || 0));
+      const pricePerRegularParticipant = Number(eventPrice.pricePerParticipant);
+      const pricePerFederationParticipant = Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant);
+      const regularPrice = pricePerRegularParticipant * regularCount;
+      const federationPrice = pricePerFederationParticipant * (reg.federationParticipantsCount || 0);
+      const regPerformancePrice = regularPrice + federationPrice;
+
+      // Используем кастомное количество дипломов/медалей если указано, иначе из регистрации
+      const diplomasCount = customDiplomasCounts?.[reg.id] !== undefined 
+        ? parseInt(customDiplomasCounts[reg.id]) || 0
+        : (reg.diplomasCount || 0);
+      const medalsCount = customMedalsCounts?.[reg.id] !== undefined
+        ? parseInt(customMedalsCounts[reg.id]) || 0
+        : (reg.medalsCount || 0);
+
+      const regDiplomasPrice = pricePerDiploma * diplomasCount;
+      const regMedalsPrice = pricePerMedal * medalsCount;
+
+      totalPerformancePrice += regPerformancePrice;
+      totalDiplomasPrice += regDiplomasPrice;
+      totalMedalsPrice += regMedalsPrice;
+
+      breakdown.push({
+        registrationId: reg.id,
+        danceName: reg.danceName,
+        collectiveName: reg.collective?.name || '',
+        performancePrice: regPerformancePrice,
+        diplomasPrice: regDiplomasPrice,
+        medalsPrice: regMedalsPrice,
+        diplomasCount,
+        medalsCount,
+      });
+    }
+
+    const totalPrice = totalPerformancePrice + totalDiplomasPrice + totalMedalsPrice;
+
+    res.json({
+      totalPrice,
+      totalPerformancePrice,
+      totalDiplomasPrice,
+      totalMedalsPrice,
+      breakdown,
+    });
+  } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
 export default router;
 

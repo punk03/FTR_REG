@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   Container,
@@ -16,6 +16,20 @@ import {
   useMediaQuery,
   ThemeProvider,
   CssBaseline,
+  Tabs,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Checkbox,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { createAppTheme } from '../theme';
 import axios from 'axios';
@@ -40,17 +54,28 @@ export const Calculator: React.FC = () => {
   const calculatorTheme = createAppTheme(false);
   const isMobile = useMediaQuery(calculatorTheme.breakpoints.down('sm'));
 
+  const [currentTab, setCurrentTab] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eventData, setEventData] = useState<any>(null);
   
+  // Состояния для основной вкладки калькулятора
   const [participantsCount, setParticipantsCount] = useState<number>(1);
   const [federationParticipantsCount, setFederationParticipantsCount] = useState<number>(0);
   const [selectedNominationId, setSelectedNominationId] = useState<number | ''>('');
   const [diplomasCount, setDiplomasCount] = useState<number>(0);
   const [medalsCount, setMedalsCount] = useState<number>(0);
-
   const [calculationResult, setCalculationResult] = useState<any>(null);
+
+  // Состояния для вкладки списка номеров
+  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [selectedRegistrations, setSelectedRegistrations] = useState<Set<number>>(new Set());
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [registrationEditData, setRegistrationEditData] = useState<Record<number, any>>({});
+  const [customDiplomasCounts, setCustomDiplomasCounts] = useState<Record<number, number>>({});
+  const [customMedalsCounts, setCustomMedalsCounts] = useState<Record<number, number>>({});
+  const [combinedCalculationResult, setCombinedCalculationResult] = useState<any>(null);
 
   // Загрузка данных события
   useEffect(() => {
@@ -143,6 +168,44 @@ export const Calculator: React.FC = () => {
     }
   }, [participantsCount, eventData]);
 
+  // Загрузка регистраций для вкладки списка номеров
+  const fetchRegistrations = useCallback(async () => {
+    if (!token) return;
+    
+    setRegistrationsLoading(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/public/calculator/${token}/registrations`);
+      const regs = response.data.registrations || [];
+      setRegistrations(regs);
+      
+      // Инициализация данных редактирования
+      const initialEditData: Record<number, any> = {};
+      regs.forEach((reg: any) => {
+        initialEditData[reg.id] = {
+          danceName: reg.danceName || '',
+          participantsCount: reg.participantsCount || 0,
+          federationParticipantsCount: reg.federationParticipantsCount || 0,
+          diplomasCount: reg.diplomasCount || 0,
+          medalsCount: reg.medalsCount || 0,
+          diplomasList: reg.diplomasList || '',
+        };
+      });
+      setRegistrationEditData(initialEditData);
+    } catch (err: any) {
+      console.error('Error fetching registrations:', err);
+      setError(err.response?.data?.error || 'Не удалось загрузить список номеров');
+    } finally {
+      setRegistrationsLoading(false);
+    }
+  }, [token]);
+
+  // Загрузка регистраций при переключении на вкладку списка номеров
+  useEffect(() => {
+    if (currentTab === 1 && registrations.length === 0 && !registrationsLoading) {
+      fetchRegistrations();
+    }
+  }, [currentTab, fetchRegistrations, registrations.length, registrationsLoading]);
+
   // Расчет стоимости
   const handleCalculate = async () => {
     if (!token || !selectedNominationId) {
@@ -162,6 +225,26 @@ export const Calculator: React.FC = () => {
     } catch (err: any) {
       console.error('Error calculating price:', err);
       setError(err.response?.data?.error || 'Ошибка при расчете стоимости');
+    }
+  };
+
+  // Расчет объединённой оплаты
+  const handleCalculateCombined = async () => {
+    if (!token || selectedRegistrations.size === 0) {
+      setError('Выберите хотя бы один номер');
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${API_URL}/api/public/calculator/${token}/calculate-combined`, {
+        registrationIds: Array.from(selectedRegistrations),
+        customDiplomasCounts,
+        customMedalsCounts,
+      });
+      setCombinedCalculationResult(response.data);
+    } catch (err: any) {
+      console.error('Error calculating combined price:', err);
+      setError(err.response?.data?.error || 'Ошибка при расчете объединённой оплаты');
     }
   };
 
@@ -195,6 +278,17 @@ export const Calculator: React.FC = () => {
       </ThemeProvider>
     );
   }
+
+  // Отфильтрованные регистрации для отображения
+  const filteredRegistrations = useMemo(() => {
+    if (!search) return registrations;
+    const searchLower = search.toLowerCase();
+    return registrations.filter((reg: any) => {
+      const danceName = (reg.danceName || '').toLowerCase();
+      const collectiveName = (reg.collective?.name || '').toLowerCase();
+      return danceName.includes(searchLower) || collectiveName.includes(searchLower);
+    });
+  }, [registrations, search]);
 
   return (
     <ThemeProvider theme={calculatorTheme}>
@@ -247,13 +341,21 @@ export const Calculator: React.FC = () => {
               </CardContent>
             </Card>
 
+            <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)} sx={{ mb: 3 }}>
+              <Tab label="Калькулятор" />
+              <Tab label="Список номеров" />
+            </Tabs>
+
             {error && (
               <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
 
-            <Grid container spacing={3}>
+            {/* Вкладка 1: Калькулятор */}
+            {currentTab === 0 && (
+              <Box>
+                <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -512,6 +614,252 @@ export const Calculator: React.FC = () => {
                   </CardContent>
                 </Card>
               </>
+            )}
+              </Box>
+            )}
+
+            {/* Вкладка 2: Список номеров */}
+            {currentTab === 1 && (
+              <Box>
+                {registrationsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <>
+                    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        label="Поиск"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        sx={{ maxWidth: { xs: '100%', sm: '300px' } }}
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={handleCalculateCombined}
+                        disabled={selectedRegistrations.size === 0}
+                        sx={{ minWidth: { xs: '100%', sm: '200px' } }}
+                      >
+                        Рассчитать выбранные ({selectedRegistrations.size})
+                      </Button>
+                    </Box>
+
+                    {filteredRegistrations.length === 0 ? (
+                      <Alert severity="info">Номера не найдены</Alert>
+                    ) : (
+                      <TableContainer component={Paper} sx={{ maxHeight: '60vh', mb: 3 }}>
+                        <Table stickyHeader size={isMobile ? 'small' : 'medium'}>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell padding="checkbox" sx={{ backgroundColor: 'background.paper' }}>
+                                <Checkbox
+                                  checked={selectedRegistrations.size === filteredRegistrations.length && filteredRegistrations.length > 0}
+                                  indeterminate={selectedRegistrations.size > 0 && selectedRegistrations.size < filteredRegistrations.length}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedRegistrations(new Set(filteredRegistrations.map((r: any) => r.id)));
+                                    } else {
+                                      setSelectedRegistrations(new Set());
+                                    }
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Коллектив</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Название номера</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дисциплина</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Номинация</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Участников</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дипломы</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Медали</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {filteredRegistrations.map((reg: any) => (
+                              <TableRow key={reg.id} hover>
+                                <TableCell padding="checkbox">
+                                  <Checkbox
+                                    checked={selectedRegistrations.has(reg.id)}
+                                    onChange={(e) => {
+                                      const newSelected = new Set(selectedRegistrations);
+                                      if (e.target.checked) {
+                                        newSelected.add(reg.id);
+                                      } else {
+                                        newSelected.delete(reg.id);
+                                      }
+                                      setSelectedRegistrations(newSelected);
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell>{reg.collective?.name || '-'}</TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    value={registrationEditData[reg.id]?.danceName || ''}
+                                    onChange={(e) => {
+                                      setRegistrationEditData({
+                                        ...registrationEditData,
+                                        [reg.id]: {
+                                          ...registrationEditData[reg.id],
+                                          danceName: e.target.value,
+                                        },
+                                      });
+                                    }}
+                                    sx={{ minWidth: 150 }}
+                                  />
+                                </TableCell>
+                                <TableCell>{reg.discipline?.name || '-'}</TableCell>
+                                <TableCell>{reg.nomination?.name || '-'}</TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    type="number"
+                                    value={registrationEditData[reg.id]?.participantsCount || 0}
+                                    onChange={(e) => {
+                                      setRegistrationEditData({
+                                        ...registrationEditData,
+                                        [reg.id]: {
+                                          ...registrationEditData[reg.id],
+                                          participantsCount: parseInt(e.target.value) || 0,
+                                        },
+                                      });
+                                    }}
+                                    sx={{ width: 80 }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    type="number"
+                                    value={customDiplomasCounts[reg.id] !== undefined ? customDiplomasCounts[reg.id] : (registrationEditData[reg.id]?.diplomasCount || 0)}
+                                    onChange={(e) => {
+                                      const value = parseInt(e.target.value) || 0;
+                                      setCustomDiplomasCounts({
+                                        ...customDiplomasCounts,
+                                        [reg.id]: value,
+                                      });
+                                    }}
+                                    sx={{ width: 80 }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    type="number"
+                                    value={customMedalsCounts[reg.id] !== undefined ? customMedalsCounts[reg.id] : (registrationEditData[reg.id]?.medalsCount || 0)}
+                                    onChange={(e) => {
+                                      const value = parseInt(e.target.value) || 0;
+                                      setCustomMedalsCounts({
+                                        ...customMedalsCounts,
+                                        [reg.id]: value,
+                                      });
+                                    }}
+                                    sx={{ width: 80 }}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    )}
+
+                    {combinedCalculationResult && (
+                      <Card sx={{ backgroundColor: 'success.main', color: 'white', mt: 3 }}>
+                        <CardContent>
+                          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
+                            Итого к оплате
+                          </Typography>
+                          <Typography variant="h3" sx={{ fontWeight: 700, textAlign: 'center', mb: 3 }}>
+                            {formatCurrency(combinedCalculationResult.totalPrice)}
+                          </Typography>
+                          <Divider sx={{ my: 2, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={4}>
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                  Выступление
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {formatCurrency(combinedCalculationResult.totalPerformancePrice)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            {combinedCalculationResult.totalDiplomasPrice > 0 && (
+                              <Grid item xs={12} sm={4}>
+                                <Box sx={{ textAlign: 'center' }}>
+                                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                    Дипломы
+                                  </Typography>
+                                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    {formatCurrency(combinedCalculationResult.totalDiplomasPrice)}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            )}
+                            {combinedCalculationResult.totalMedalsPrice > 0 && (
+                              <Grid item xs={12} sm={4}>
+                                <Box sx={{ textAlign: 'center' }}>
+                                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                    Медали
+                                  </Typography>
+                                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                    {formatCurrency(combinedCalculationResult.totalMedalsPrice)}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            )}
+                          </Grid>
+                          {combinedCalculationResult.breakdown && combinedCalculationResult.breakdown.length > 0 && (
+                            <Box sx={{ mt: 3 }}>
+                              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                                Детализация по номерам:
+                              </Typography>
+                              {combinedCalculationResult.breakdown.map((item: any) => (
+                                <Box key={item.registrationId} sx={{ mb: 2, p: 2, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+                                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                                    {item.danceName} ({item.collectiveName})
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                    Выступление: {formatCurrency(item.performancePrice)}
+                                  </Typography>
+                                  {item.diplomasPrice > 0 && (
+                                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                      Дипломы ({item.diplomasCount} шт.): {formatCurrency(item.diplomasPrice)}
+                                    </Typography>
+                                  )}
+                                  {item.medalsPrice > 0 && (
+                                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                      Медали ({item.medalsCount} шт.): {formatCurrency(item.medalsPrice)}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              ))}
+                            </Box>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </Box>
+            )}
+
+            {/* Ссылка на меню внизу */}
+            {currentTab === 0 && (
+              <Box sx={{ mt: 4, textAlign: 'center' }}>
+                <Button
+                  variant="text"
+                  onClick={() => setCurrentTab(1)}
+                  sx={{
+                    color: 'primary.main',
+                    textTransform: 'none',
+                  }}
+                >
+                  Перейти к списку номеров →
+                </Button>
+              </Box>
             )}
           </>
         )}
