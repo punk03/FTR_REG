@@ -139,19 +139,6 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
 
     const registrations = await prisma.registration.findMany({
       where: { eventId: event.id },
-      include: {
-        collective: true,
-        discipline: true,
-        nomination: true,
-        age: true,
-        category: true,
-        leaders: { include: { person: true } },
-        trainers: { include: { person: true } },
-      },
-      orderBy: [
-        { collective: { name: 'asc' } },
-        { createdAt: 'desc' },
-      ],
       select: {
         id: true,
         danceName: true,
@@ -161,14 +148,61 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
         medalsCount: true,
         diplomasList: true,
         paymentStatus: true,
-        collective: true,
-        discipline: true,
-        nomination: true,
-        age: true,
-        category: true,
-        leaders: { include: { person: true } },
-        trainers: { include: { person: true } },
+        collective: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        discipline: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        nomination: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        age: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        leaders: {
+          select: {
+            person: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
+        },
+        trainers: {
+          select: {
+            person: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
+        },
       },
+      orderBy: [
+        { collective: { name: 'asc' } },
+        { createdAt: 'desc' },
+      ],
     });
 
     res.json({ registrations });
@@ -211,8 +245,26 @@ router.post('/:token/calculate-combined', async (req: Request, res: Response): P
         id: { in: registrationIds.map((id: any) => parseInt(id)) },
         eventId: event.id,
       },
-      include: {
-        nomination: true,
+      select: {
+        id: true,
+        danceName: true,
+        participantsCount: true,
+        federationParticipantsCount: true,
+        diplomasCount: true,
+        medalsCount: true,
+        nominationId: true,
+        nomination: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        collective: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
