@@ -73,6 +73,7 @@ export const Calculator: React.FC = () => {
   const [registrationsLoading, setRegistrationsLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [registrationEditData, setRegistrationEditData] = useState<Record<number, any>>({});
+  const [originalNominations, setOriginalNominations] = useState<Record<number, number>>({});
   const [customDiplomasCounts, setCustomDiplomasCounts] = useState<Record<number, number>>({});
   const [customMedalsCounts, setCustomMedalsCounts] = useState<Record<number, number>>({});
   const [combinedCalculationResult, setCombinedCalculationResult] = useState<any>(null);
@@ -187,8 +188,9 @@ export const Calculator: React.FC = () => {
       const regs = response.data?.registrations || [];
       setRegistrations(regs);
       
-      // Инициализация данных редактирования
+      // Инициализация данных редактирования и сохранение исходных номинаций
       const initialEditData: Record<number, any> = {};
+      const initialOriginalNominations: Record<number, number> = {};
       regs.forEach((reg: any) => {
         initialEditData[reg.id] = {
           participantsCount: reg.participantsCount || 0,
@@ -197,8 +199,11 @@ export const Calculator: React.FC = () => {
           medalsCount: reg.medalsCount || 0,
           nominationId: reg.nominationId,
         };
+        // Сохраняем исходную номинацию для сравнения
+        initialOriginalNominations[reg.id] = reg.nominationId;
       });
       setRegistrationEditData(initialEditData);
+      setOriginalNominations(initialOriginalNominations);
       
       // Восстанавливаем фокус после загрузки
       setTimeout(() => {
@@ -792,7 +797,12 @@ export const Calculator: React.FC = () => {
                               </TableRow>
                             </TableHead>
                             <TableBody>
-                              {filteredRegistrations.map((reg: any) => (
+                              {filteredRegistrations.map((reg: any) => {
+                                const currentNominationId = registrationEditData[reg.id]?.nominationId || reg.nominationId;
+                                const originalNominationId = originalNominations[reg.id] || reg.nominationId;
+                                const nominationChanged = currentNominationId !== originalNominationId;
+                                
+                                return (
                                 <TableRow key={reg.id} hover>
                                   <TableCell padding="checkbox">
                                     <Checkbox
@@ -818,7 +828,20 @@ export const Calculator: React.FC = () => {
                                       InputProps={{
                                         readOnly: true,
                                       }}
-                                      sx={{ width: 120 }}
+                                      sx={{ 
+                                        width: 120,
+                                        '& .MuiOutlinedInput-root': {
+                                          backgroundColor: nominationChanged ? 'rgba(211, 47, 47, 0.1)' : 'transparent',
+                                          '& fieldset': {
+                                            borderColor: nominationChanged ? '#d32f2f' : undefined,
+                                            borderWidth: nominationChanged ? 2 : undefined,
+                                          },
+                                        },
+                                        '& .MuiInputBase-input': {
+                                          color: nominationChanged ? '#d32f2f' : undefined,
+                                          fontWeight: nominationChanged ? 600 : undefined,
+                                        },
+                                      }}
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -917,7 +940,8 @@ export const Calculator: React.FC = () => {
                                     />
                                   </TableCell>
                                 </TableRow>
-                              ))}
+                                );
+                              })}
                             </TableBody>
                           </Table>
                         </TableContainer>
