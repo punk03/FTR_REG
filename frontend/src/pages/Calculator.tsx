@@ -76,7 +76,7 @@ export const Calculator: React.FC = () => {
   const [customDiplomasCounts, setCustomDiplomasCounts] = useState<Record<number, number>>({});
   const [customMedalsCounts, setCustomMedalsCounts] = useState<Record<number, number>>({});
   const [combinedCalculationResult, setCombinedCalculationResult] = useState<any>(null);
-  const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Загрузка данных события
@@ -171,7 +171,7 @@ export const Calculator: React.FC = () => {
   }, [participantsCount, eventData]);
 
   // Загрузка регистраций для вкладки списка номеров
-  const fetchRegistrations = useCallback(async (searchQuery?: string): Promise<void> => {
+  const fetchRegistrations = useCallback(async (searchQuery: string = ''): Promise<void> => {
     if (!token) {
       console.error('No token provided for fetching registrations');
       return Promise.resolve();
@@ -180,9 +180,8 @@ export const Calculator: React.FC = () => {
     setRegistrationsLoading(true);
     setError(null); // Сбрасываем предыдущие ошибки
     try {
-      const querySearch = searchQuery !== undefined ? searchQuery : search;
-      console.log('Fetching registrations for token:', token, 'search:', querySearch);
-      const params = querySearch && querySearch.trim() ? { search: querySearch.trim() } : {};
+      console.log('Fetching registrations for token:', token, 'search:', searchQuery);
+      const params = searchQuery && searchQuery.trim() ? { search: searchQuery.trim() } : {};
       const response = await axios.get(`${API_URL}/api/public/calculator/${token}/registrations`, { params });
       console.log('Registrations response:', response.data);
       const regs = response.data?.registrations || [];
@@ -200,6 +199,13 @@ export const Calculator: React.FC = () => {
         };
       });
       setRegistrationEditData(initialEditData);
+      
+      // Восстанавливаем фокус после загрузки
+      setTimeout(() => {
+        if (searchInputRef.current && currentTab === 1) {
+          searchInputRef.current.focus();
+        }
+      }, 50);
     } catch (err: any) {
       console.error('Error fetching registrations:', err);
       console.error('Error response:', err.response?.data);
@@ -209,23 +215,24 @@ export const Calculator: React.FC = () => {
     } finally {
       setRegistrationsLoading(false);
     }
-  }, [token, search]);
+  }, [token, currentTab]);
   
   // Очистка таймера при размонтировании
   useEffect(() => {
     return () => {
-      if (searchDebounceTimer) {
-        clearTimeout(searchDebounceTimer);
+      if (searchDebounceTimerRef.current) {
+        clearTimeout(searchDebounceTimerRef.current);
       }
     };
-  }, [searchDebounceTimer]);
+  }, []);
 
-  // Загрузка регистраций при переключении на вкладку списка номеров или изменении поиска
+  // Загрузка регистраций при переключении на вкладку списка номеров (только один раз)
   useEffect(() => {
-    if (currentTab === 1) {
-      fetchRegistrations();
+    if (currentTab === 1 && registrations.length === 0 && !registrationsLoading) {
+      fetchRegistrations('');
     }
-  }, [currentTab, fetchRegistrations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTab]); // Загружаем только при переключении вкладки
 
 
   // Расчет стоимости
@@ -715,18 +722,16 @@ export const Calculator: React.FC = () => {
                           setSearch(newSearch);
                           
                           // Очищаем предыдущий таймер
-                          if (searchDebounceTimer) {
-                            clearTimeout(searchDebounceTimer);
+                          if (searchDebounceTimerRef.current) {
+                            clearTimeout(searchDebounceTimerRef.current);
                           }
                           
                           // Устанавливаем новый таймер для debounce (500ms)
-                          const timer = setTimeout(() => {
+                          searchDebounceTimerRef.current = setTimeout(() => {
                             if (currentTab === 1) {
                               fetchRegistrations(newSearch);
                             }
                           }, 500);
-                          
-                          setSearchDebounceTimer(timer);
                         }}
                         onKeyDown={(e) => {
                           // Предотвращаем submit формы при нажатии Enter
