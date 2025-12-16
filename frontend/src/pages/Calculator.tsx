@@ -737,178 +737,176 @@ export const Calculator: React.FC = () => {
                         Рассчитать выбранные ({selectedRegistrations.size})
                       </Button>
                     </Box>
-                    {filteredRegistrations.length > 0 && (
-                      <Box className="no-print">
 
                     {filteredRegistrations.length === 0 ? (
                       <Alert severity="info">Номера не найдены</Alert>
                     ) : (
-                      <TableContainer 
-                        component={Paper} 
-                        className="no-print"
-                        sx={{ 
-                          width: '100%',
-                          overflowX: 'auto',
-                          maxHeight: '60vh', 
-                          mb: 3 
-                        }}
-                      >
-                        <Table stickyHeader size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 800 }}>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell padding="checkbox" sx={{ backgroundColor: 'background.paper' }}>
-                                <Checkbox
-                                  checked={selectedRegistrations.size === filteredRegistrations.length && filteredRegistrations.length > 0}
-                                  indeterminate={selectedRegistrations.size > 0 && selectedRegistrations.size < filteredRegistrations.length}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedRegistrations(new Set(filteredRegistrations.map((r: any) => r.id)));
-                                    } else {
-                                      setSelectedRegistrations(new Set());
-                                    }
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Коллектив</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Название номера</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дисциплина</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Номинация</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Участников</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Фед. участников</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дипломы</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Медали</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {filteredRegistrations.map((reg: any) => (
-                              <TableRow key={reg.id} hover>
-                                <TableCell padding="checkbox">
+                      <Box className="no-print">
+                        <TableContainer 
+                          component={Paper} 
+                          sx={{ 
+                            width: '100%',
+                            overflowX: 'auto',
+                            maxHeight: '60vh', 
+                            mb: 3 
+                          }}
+                        >
+                          <Table stickyHeader size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 800 }}>
+                            <TableHead>
+                              <TableRow>
+                                <TableCell padding="checkbox" sx={{ backgroundColor: 'background.paper' }}>
                                   <Checkbox
-                                    checked={selectedRegistrations.has(reg.id)}
+                                    checked={selectedRegistrations.size === filteredRegistrations.length && filteredRegistrations.length > 0}
+                                    indeterminate={selectedRegistrations.size > 0 && selectedRegistrations.size < filteredRegistrations.length}
                                     onChange={(e) => {
-                                      const newSelected = new Set(selectedRegistrations);
                                       if (e.target.checked) {
-                                        newSelected.add(reg.id);
+                                        setSelectedRegistrations(new Set(filteredRegistrations.map((r: any) => r.id)));
                                       } else {
-                                        newSelected.delete(reg.id);
+                                        setSelectedRegistrations(new Set());
                                       }
-                                      setSelectedRegistrations(newSelected);
                                     }}
                                   />
                                 </TableCell>
-                                <TableCell>{reg.collective?.name || '-'}</TableCell>
-                                <TableCell>{reg.danceName || '-'}</TableCell>
-                                <TableCell>{reg.discipline?.name || '-'}</TableCell>
-                                <TableCell>
-                                  <TextField
-                                    size="small"
-                                    value={getNominationByParticipants(registrationEditData[reg.id]?.participantsCount || reg.participantsCount || 0)}
-                                    InputProps={{
-                                      readOnly: true,
-                                    }}
-                                    sx={{ width: 120 }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    value={registrationEditData[reg.id]?.participantsCount ?? (reg.participantsCount || 0)}
-                                    onChange={(e) => {
-                                      const newCount = parseInt(e.target.value) || 0;
-                                      const autoNomination = getNominationByParticipants(newCount);
-                                      
-                                      // Найти nominationId по названию из eventPrices
-                                      let nominationId = registrationEditData[reg.id]?.nominationId || reg.nominationId;
-                                      if (eventData?.eventPrices) {
-                                        let foundNomination = eventData.eventPrices.find(
-                                          (price: any) => price.nominationName === autoNomination
-                                        );
-                                        
-                                        if (!foundNomination) {
-                                          const alternativeNames: { [key: string]: string[] } = {
-                                            'Малая группа': ['Малая группа', 'Малая форма', 'Малая'],
-                                            'Формейшен': ['Формейшен', 'Формейшн', 'Formation'],
-                                            'Продакшен': ['Продакшен', 'Продакшн', 'Production'],
-                                            'Соло': ['Соло', 'Solo'],
-                                            'Дуэт': ['Дуэт', 'Duet'],
-                                          };
-                                          
-                                          const alternatives = alternativeNames[autoNomination] || [autoNomination];
-                                          foundNomination = eventData.eventPrices.find((price: any) =>
-                                            alternatives.some(alt => price.nominationName.toLowerCase().includes(alt.toLowerCase()))
-                                          );
-                                        }
-                                        
-                                        if (foundNomination) {
-                                          nominationId = foundNomination.nominationId;
-                                        }
-                                      }
-                                      
-                                      setRegistrationEditData({
-                                        ...registrationEditData,
-                                        [reg.id]: {
-                                          ...registrationEditData[reg.id],
-                                          participantsCount: newCount,
-                                          nominationId,
-                                        },
-                                      });
-                                    }}
-                                    sx={{ width: 80 }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    value={registrationEditData[reg.id]?.federationParticipantsCount || 0}
-                                    onChange={(e) => {
-                                      setRegistrationEditData({
-                                        ...registrationEditData,
-                                        [reg.id]: {
-                                          ...registrationEditData[reg.id],
-                                          federationParticipantsCount: parseInt(e.target.value) || 0,
-                                        },
-                                      });
-                                    }}
-                                    sx={{ width: 80 }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    value={customDiplomasCounts[reg.id] !== undefined ? customDiplomasCounts[reg.id] : (registrationEditData[reg.id]?.diplomasCount || 0)}
-                                    onChange={(e) => {
-                                      const value = parseInt(e.target.value) || 0;
-                                      setCustomDiplomasCounts({
-                                        ...customDiplomasCounts,
-                                        [reg.id]: value,
-                                      });
-                                    }}
-                                    sx={{ width: 80 }}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    value={customMedalsCounts[reg.id] !== undefined ? customMedalsCounts[reg.id] : (registrationEditData[reg.id]?.medalsCount || 0)}
-                                    onChange={(e) => {
-                                      const value = parseInt(e.target.value) || 0;
-                                      setCustomMedalsCounts({
-                                        ...customMedalsCounts,
-                                        [reg.id]: value,
-                                      });
-                                    }}
-                                    sx={{ width: 80 }}
-                                  />
-                                </TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Коллектив</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Название номера</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дисциплина</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Номинация</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Участников</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Фед. участников</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дипломы</TableCell>
+                                <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Медали</TableCell>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                              {filteredRegistrations.map((reg: any) => (
+                                <TableRow key={reg.id} hover>
+                                  <TableCell padding="checkbox">
+                                    <Checkbox
+                                      checked={selectedRegistrations.has(reg.id)}
+                                      onChange={(e) => {
+                                        const newSelected = new Set(selectedRegistrations);
+                                        if (e.target.checked) {
+                                          newSelected.add(reg.id);
+                                        } else {
+                                          newSelected.delete(reg.id);
+                                        }
+                                        setSelectedRegistrations(newSelected);
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>{reg.collective?.name || '-'}</TableCell>
+                                  <TableCell>{reg.danceName || '-'}</TableCell>
+                                  <TableCell>{reg.discipline?.name || '-'}</TableCell>
+                                  <TableCell>
+                                    <TextField
+                                      size="small"
+                                      value={getNominationByParticipants(registrationEditData[reg.id]?.participantsCount || reg.participantsCount || 0)}
+                                      InputProps={{
+                                        readOnly: true,
+                                      }}
+                                      sx={{ width: 120 }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <TextField
+                                      size="small"
+                                      type="number"
+                                      value={registrationEditData[reg.id]?.participantsCount ?? (reg.participantsCount || 0)}
+                                      onChange={(e) => {
+                                        const newCount = parseInt(e.target.value) || 0;
+                                        const autoNomination = getNominationByParticipants(newCount);
+                                        
+                                        // Найти nominationId по названию из eventPrices
+                                        let nominationId = registrationEditData[reg.id]?.nominationId || reg.nominationId;
+                                        if (eventData?.eventPrices) {
+                                          let foundNomination = eventData.eventPrices.find(
+                                            (price: any) => price.nominationName === autoNomination
+                                          );
+                                          
+                                          if (!foundNomination) {
+                                            const alternativeNames: { [key: string]: string[] } = {
+                                              'Малая группа': ['Малая группа', 'Малая форма', 'Малая'],
+                                              'Формейшен': ['Формейшен', 'Формейшн', 'Formation'],
+                                              'Продакшен': ['Продакшен', 'Продакшн', 'Production'],
+                                              'Соло': ['Соло', 'Solo'],
+                                              'Дуэт': ['Дуэт', 'Duet'],
+                                            };
+                                            
+                                            const alternatives = alternativeNames[autoNomination] || [autoNomination];
+                                            foundNomination = eventData.eventPrices.find((price: any) =>
+                                              alternatives.some(alt => price.nominationName.toLowerCase().includes(alt.toLowerCase()))
+                                            );
+                                          }
+                                          
+                                          if (foundNomination) {
+                                            nominationId = foundNomination.nominationId;
+                                          }
+                                        }
+                                        
+                                        setRegistrationEditData({
+                                          ...registrationEditData,
+                                          [reg.id]: {
+                                            ...registrationEditData[reg.id],
+                                            participantsCount: newCount,
+                                            nominationId,
+                                          },
+                                        });
+                                      }}
+                                      sx={{ width: 80 }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <TextField
+                                      size="small"
+                                      type="number"
+                                      value={registrationEditData[reg.id]?.federationParticipantsCount || 0}
+                                      onChange={(e) => {
+                                        setRegistrationEditData({
+                                          ...registrationEditData,
+                                          [reg.id]: {
+                                            ...registrationEditData[reg.id],
+                                            federationParticipantsCount: parseInt(e.target.value) || 0,
+                                          },
+                                        });
+                                      }}
+                                      sx={{ width: 80 }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <TextField
+                                      size="small"
+                                      type="number"
+                                      value={customDiplomasCounts[reg.id] !== undefined ? customDiplomasCounts[reg.id] : (registrationEditData[reg.id]?.diplomasCount || 0)}
+                                      onChange={(e) => {
+                                        const value = parseInt(e.target.value) || 0;
+                                        setCustomDiplomasCounts({
+                                          ...customDiplomasCounts,
+                                          [reg.id]: value,
+                                        });
+                                      }}
+                                      sx={{ width: 80 }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <TextField
+                                      size="small"
+                                      type="number"
+                                      value={customMedalsCounts[reg.id] !== undefined ? customMedalsCounts[reg.id] : (registrationEditData[reg.id]?.medalsCount || 0)}
+                                      onChange={(e) => {
+                                        const value = parseInt(e.target.value) || 0;
+                                        setCustomMedalsCounts({
+                                          ...customMedalsCounts,
+                                          [reg.id]: value,
+                                        });
+                                      }}
+                                      sx={{ width: 80 }}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
                       </Box>
                     )}
 
