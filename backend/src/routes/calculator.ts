@@ -152,6 +152,23 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
         { collective: { name: 'asc' } },
         { createdAt: 'desc' },
       ],
+      select: {
+        id: true,
+        danceName: true,
+        participantsCount: true,
+        federationParticipantsCount: true,
+        diplomasCount: true,
+        medalsCount: true,
+        diplomasList: true,
+        paymentStatus: true,
+        collective: true,
+        discipline: true,
+        nomination: true,
+        age: true,
+        category: true,
+        leaders: { include: { person: true } },
+        trainers: { include: { person: true } },
+      },
     });
 
     res.json({ registrations });
@@ -165,7 +182,7 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
 router.post('/:token/calculate-combined', async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
-    const { registrationIds, customDiplomasCounts, customMedalsCounts } = req.body;
+    const { registrationIds, customDiplomasCounts, customMedalsCounts, customParticipantsCounts, customFederationParticipantsCounts } = req.body;
 
     const event = await prisma.event.findUnique({
       where: { calculatorToken: token },
@@ -221,11 +238,19 @@ router.post('/:token/calculate-combined', async (req: Request, res: Response): P
         continue;
       }
 
-      const regularCount = Math.max(0, (reg.participantsCount || 0) - (reg.federationParticipantsCount || 0));
+      // Используем кастомное количество участников если указано, иначе из регистрации
+      const participantsCount = customParticipantsCounts?.[reg.id] !== undefined
+        ? parseInt(customParticipantsCounts[reg.id]) || 0
+        : (reg.participantsCount || 0);
+      const federationParticipantsCount = customFederationParticipantsCounts?.[reg.id] !== undefined
+        ? parseInt(customFederationParticipantsCounts[reg.id]) || 0
+        : (reg.federationParticipantsCount || 0);
+
+      const regularCount = Math.max(0, participantsCount - federationParticipantsCount);
       const pricePerRegularParticipant = Number(eventPrice.pricePerParticipant);
       const pricePerFederationParticipant = Number(eventPrice.pricePerFederationParticipant || eventPrice.pricePerParticipant);
       const regularPrice = pricePerRegularParticipant * regularCount;
-      const federationPrice = pricePerFederationParticipant * (reg.federationParticipantsCount || 0);
+      const federationPrice = pricePerFederationParticipant * federationParticipantsCount;
       const regPerformancePrice = regularPrice + federationPrice;
 
       // Используем кастомное количество дипломов/медалей если указано, иначе из регистрации

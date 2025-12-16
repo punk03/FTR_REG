@@ -236,10 +236,28 @@ export const Calculator: React.FC = () => {
     }
 
     try {
+      // Подготавливаем кастомные данные участников из отредактированных данных
+      const customParticipantsCounts: Record<number, number> = {};
+      const customFederationParticipantsCounts: Record<number, number> = {};
+      
+      Array.from(selectedRegistrations).forEach((regId) => {
+        const editData = registrationEditData[regId];
+        if (editData) {
+          if (editData.participantsCount !== undefined) {
+            customParticipantsCounts[regId] = editData.participantsCount;
+          }
+          if (editData.federationParticipantsCount !== undefined) {
+            customFederationParticipantsCounts[regId] = editData.federationParticipantsCount;
+          }
+        }
+      });
+
       const response = await axios.post(`${API_URL}/api/public/calculator/${token}/calculate-combined`, {
         registrationIds: Array.from(selectedRegistrations),
         customDiplomasCounts,
         customMedalsCounts,
+        customParticipantsCounts,
+        customFederationParticipantsCounts,
       });
       setCombinedCalculationResult(response.data);
     } catch (err: any) {
@@ -255,6 +273,35 @@ export const Calculator: React.FC = () => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'success';
+      case 'PERFORMANCE_PAID':
+      case 'DIPLOMAS_PAID':
+        return 'warning';
+      case 'UNPAID':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPaymentStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'Оплачено';
+      case 'PERFORMANCE_PAID':
+        return 'Выступление';
+      case 'DIPLOMAS_PAID':
+        return 'Д/М';
+      case 'UNPAID':
+        return 'Не оплачено';
+      default:
+        return status;
+    }
   };
 
   if (loading) {
@@ -627,7 +674,14 @@ export const Calculator: React.FC = () => {
                   </Box>
                 ) : (
                   <>
-                    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setCurrentTab(0)}
+                        sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+                      >
+                        ← Вернуться к калькулятору
+                      </Button>
                       <TextField
                         fullWidth
                         size="small"
@@ -671,8 +725,10 @@ export const Calculator: React.FC = () => {
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дисциплина</TableCell>
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Номинация</TableCell>
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Участников</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Фед. участников</TableCell>
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дипломы</TableCell>
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Медали</TableCell>
+                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Статус оплаты</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -732,6 +788,23 @@ export const Calculator: React.FC = () => {
                                   <TextField
                                     size="small"
                                     type="number"
+                                    value={registrationEditData[reg.id]?.federationParticipantsCount || 0}
+                                    onChange={(e) => {
+                                      setRegistrationEditData({
+                                        ...registrationEditData,
+                                        [reg.id]: {
+                                          ...registrationEditData[reg.id],
+                                          federationParticipantsCount: parseInt(e.target.value) || 0,
+                                        },
+                                      });
+                                    }}
+                                    sx={{ width: 80 }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <TextField
+                                    size="small"
+                                    type="number"
                                     value={customDiplomasCounts[reg.id] !== undefined ? customDiplomasCounts[reg.id] : (registrationEditData[reg.id]?.diplomasCount || 0)}
                                     onChange={(e) => {
                                       const value = parseInt(e.target.value) || 0;
@@ -756,6 +829,13 @@ export const Calculator: React.FC = () => {
                                       });
                                     }}
                                     sx={{ width: 80 }}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                  <Chip
+                                    label={getPaymentStatusLabel(reg.paymentStatus || 'UNPAID')}
+                                    color={getPaymentStatusColor(reg.paymentStatus || 'UNPAID') as any}
+                                    size="small"
                                   />
                                 </TableCell>
                               </TableRow>
