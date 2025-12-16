@@ -36,4 +36,13 @@ export const apiRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiter для публичных endpoints калькулятора (более мягкий)
+export const calculatorPublicRateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 минута
+  max: 200, // максимум 200 запросов в минуту (больше, так как публичный инструмент)
+  message: 'Слишком много запросов к калькулятору. Попробуйте позже.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 

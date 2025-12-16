@@ -17,7 +17,7 @@ import adminRoutes from './routes/admin';
 import excelImportRoutes from './routes/excelImport';
 import calculatorRoutes from './routes/calculator';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { apiRateLimiter } from './middleware/rateLimit';
+import { apiRateLimiter, calculatorPublicRateLimiter } from './middleware/rateLimit';
 import { cacheService } from './services/cacheService';
 import { emailService } from './services/emailService';
 
@@ -262,12 +262,16 @@ app.use('/api', (req, res, next) => {
   if (req.path.startsWith('/registrations/') && req.path.endsWith('/calculate-price')) {
     return next();
   }
+  // Не ограничиваем публичные endpoints калькулятора (они будут ограничены отдельно)
+  if (req.path.startsWith('/public/calculator')) {
+    return next();
+  }
   return apiRateLimiter(req, res, next);
 });
 
 // Routes
-// Публичные роуты (без авторизации)
-app.use('/api/public/calculator', calculatorRoutes);
+// Публичные роуты (без авторизации) с более мягким rate limiting
+app.use('/api/public/calculator', calculatorPublicRateLimiter, calculatorRoutes);
 // Защищенные роуты
 app.use('/api/auth', authRoutes);
 app.use('/api/reference', referenceRoutes);
