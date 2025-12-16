@@ -170,12 +170,18 @@ export const Calculator: React.FC = () => {
 
   // Загрузка регистраций для вкладки списка номеров
   const fetchRegistrations = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      console.error('No token provided for fetching registrations');
+      return;
+    }
     
     setRegistrationsLoading(true);
+    setError(null); // Сбрасываем предыдущие ошибки
     try {
+      console.log('Fetching registrations for token:', token);
       const response = await axios.get(`${API_URL}/api/public/calculator/${token}/registrations`);
-      const regs = response.data.registrations || [];
+      console.log('Registrations response:', response.data);
+      const regs = response.data?.registrations || [];
       setRegistrations(regs);
       
       // Инициализация данных редактирования
@@ -193,7 +199,10 @@ export const Calculator: React.FC = () => {
       setRegistrationEditData(initialEditData);
     } catch (err: any) {
       console.error('Error fetching registrations:', err);
-      setError(err.response?.data?.error || 'Не удалось загрузить список номеров');
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
+      const errorMessage = err.response?.data?.error || err.message || 'Не удалось загрузить список номеров';
+      setError(errorMessage);
     } finally {
       setRegistrationsLoading(false);
     }

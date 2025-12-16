@@ -139,65 +139,14 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
 
     const registrations = await prisma.registration.findMany({
       where: { eventId: event.id },
-      select: {
-        id: true,
-        danceName: true,
-        participantsCount: true,
-        federationParticipantsCount: true,
-        diplomasCount: true,
-        medalsCount: true,
-        diplomasList: true,
-        paymentStatus: true,
-        collective: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        discipline: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        nomination: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        age: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        category: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        leaders: {
-          select: {
-            person: {
-              select: {
-                id: true,
-                fullName: true,
-              },
-            },
-          },
-        },
-        trainers: {
-          select: {
-            person: {
-              select: {
-                id: true,
-                fullName: true,
-              },
-            },
-          },
-        },
+      include: {
+        collective: true,
+        discipline: true,
+        nomination: true,
+        age: true,
+        category: true,
+        leaders: { include: { person: true } },
+        trainers: { include: { person: true } },
       },
       orderBy: [
         { collective: { name: 'asc' } },
@@ -207,6 +156,7 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
 
     res.json({ registrations });
   } catch (error) {
+    console.error('Error fetching registrations for calculator:', error);
     errorHandler(error as Error, req, res, () => {});
   }
 });
