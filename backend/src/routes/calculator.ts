@@ -123,10 +123,11 @@ router.post('/:token/calculate', async (req: Request, res: Response): Promise<vo
 });
 
 // Публичный endpoint для получения списка регистраций события (без авторизации)
-// GET /api/public/calculator/:token/registrations
+// GET /api/public/calculator/:token/registrations?search=...
 router.get('/:token/registrations', async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
+    const { search } = req.query;
 
     const event = await prisma.event.findUnique({
       where: { calculatorToken: token },
@@ -137,8 +138,21 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
       return;
     }
 
+    // Формируем условие поиска
+    const where: any = { eventId: event.id };
+    
+    if (search && typeof search === 'string' && search.trim()) {
+      const searchLower = search.trim().toLowerCase();
+      where.OR = [
+        { danceName: { contains: searchLower, mode: 'insensitive' } },
+        { collective: { name: { contains: searchLower, mode: 'insensitive' } } },
+        { leaders: { some: { person: { fullName: { contains: searchLower, mode: 'insensitive' } } } } },
+        { trainers: { some: { person: { fullName: { contains: searchLower, mode: 'insensitive' } } } } },
+      ];
+    }
+
     const registrations = await prisma.registration.findMany({
-      where: { eventId: event.id },
+      where,
       include: {
         collective: true,
         discipline: true,
@@ -166,7 +180,7 @@ router.get('/:token/registrations', async (req: Request, res: Response): Promise
 router.post('/:token/calculate-combined', async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
-    const { registrationIds, customDiplomasCounts, customMedalsCounts, customParticipantsCounts, customFederationParticipantsCounts } = req.body;
+    const { registrationIds, customDiplomasCounts, customMedalsCounts, customParticipantsCounts, customFederationParticipantsCounts, customNominationIds } = req.body;
 
     const event = await prisma.event.findUnique({
       where: { calculatorToken: token },
@@ -233,8 +247,13 @@ router.post('/:token/calculate-combined', async (req: Request, res: Response): P
     const breakdown: any[] = [];
 
     for (const reg of registrations) {
+      // Используем кастомный nominationId если указан, иначе из регистрации
+      const nominationId = customNominationIds?.[reg.id] !== undefined
+        ? parseInt(customNominationIds[reg.id])
+        : reg.nominationId;
+      
       // Находим цену для номинации регистрации
-      const eventPrice = event.eventPrices.find((price: any) => price.nominationId === reg.nominationId);
+      const eventPrice = event.eventPrices.find((price: any) => price.nominationId === nominationId);
       
       if (!eventPrice) {
         continue;

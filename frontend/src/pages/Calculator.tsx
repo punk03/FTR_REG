@@ -76,6 +76,7 @@ export const Calculator: React.FC = () => {
   const [customDiplomasCounts, setCustomDiplomasCounts] = useState<Record<number, number>>({});
   const [customMedalsCounts, setCustomMedalsCounts] = useState<Record<number, number>>({});
   const [combinedCalculationResult, setCombinedCalculationResult] = useState<any>(null);
+  const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Загрузка данных события
   useEffect(() => {
@@ -169,7 +170,7 @@ export const Calculator: React.FC = () => {
   }, [participantsCount, eventData]);
 
   // Загрузка регистраций для вкладки списка номеров
-  const fetchRegistrations = useCallback(async () => {
+  const fetchRegistrations = useCallback(async (searchQuery?: string) => {
     if (!token) {
       console.error('No token provided for fetching registrations');
       return;
@@ -178,8 +179,10 @@ export const Calculator: React.FC = () => {
     setRegistrationsLoading(true);
     setError(null); // Сбрасываем предыдущие ошибки
     try {
-      console.log('Fetching registrations for token:', token);
-      const response = await axios.get(`${API_URL}/api/public/calculator/${token}/registrations`);
+      const querySearch = searchQuery !== undefined ? searchQuery : search;
+      console.log('Fetching registrations for token:', token, 'search:', querySearch);
+      const params = querySearch && querySearch.trim() ? { search: querySearch.trim() } : {};
+      const response = await axios.get(`${API_URL}/api/public/calculator/${token}/registrations`, { params });
       console.log('Registrations response:', response.data);
       const regs = response.data?.registrations || [];
       setRegistrations(regs);
@@ -188,12 +191,11 @@ export const Calculator: React.FC = () => {
       const initialEditData: Record<number, any> = {};
       regs.forEach((reg: any) => {
         initialEditData[reg.id] = {
-          danceName: reg.danceName || '',
           participantsCount: reg.participantsCount || 0,
           federationParticipantsCount: reg.federationParticipantsCount || 0,
           diplomasCount: reg.diplomasCount || 0,
           medalsCount: reg.medalsCount || 0,
-          diplomasList: reg.diplomasList || '',
+          nominationId: reg.nominationId,
         };
       });
       setRegistrationEditData(initialEditData);
@@ -206,14 +208,24 @@ export const Calculator: React.FC = () => {
     } finally {
       setRegistrationsLoading(false);
     }
-  }, [token]);
-
-  // Загрузка регистраций при переключении на вкладку списка номеров
+  }, [token, search]);
+  
+  // Очистка таймера при размонтировании
   useEffect(() => {
-    if (currentTab === 1 && registrations.length === 0 && !registrationsLoading) {
+    return () => {
+      if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+      }
+    };
+  }, [searchDebounceTimer]);
+
+  // Загрузка регистраций при переключении на вкладку списка номеров или изменении поиска
+  useEffect(() => {
+    if (currentTab === 1) {
       fetchRegistrations();
     }
-  }, [currentTab, fetchRegistrations, registrations.length, registrationsLoading]);
+  }, [currentTab, fetchRegistrations]);
+
 
   // Расчет стоимости
   const handleCalculate = async () => {
@@ -248,6 +260,7 @@ export const Calculator: React.FC = () => {
       // Подготавливаем кастомные данные участников из отредактированных данных
       const customParticipantsCounts: Record<number, number> = {};
       const customFederationParticipantsCounts: Record<number, number> = {};
+      const customNominationIds: Record<number, number> = {};
       
       Array.from(selectedRegistrations).forEach((regId) => {
         const editData = registrationEditData[regId];
@@ -258,6 +271,9 @@ export const Calculator: React.FC = () => {
           if (editData.federationParticipantsCount !== undefined) {
             customFederationParticipantsCounts[regId] = editData.federationParticipantsCount;
           }
+          if (editData.nominationId !== undefined) {
+            customNominationIds[regId] = editData.nominationId;
+          }
         }
       });
 
@@ -267,6 +283,7 @@ export const Calculator: React.FC = () => {
         customMedalsCounts,
         customParticipantsCounts,
         customFederationParticipantsCounts,
+        customNominationIds,
       });
       setCombinedCalculationResult(response.data);
     } catch (err: any) {
@@ -284,45 +301,11 @@ export const Calculator: React.FC = () => {
     }).format(amount);
   };
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'PAID':
-        return 'success';
-      case 'PERFORMANCE_PAID':
-      case 'DIPLOMAS_PAID':
-        return 'warning';
-      case 'UNPAID':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
 
-  const getPaymentStatusLabel = (status: string) => {
-    switch (status) {
-      case 'PAID':
-        return 'Оплачено';
-      case 'PERFORMANCE_PAID':
-        return 'Выступление';
-      case 'DIPLOMAS_PAID':
-        return 'Д/М';
-      case 'UNPAID':
-        return 'Не оплачено';
-      default:
-        return status;
-    }
-  };
-
-  // Отфильтрованные регистрации для отображения (должно быть до всех ранних возвратов)
+  // Регистрации уже отфильтрованы на сервере, просто используем их
   const filteredRegistrations = useMemo(() => {
-    if (!search) return registrations;
-    const searchLower = search.toLowerCase();
-    return registrations.filter((reg: any) => {
-      const danceName = (reg.danceName || '').toLowerCase();
-      const collectiveName = (reg.collective?.name || '').toLowerCase();
-      return danceName.includes(searchLower) || collectiveName.includes(searchLower);
-    });
-  }, [registrations, search]);
+    return registrations;
+  }, [registrations]);
 
   if (loading) {
     return (
@@ -349,7 +332,31 @@ export const Calculator: React.FC = () => {
   return (
     <ThemeProvider theme={calculatorTheme}>
       <CssBaseline />
-      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
+      <Box
+        sx={{
+          '@media print': {
+            '& .no-print': {
+              display: 'none !important',
+            },
+            '& .print-only': {
+              display: 'block !important',
+            },
+            '& button': {
+              display: 'none !important',
+            },
+            '& .MuiTabs-root': {
+              display: 'none !important',
+            },
+            '& .MuiTextField-root': {
+              '& .MuiInputBase-input': {
+                color: '#000 !important',
+                WebkitTextFillColor: '#000 !important',
+              },
+            },
+          },
+        }}
+      >
+      <Container maxWidth={currentTab === 1 ? false : "md"} sx={{ py: { xs: 2, sm: 4 } }}>
       <Paper
         elevation={3}
         sx={{
@@ -357,6 +364,11 @@ export const Calculator: React.FC = () => {
           borderRadius: 2,
           backgroundColor: 'background.paper',
           color: 'text.primary',
+          '@media print': {
+            boxShadow: 'none',
+            backgroundColor: 'white',
+            color: 'black',
+          },
         }}
       >
         <Typography
@@ -397,7 +409,7 @@ export const Calculator: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)} sx={{ mb: 3 }}>
+            <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)} sx={{ mb: 3 }} className="no-print">
               <Tab label="Калькулятор" />
               <Tab label="Список номеров" />
             </Tabs>
@@ -683,7 +695,7 @@ export const Calculator: React.FC = () => {
                   </Box>
                 ) : (
                   <>
-                    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }} className="no-print">
                       <Button
                         variant="outlined"
                         onClick={() => setCurrentTab(0)}
@@ -694,10 +706,27 @@ export const Calculator: React.FC = () => {
                       <TextField
                         fullWidth
                         size="small"
-                        label="Поиск"
+                        label="Поиск (по названию, коллективу, фамилии руководителя или тренера)"
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        sx={{ maxWidth: { xs: '100%', sm: '300px' } }}
+                        onChange={(e) => {
+                          const newSearch = e.target.value;
+                          setSearch(newSearch);
+                          
+                          // Очищаем предыдущий таймер
+                          if (searchDebounceTimer) {
+                            clearTimeout(searchDebounceTimer);
+                          }
+                          
+                          // Устанавливаем новый таймер для debounce (500ms)
+                          const timer = setTimeout(() => {
+                            if (currentTab === 1) {
+                              fetchRegistrations(newSearch);
+                            }
+                          }, 500);
+                          
+                          setSearchDebounceTimer(timer);
+                        }}
+                        sx={{ maxWidth: { xs: '100%', sm: '400px' } }}
                       />
                       <Button
                         variant="contained"
@@ -708,12 +737,23 @@ export const Calculator: React.FC = () => {
                         Рассчитать выбранные ({selectedRegistrations.size})
                       </Button>
                     </Box>
+                    {filteredRegistrations.length > 0 && (
+                      <Box className="no-print">
 
                     {filteredRegistrations.length === 0 ? (
                       <Alert severity="info">Номера не найдены</Alert>
                     ) : (
-                      <TableContainer component={Paper} sx={{ maxHeight: '60vh', mb: 3 }}>
-                        <Table stickyHeader size={isMobile ? 'small' : 'medium'}>
+                      <TableContainer 
+                        component={Paper} 
+                        className="no-print"
+                        sx={{ 
+                          width: '100%',
+                          overflowX: 'auto',
+                          maxHeight: '60vh', 
+                          mb: 3 
+                        }}
+                      >
+                        <Table stickyHeader size={isMobile ? 'small' : 'medium'} sx={{ minWidth: 800 }}>
                           <TableHead>
                             <TableRow>
                               <TableCell padding="checkbox" sx={{ backgroundColor: 'background.paper' }}>
@@ -737,7 +777,6 @@ export const Calculator: React.FC = () => {
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Фед. участников</TableCell>
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Дипломы</TableCell>
                               <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Медали</TableCell>
-                              <TableCell sx={{ backgroundColor: 'background.paper', fontWeight: 600 }}>Статус оплаты</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -758,35 +797,60 @@ export const Calculator: React.FC = () => {
                                   />
                                 </TableCell>
                                 <TableCell>{reg.collective?.name || '-'}</TableCell>
+                                <TableCell>{reg.danceName || '-'}</TableCell>
+                                <TableCell>{reg.discipline?.name || '-'}</TableCell>
                                 <TableCell>
                                   <TextField
                                     size="small"
-                                    value={registrationEditData[reg.id]?.danceName || ''}
-                                    onChange={(e) => {
-                                      setRegistrationEditData({
-                                        ...registrationEditData,
-                                        [reg.id]: {
-                                          ...registrationEditData[reg.id],
-                                          danceName: e.target.value,
-                                        },
-                                      });
+                                    value={getNominationByParticipants(registrationEditData[reg.id]?.participantsCount || reg.participantsCount || 0)}
+                                    InputProps={{
+                                      readOnly: true,
                                     }}
-                                    sx={{ minWidth: 150 }}
+                                    sx={{ width: 120 }}
                                   />
                                 </TableCell>
-                                <TableCell>{reg.discipline?.name || '-'}</TableCell>
-                                <TableCell>{reg.nomination?.name || '-'}</TableCell>
                                 <TableCell>
                                   <TextField
                                     size="small"
                                     type="number"
-                                    value={registrationEditData[reg.id]?.participantsCount || 0}
+                                    value={registrationEditData[reg.id]?.participantsCount ?? (reg.participantsCount || 0)}
                                     onChange={(e) => {
+                                      const newCount = parseInt(e.target.value) || 0;
+                                      const autoNomination = getNominationByParticipants(newCount);
+                                      
+                                      // Найти nominationId по названию из eventPrices
+                                      let nominationId = registrationEditData[reg.id]?.nominationId || reg.nominationId;
+                                      if (eventData?.eventPrices) {
+                                        let foundNomination = eventData.eventPrices.find(
+                                          (price: any) => price.nominationName === autoNomination
+                                        );
+                                        
+                                        if (!foundNomination) {
+                                          const alternativeNames: { [key: string]: string[] } = {
+                                            'Малая группа': ['Малая группа', 'Малая форма', 'Малая'],
+                                            'Формейшен': ['Формейшен', 'Формейшн', 'Formation'],
+                                            'Продакшен': ['Продакшен', 'Продакшн', 'Production'],
+                                            'Соло': ['Соло', 'Solo'],
+                                            'Дуэт': ['Дуэт', 'Duet'],
+                                          };
+                                          
+                                          const alternatives = alternativeNames[autoNomination] || [autoNomination];
+                                          foundNomination = eventData.eventPrices.find((price: any) =>
+                                            alternatives.some(alt => price.nominationName.toLowerCase().includes(alt.toLowerCase()))
+                                          );
+                                        }
+                                        
+                                        if (foundNomination) {
+                                          nominationId = foundNomination.nominationId;
+                                        }
+                                      }
+                                      
                                       setRegistrationEditData({
                                         ...registrationEditData,
                                         [reg.id]: {
                                           ...registrationEditData[reg.id],
-                                          participantsCount: parseInt(e.target.value) || 0,
+                                          participantsCount: newCount,
+                                          nominationId,
                                         },
                                       });
                                     }}
@@ -840,26 +904,37 @@ export const Calculator: React.FC = () => {
                                     sx={{ width: 80 }}
                                   />
                                 </TableCell>
-                                <TableCell>
-                                  <Chip
-                                    label={getPaymentStatusLabel(reg.paymentStatus || 'UNPAID')}
-                                    color={getPaymentStatusColor(reg.paymentStatus || 'UNPAID') as any}
-                                    size="small"
-                                  />
-                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
                       </TableContainer>
+                      </Box>
                     )}
 
                     {combinedCalculationResult && (
                       <Card sx={{ backgroundColor: 'success.main', color: 'white', mt: 3 }}>
                         <CardContent>
-                          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
-                            Итого к оплате
-                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                              Итого к оплате
+                            </Typography>
+                            <Button
+                              variant="contained"
+                              onClick={() => {
+                                window.print();
+                              }}
+                              sx={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                color: 'white',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                },
+                              }}
+                            >
+                              Печать отчета
+                            </Button>
+                          </Box>
                           <Typography variant="h3" sx={{ fontWeight: 700, textAlign: 'center', mb: 3 }}>
                             {formatCurrency(combinedCalculationResult.totalPrice)}
                           </Typography>
@@ -937,7 +1012,7 @@ export const Calculator: React.FC = () => {
 
             {/* Ссылка на меню внизу */}
             {currentTab === 0 && (
-              <Box sx={{ mt: 4, textAlign: 'center' }}>
+              <Box sx={{ mt: 4, textAlign: 'center' }} className="no-print">
                 <Button
                   variant="text"
                   onClick={() => setCurrentTab(1)}
@@ -954,6 +1029,7 @@ export const Calculator: React.FC = () => {
         )}
       </Paper>
     </Container>
+    </Box>
     </ThemeProvider>
   );
 };
