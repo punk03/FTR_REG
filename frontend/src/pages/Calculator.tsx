@@ -304,6 +304,17 @@ export const Calculator: React.FC = () => {
     }
   };
 
+  // Отфильтрованные регистрации для отображения (должно быть до всех ранних возвратов)
+  const filteredRegistrations = useMemo(() => {
+    if (!search) return registrations;
+    const searchLower = search.toLowerCase();
+    return registrations.filter((reg: any) => {
+      const danceName = (reg.danceName || '').toLowerCase();
+      const collectiveName = (reg.collective?.name || '').toLowerCase();
+      return danceName.includes(searchLower) || collectiveName.includes(searchLower);
+    });
+  }, [registrations, search]);
+
   if (loading) {
     return (
       <ThemeProvider theme={calculatorTheme}>
@@ -314,17 +325,6 @@ export const Calculator: React.FC = () => {
       </ThemeProvider>
     );
   }
-
-  // Отфильтрованные регистрации для отображения (должно быть до раннего возврата)
-  const filteredRegistrations = useMemo(() => {
-    if (!search) return registrations;
-    const searchLower = search.toLowerCase();
-    return registrations.filter((reg: any) => {
-      const danceName = (reg.danceName || '').toLowerCase();
-      const collectiveName = (reg.collective?.name || '').toLowerCase();
-      return danceName.includes(searchLower) || collectiveName.includes(searchLower);
-    });
-  }, [registrations, search]);
 
   if (error && !eventData) {
     return (
