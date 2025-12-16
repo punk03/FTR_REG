@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { AuthProvider } from './context/AuthContext';
@@ -37,7 +37,9 @@ const loadThemeMode = (): boolean => {
 
 const AppRoutes: React.FC = () => {
   const [darkMode, setDarkMode] = useState(loadThemeMode);
-  const theme = createAppTheme(darkMode);
+  
+  // Мемоизируем тему, чтобы не пересоздавать при каждом рендере
+  const theme = React.useMemo(() => createAppTheme(darkMode), [darkMode]);
 
   // Сохранить тему в localStorage при изменении
   useEffect(() => {
@@ -47,8 +49,6 @@ const AppRoutes: React.FC = () => {
       console.error('Error saving theme to localStorage:', error);
     }
   }, [darkMode]);
-
-  console.log('AppRoutes rendering');
 
   return (
     <ThemeProvider theme={theme}>
@@ -88,8 +88,6 @@ const AppRoutes: React.FC = () => {
 };
 
 function App() {
-  console.log('App component rendering');
-  
   return (
     <ErrorBoundary>
       <NotificationProvider>

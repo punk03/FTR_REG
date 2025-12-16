@@ -167,10 +167,20 @@ export const Layout: React.FC<LayoutProps> = ({ darkMode, toggleDarkMode }) => {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
+          ModalProps={{ 
+            keepMounted: true,
+            // Оптимизация: отключить backdrop transition на медленных устройствах
+            disableAutoFocus: true,
+          }}
+          transitionDuration={isMobile ? 200 : 225}
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              // Оптимизация производительности
+              willChange: 'transform',
+            },
           }}
         >
           {drawer}

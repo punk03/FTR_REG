@@ -72,11 +72,53 @@ export const createAppTheme = (darkMode: boolean) => {
     },
     components: {
       MuiButton: {
+        defaultProps: {
+          disableRipple: false, // Можно отключить для больших списков
+        },
         styleOverrides: {
           root: {
             '@media (max-width:600px)': {
               fontSize: '0.875rem',
               padding: '8px 16px',
+            },
+            // Оптимизация transitions
+            transition: 'background-color 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms, box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms',
+          },
+        },
+      },
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            // Оптимизация transitions для Drawer
+            transition: 'transform 225ms cubic-bezier(0, 0, 0.2, 1) 0ms !important',
+            willChange: 'transform',
+          },
+        },
+      },
+      MuiDialog: {
+        styleOverrides: {
+          root: {
+            // Оптимизация transitions для Dialog
+            '& .MuiBackdrop-root': {
+              transition: 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms',
+            },
+          },
+        },
+      },
+      MuiTableRow: {
+        styleOverrides: {
+          root: {
+            // Оптимизация hover через CSS вместо JS
+            '&:hover': {
+              backgroundColor: 'action.hover',
+              transition: 'background-color 100ms cubic-bezier(0.4, 0, 0.2, 1) 0ms',
+            },
+            // Отключить transitions для очень больших таблиц (можно добавить класс)
+            '&.no-transition': {
+              transition: 'none',
+              '&:hover': {
+                transition: 'none',
+              },
             },
           },
         },

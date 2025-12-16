@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Box,
   Paper,
@@ -54,6 +55,207 @@ interface FiltersState {
 
 const STORAGE_KEY = 'ftr_registrations_filters';
 
+// Мемоизированный компонент строки таблицы для десктопа
+const RegistrationTableRow = memo(({ 
+  reg, 
+  isSelected, 
+  onSelect, 
+  onNavigate 
+}: { 
+  reg: any; 
+  isSelected: boolean; 
+  onSelect: (id: number) => void; 
+  onNavigate: (id: number) => void;
+}) => {
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'success';
+      case 'PERFORMANCE_PAID':
+      case 'DIPLOMAS_PAID':
+        return 'warning';
+      case 'UNPAID':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPaymentStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'Оплачено полностью';
+      case 'PERFORMANCE_PAID':
+        return 'Оплачено выступление';
+      case 'DIPLOMAS_PAID':
+        return 'Оплачены Д/М';
+      case 'UNPAID':
+        return 'Не оплачено';
+      default:
+        return status;
+    }
+  };
+
+  return (
+    <TableRow
+      hover
+      sx={{ cursor: 'pointer' }}
+    >
+      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={isSelected}
+          onChange={() => onSelect(reg.id)}
+        />
+      </TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>
+        {formatRegistrationNumber(reg)}
+      </TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>{reg.collective?.name || '-'}</TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>{reg.danceName || '-'}</TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>{reg.discipline?.name || '-'}</TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>{reg.nomination?.name || '-'}</TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>{reg.age?.name || '-'}</TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>{reg.participantsCount || 0}</TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>
+        <Chip
+          label={getPaymentStatusLabel(reg.paymentStatus)}
+          color={getPaymentStatusColor(reg.paymentStatus) as any}
+          size="small"
+        />
+      </TableCell>
+      <TableCell onClick={() => onNavigate(reg.id)}>
+        {reg.notes ? (
+          <Tooltip title={reg.notes}>
+            <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {reg.notes}
+            </Typography>
+          </Tooltip>
+        ) : (
+          '-'
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}, (prevProps, nextProps) => {
+  // Кастомная функция сравнения для оптимизации
+  return (
+    prevProps.reg.id === nextProps.reg.id &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.reg.paymentStatus === nextProps.reg.paymentStatus &&
+    prevProps.reg.notes === nextProps.reg.notes
+  );
+});
+
+RegistrationTableRow.displayName = 'RegistrationTableRow';
+
+// Мемоизированный компонент карточки для мобильной версии
+const RegistrationCard = memo(({ 
+  reg, 
+  isSelected, 
+  onSelect, 
+  onNavigate 
+}: { 
+  reg: any; 
+  isSelected: boolean; 
+  onSelect: (id: number) => void; 
+  onNavigate: (id: number) => void;
+}) => {
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'success';
+      case 'PERFORMANCE_PAID':
+      case 'DIPLOMAS_PAID':
+        return 'warning';
+      case 'UNPAID':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPaymentStatusLabel = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return 'Оплачено полностью';
+      case 'PERFORMANCE_PAID':
+        return 'Оплачено выступление';
+      case 'DIPLOMAS_PAID':
+        return 'Оплачены Д/М';
+      case 'UNPAID':
+        return 'Не оплачено';
+      default:
+        return status;
+    }
+  };
+
+  return (
+    <Paper
+      sx={{
+        p: 2,
+        mb: 2,
+        cursor: 'pointer',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          boxShadow: 3,
+          transform: 'translateY(-2px)'
+        }
+      }}
+      onClick={() => onNavigate(reg.id)}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+            {reg.collective?.name || '-'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            {reg.danceName || '-'}
+          </Typography>
+          <Typography variant="caption">
+            №{formatRegistrationNumber(reg)} | {reg.discipline?.name || '-'} | {reg.nomination?.name || '-'}
+          </Typography>
+        </Box>
+        <Checkbox
+          checked={isSelected}
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelect(reg.id);
+          }}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: reg.notes ? 1 : 0 }}>
+        <Typography variant="body2">
+          Участники: {reg.participantsCount || 0}
+        </Typography>
+        <Chip
+          label={getPaymentStatusLabel(reg.paymentStatus)}
+          color={getPaymentStatusColor(reg.paymentStatus) as any}
+          size="small"
+        />
+      </Box>
+      {reg.notes && (
+        <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+            📝 {reg.notes}
+          </Typography>
+        </Box>
+      )}
+    </Paper>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.reg.id === nextProps.reg.id &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.reg.paymentStatus === nextProps.reg.paymentStatus &&
+    prevProps.reg.notes === nextProps.reg.notes &&
+    prevProps.reg.collective?.name === nextProps.reg.collective?.name &&
+    prevProps.reg.danceName === nextProps.reg.danceName
+  );
+});
+
+RegistrationCard.displayName = 'RegistrationCard';
+
 export const RegistrationsList: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -94,6 +296,54 @@ export const RegistrationsList: React.FC = () => {
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
+
+  // Refs для виртуализации мобильной версии
+  const mobileListRef = useRef<HTMLDivElement>(null);
+  
+  // Мемоизируем отсортированный список регистраций
+  const sortedRegistrations = useMemo(() => {
+    if (!orderBy) return registrations;
+    
+    return [...registrations].sort((a: any, b: any) => {
+      const direction = order === 'asc' ? 1 : -1;
+      const getValue = (reg: any) => {
+        switch (orderBy) {
+          case 'number':
+            return reg.number || 0;
+          case 'collective':
+            return reg.collective?.name || '';
+          case 'danceName':
+            return reg.danceName || '';
+          case 'discipline':
+            return reg.discipline?.name || '';
+          case 'nomination':
+            return reg.nomination?.name || '';
+          case 'age':
+            return reg.age?.name || '';
+          case 'participantsCount':
+            return reg.participantsCount || 0;
+          case 'paymentStatus':
+            return reg.paymentStatus || '';
+          default:
+            return '';
+        }
+      };
+      const aVal = getValue(a);
+      const bVal = getValue(b);
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return (aVal - bVal) * direction;
+      }
+      return String(aVal).localeCompare(String(bVal)) * direction;
+    });
+  }, [registrations, orderBy, order]);
+
+  // Виртуализатор для мобильной версии (только если больше 50 элементов)
+  const mobileVirtualizer = useVirtualizer({
+    count: sortedRegistrations.length,
+    getScrollElement: () => mobileListRef.current,
+    estimateSize: () => 120, // Примерная высота карточки
+    overscan: 5, // Рендерим 5 дополнительных элементов для плавности
+  });
 
   // Save filters to localStorage
   useEffect(() => {
@@ -613,46 +863,14 @@ export const RegistrationsList: React.FC = () => {
                   return String(aVal).localeCompare(String(bVal)) * direction;
                 })
                 .map((reg: any) => (
-                <TableRow
-                  key={reg.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                >
-                  <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedIds.has(reg.id)}
-                      onChange={() => handleSelectOne(reg.id)}
-                    />
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>
-                    {formatRegistrationNumber(reg)}
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.collective?.name || '-'}</TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.danceName || '-'}</TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.discipline?.name || '-'}</TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.nomination?.name || '-'}</TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.age?.name || '-'}</TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>{reg.participantsCount || 0}</TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>
-                    <Chip
-                      label={getPaymentStatusLabel(reg.paymentStatus)}
-                      color={getPaymentStatusColor(reg.paymentStatus) as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/registrations/${reg.id}`)}>
-                    {reg.notes ? (
-                      <Tooltip title={reg.notes}>
-                        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {reg.notes}
-                        </Typography>
-                      </Tooltip>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
+                  <RegistrationTableRow
+                    key={reg.id}
+                    reg={reg}
+                    isSelected={selectedIds.has(reg.id)}
+                    onSelect={handleSelectOne}
+                    onNavigate={(id) => navigate(`/registrations/${id}`)}
+                  />
+                ))
             )}
           </TableBody>
         </Table>
@@ -680,42 +898,13 @@ export const RegistrationsList: React.FC = () => {
         ) : (
           <>
             {registrations.map((reg: any) => (
-              <Paper
+              <RegistrationCard
                 key={reg.id}
-                sx={{ p: 2, mb: 2, cursor: 'pointer' }}
-                onClick={() => navigate(`/registrations/${reg.id}`)}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
-                  <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                    {reg.collective?.name || '-'}
-                  </Typography>
-                  <Chip
-                    label={getPaymentStatusLabel(reg.paymentStatus)}
-                    color={getPaymentStatusColor(reg.paymentStatus) as any}
-                    size="small"
-                  />
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  {reg.danceName || 'Без названия'}
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                  <Typography variant="caption">
-                    №{formatRegistrationNumber(reg)} | {reg.discipline?.name || '-'} | {reg.nomination?.name || '-'}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: reg.notes ? 1 : 0 }}>
-                  <Typography variant="body2">
-                    Участники: {reg.participantsCount || 0}
-                  </Typography>
-                </Box>
-                {reg.notes && (
-                  <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                      📝 {reg.notes}
-                    </Typography>
-                  </Box>
-                )}
-              </Paper>
+                reg={reg}
+                isSelected={selectedIds.has(reg.id)}
+                onSelect={handleSelectOne}
+                onNavigate={(id) => navigate(`/registrations/${id}`)}
+              />
             ))}
           </>
         )}
