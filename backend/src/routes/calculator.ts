@@ -340,7 +340,7 @@ router.get('/:token/statement', authenticateToken, async (req: Request, res: Res
     });
 
     // Формируем список записей для ведомости
-    const statementEntries = entries.map((entry) => ({
+    const statementEntries = entries.map((entry: { id: number; collectiveName: string; amount: any; method: string; paidFor: string; createdAt: Date }) => ({
       id: entry.id,
       collectiveName: entry.collectiveName,
       amount: Number(entry.amount),
@@ -363,7 +363,7 @@ router.get('/:token/statement', authenticateToken, async (req: Request, res: Res
       total: 0,
     };
 
-    statementEntries.forEach((entry) => {
+    statementEntries.forEach((entry: { method: string; paidFor: string; amount: number }) => {
       stats.byMethod[entry.method as keyof typeof stats.byMethod] += entry.amount;
       stats.byPaidFor[entry.paidFor as keyof typeof stats.byPaidFor] += entry.amount;
       stats.total += entry.amount;
