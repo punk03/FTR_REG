@@ -37,6 +37,10 @@ CREATE INDEX IF NOT EXISTS "CalculatorStatement_deletedAt_idx" ON "CalculatorSta
 
 -- Добавление внешнего ключа
 ALTER TABLE "CalculatorStatement" ADD CONSTRAINT "CalculatorStatement_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Добавление поля deletedAt для мягкого удаления (если таблица уже существует)
+ALTER TABLE "CalculatorStatement" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
+CREATE INDEX IF NOT EXISTS "CalculatorStatement_deletedAt_idx" ON "CalculatorStatement"("deletedAt");
 EOF
 ```
 
