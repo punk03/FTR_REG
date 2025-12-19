@@ -30,7 +30,14 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  IconButton,
+  Tooltip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import RestoreIcon from '@mui/icons-material/Restore';
+import { useAuth } from '../context/AuthContext';
 import { createAppTheme } from '../theme';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -272,7 +279,7 @@ export const Calculator: React.FC = () => {
   }, [currentTab]); // Загружаем только при переключении вкладки
 
   // Загрузка ведомости при переключении на вкладку ведомости
-  const fetchStatement = useCallback(async () => {
+  const fetchStatement = useCallback(async (includeDeleted: boolean = false) => {
     if (!token || !isAuthenticated) {
       return;
     }
@@ -280,7 +287,8 @@ export const Calculator: React.FC = () => {
     setStatementLoading(true);
     try {
       const url = API_URL ? `${API_URL}/api/public/calculator/${token}/statement` : `/api/public/calculator/${token}/statement`;
-      const response = await api.get(url);
+      const params = includeDeleted ? { includeDeleted: 'true' } : {};
+      const response = await api.get(url, { params });
       setStatementEntries(response.data.entries || []);
       setStatementStatistics(response.data.statistics || null);
     } catch (err: any) {
@@ -293,9 +301,16 @@ export const Calculator: React.FC = () => {
 
   useEffect(() => {
     if (currentTab === 2 && isAuthenticated && !authLoading) {
-      fetchStatement();
+      fetchStatement(showDeletedEntries);
     }
-  }, [currentTab, isAuthenticated, authLoading, fetchStatement]);
+  }, [currentTab, isAuthenticated, authLoading, showDeletedEntries, fetchStatement]);
+
+  // Обработка изменения переключателя показа удаленных записей
+  useEffect(() => {
+    if (currentTab === 2 && isAuthenticated && !authLoading) {
+      fetchStatement(showDeletedEntries);
+    }
+  }, [showDeletedEntries, currentTab, isAuthenticated, authLoading, fetchStatement]);
 
   // Создание записи ведомости
   const handleCreateStatementEntry = async () => {
@@ -1253,6 +1268,21 @@ export const Calculator: React.FC = () => {
                       </CardContent>
                     </Card>
 
+                    {/* Переключатель показа удаленных записей (только для администраторов) */}
+                    {isAdmin && (
+                      <Box sx={{ mb: 2 }} className="no-print">
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={showDeletedEntries}
+                              onChange={(e) => setShowDeletedEntries(e.target.checked)}
+                            />
+                          }
+                          label="Показать удаленные записи"
+                        />
+                      </Box>
+                    )}
+
                     {/* Таблица записей */}
                     {statementEntries.length === 0 ? (
                       <Alert severity="info">Записи ведомости отсутствуют</Alert>
@@ -1266,12 +1296,33 @@ export const Calculator: React.FC = () => {
                               <TableCell sx={{ fontWeight: 600 }}>Способ оплаты</TableCell>
                               <TableCell sx={{ fontWeight: 600 }}>Назначение</TableCell>
                               <TableCell sx={{ fontWeight: 600 }}>Дата</TableCell>
+                              {isAdmin && (
+                                <TableCell sx={{ fontWeight: 600 }} align="right">
+                                  Действия
+                                </TableCell>
+                              )}
                             </TableRow>
                           </TableHead>
                           <TableBody>
                             {statementEntries.map((entry: any) => (
-                              <TableRow key={entry.id}>
-                                <TableCell>{entry.collectiveName}</TableCell>
+                              <TableRow
+                                key={entry.id}
+                                sx={{
+                                  opacity: entry.deletedAt ? 0.6 : 1,
+                                  backgroundColor: entry.deletedAt ? 'rgba(0, 0, 0, 0.02)' : 'transparent',
+                                }}
+                              >
+                                <TableCell>
+                                  {entry.collectiveName}
+                                  {entry.deletedAt && (
+                                    <Chip
+                                      label="Удалено"
+                                      size="small"
+                                      color="error"
+                                      sx={{ ml: 1 }}
+                                    />
+                                  )}
+                                </TableCell>
                                 <TableCell>{formatCurrency(entry.amount)}</TableCell>
                                 <TableCell>
                                   {entry.method === 'CASH'
@@ -1292,6 +1343,31 @@ export const Calculator: React.FC = () => {
                                     minute: '2-digit',
                                   })}
                                 </TableCell>
+                                {isAdmin && (
+                                  <TableCell align="right">
+                                    {entry.deletedAt ? (
+                                      <Tooltip title="Восстановить запись">
+                                        <IconButton
+                                          size="small"
+                                          color="success"
+                                          onClick={() => handleRestoreStatementEntry(entry.id)}
+                                        >
+                                          <RestoreIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    ) : (
+                                      <Tooltip title="Удалить запись">
+                                        <IconButton
+                                          size="small"
+                                          color="error"
+                                          onClick={() => handleDeleteStatementEntry(entry.id)}
+                                        >
+                                          <DeleteIcon />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </TableCell>
+                                )}
                               </TableRow>
                             ))}
                           </TableBody>

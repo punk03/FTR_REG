@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { errorHandler } from '../middleware/errorHandler';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -317,10 +317,11 @@ router.post('/:token/calculate-combined', async (req: Request, res: Response): P
 });
 
 // Защищенный endpoint для получения ведомости (требует авторизации)
-// GET /api/public/calculator/:token/statement
+// GET /api/public/calculator/:token/statement?includeDeleted=true
 router.get('/:token/statement', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
+    const includeDeleted = req.query.includeDeleted === 'true';
 
     const event = await prisma.event.findUnique({
       where: { calculatorToken: token },
@@ -331,25 +332,33 @@ router.get('/:token/statement', authenticateToken, async (req: Request, res: Res
       return;
     }
 
+    // Формируем условие для фильтрации удаленных записей
+    const where: any = {
+      eventId: event.id,
+    };
+    
+    if (!includeDeleted) {
+      where.deletedAt = null;
+    }
+
     // Получаем все записи ведомости для этого события (отдельная таблица, не связанная с регистрациями)
     const entries = await prisma.calculatorStatement.findMany({
-      where: {
-        eventId: event.id,
-      },
+      where,
       orderBy: { createdAt: 'desc' },
     });
 
     // Формируем список записей для ведомости
-    const statementEntries = entries.map((entry: { id: number; collectiveName: string; amount: any; method: string; paidFor: string; createdAt: Date }) => ({
+    const statementEntries = entries.map((entry: { id: number; collectiveName: string; amount: any; method: string; paidFor: string; deletedAt: Date | null; createdAt: Date }) => ({
       id: entry.id,
       collectiveName: entry.collectiveName,
       amount: Number(entry.amount),
       method: entry.method, // CASH, CARD, TRANSFER
       paidFor: entry.paidFor, // PERFORMANCE, DIPLOMAS_MEDALS
+      deletedAt: entry.deletedAt,
       createdAt: entry.createdAt,
     }));
 
-    // Подсчитываем статистику
+    // Подсчитываем статистику (только для неудаленных записей)
     const stats = {
       byMethod: {
         CASH: 0,
@@ -363,11 +372,13 @@ router.get('/:token/statement', authenticateToken, async (req: Request, res: Res
       total: 0,
     };
 
-    statementEntries.forEach((entry: { method: string; paidFor: string; amount: number }) => {
-      stats.byMethod[entry.method as keyof typeof stats.byMethod] += entry.amount;
-      stats.byPaidFor[entry.paidFor as keyof typeof stats.byPaidFor] += entry.amount;
-      stats.total += entry.amount;
-    });
+    statementEntries
+      .filter((entry: { deletedAt: Date | null }) => !entry.deletedAt)
+      .forEach((entry: { method: string; paidFor: string; amount: number }) => {
+        stats.byMethod[entry.method as keyof typeof stats.byMethod] += entry.amount;
+        stats.byPaidFor[entry.paidFor as keyof typeof stats.byPaidFor] += entry.amount;
+        stats.total += entry.amount;
+      });
 
     res.json({
       entries: statementEntries,

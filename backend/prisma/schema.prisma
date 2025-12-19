@@ -473,6 +473,7 @@ model CalculatorStatement {
   amount        Decimal       @db.Decimal(10, 2)
   method        PaymentMethod
   paidFor       PaidFor
+  deletedAt     DateTime?     // Soft delete
   createdAt     DateTime      @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -481,4 +482,5 @@ model CalculatorStatement {
   @@index([createdAt])
   @@index([method])
   @@index([paidFor])
+  @@index([deletedAt])
 }
