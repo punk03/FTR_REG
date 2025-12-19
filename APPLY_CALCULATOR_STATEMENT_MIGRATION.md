@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS "CalculatorStatement" (
     "amount" DECIMAL(10, 2) NOT NULL,
     "method" "PaymentMethod" NOT NULL,
     "paidFor" "PaidFor" NOT NULL,
+    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "CalculatorStatement_pkey" PRIMARY KEY ("id")
 );
@@ -32,6 +33,7 @@ CREATE INDEX IF NOT EXISTS "CalculatorStatement_eventId_idx" ON "CalculatorState
 CREATE INDEX IF NOT EXISTS "CalculatorStatement_createdAt_idx" ON "CalculatorStatement"("createdAt");
 CREATE INDEX IF NOT EXISTS "CalculatorStatement_method_idx" ON "CalculatorStatement"("method");
 CREATE INDEX IF NOT EXISTS "CalculatorStatement_paidFor_idx" ON "CalculatorStatement"("paidFor");
+CREATE INDEX IF NOT EXISTS "CalculatorStatement_deletedAt_idx" ON "CalculatorStatement"("deletedAt");
 
 -- Добавление внешнего ключа
 ALTER TABLE "CalculatorStatement" ADD CONSTRAINT "CalculatorStatement_eventId_fkey" FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -58,6 +60,7 @@ docker-compose exec backend npx prisma generate --schema=prisma/schema.prisma
 - `amount` - сумма платежа (DECIMAL(10, 2))
 - `method` - способ оплаты (CASH, CARD, TRANSFER)
 - `paidFor` - назначение платежа (PERFORMANCE, DIPLOMAS_MEDALS)
+- `deletedAt` - дата мягкого удаления (NULL если запись не удалена)
 - `createdAt` - дата создания записи
 
 ## Важно
@@ -65,4 +68,7 @@ docker-compose exec backend npx prisma generate --schema=prisma/schema.prisma
 - Таблица `CalculatorStatement` полностью независима от `AccountingEntry`
 - Данные в ведомости калькулятора не связаны с регистрациями
 - Все записи вводятся вручную через интерфейс калькулятора
+- Поддерживается мягкое удаление записей (поле `deletedAt`)
+- Удаление и восстановление записей доступно только администраторам
+- Удаленные записи не учитываются в статистике, но могут быть восстановлены
 
