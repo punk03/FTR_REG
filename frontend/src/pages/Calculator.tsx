@@ -57,7 +57,24 @@ export const Calculator: React.FC = () => {
   const calculatorTheme = useMemo(() => createAppTheme(false), []);
   const isMobile = useMediaQuery(calculatorTheme.breakpoints.down('sm'));
 
-  const [currentTab, setCurrentTab] = useState<number>(0);
+  // Проверяем hash в URL для автоматического переключения на вкладку ведомости
+  const [currentTab, setCurrentTab] = useState<number>(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#statement') {
+      return 2; // Вкладка "Ведомость"
+    }
+    return 0;
+  });
+
+  // Обработка изменения hash для переключения вкладок
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#statement' && isAuthenticated) {
+        setCurrentTab(2);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [isAuthenticated]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [eventData, setEventData] = useState<any>(null);

@@ -2712,6 +2712,50 @@ export const Admin: React.FC = () => {
                       <ContentCopyIcon fontSize="small" />
                     </IconButton>
                   </Box>
+                  {selectedEvent.calculatorToken && (
+                    <Box sx={{ mt: 1 }}>
+                      <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 600 }}>
+                        Прямая ссылка на ведомость:
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <LinkIcon fontSize="small" color="secondary" />
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            flex: 1,
+                            minWidth: 200,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            color: 'secondary.main',
+                            textDecoration: 'underline',
+                          }}
+                          onClick={() => {
+                            const url = `${window.location.origin}/calculator/${selectedEvent.calculatorToken}#statement`;
+                            window.open(url, '_blank');
+                          }}
+                          title={`${window.location.origin}/calculator/${selectedEvent.calculatorToken}#statement`}
+                        >
+                          {`${window.location.origin}/calculator/${selectedEvent.calculatorToken}#statement`}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const url = `${window.location.origin}/calculator/${selectedEvent.calculatorToken}#statement`;
+                            navigator.clipboard.writeText(url);
+                            showSuccess('Ссылка на ведомость скопирована в буфер обмена');
+                          }}
+                          title="Скопировать ссылку на ведомость"
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                      <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                        ⚠️ Требуется авторизация для доступа к ведомости
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Grid>
             )}
