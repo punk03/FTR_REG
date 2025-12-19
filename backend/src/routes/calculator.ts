@@ -444,10 +444,111 @@ router.post('/:token/statement', authenticateToken, async (req: Request, res: Re
       amount: Number(entry.amount),
       method: entry.method,
       paidFor: entry.paidFor,
+      deletedAt: entry.deletedAt,
       createdAt: entry.createdAt,
     });
   } catch (error) {
     console.error('Error creating statement entry:', error);
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// Защищенный endpoint для мягкого удаления записи ведомости (требует авторизации, только ADMIN)
+// DELETE /api/public/calculator/:token/statement/:id
+router.delete('/:token/statement/:id', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, id } = req.params;
+    const entryId = parseInt(id);
+
+    const event = await prisma.event.findUnique({
+      where: { calculatorToken: token },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    // Проверяем, что запись существует и принадлежит этому событию
+    const entry = await prisma.calculatorStatement.findFirst({
+      where: {
+        id: entryId,
+        eventId: event.id,
+      },
+    });
+
+    if (!entry) {
+      res.status(404).json({ error: 'Statement entry not found' });
+      return;
+    }
+
+    // Мягкое удаление
+    const updatedEntry = await prisma.calculatorStatement.update({
+      where: { id: entryId },
+      data: { deletedAt: new Date() },
+    });
+
+    res.json({
+      id: updatedEntry.id,
+      collectiveName: updatedEntry.collectiveName,
+      amount: Number(updatedEntry.amount),
+      method: updatedEntry.method,
+      paidFor: updatedEntry.paidFor,
+      deletedAt: updatedEntry.deletedAt,
+      createdAt: updatedEntry.createdAt,
+    });
+  } catch (error) {
+    console.error('Error deleting statement entry:', error);
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// Защищенный endpoint для восстановления записи ведомости (требует авторизации, только ADMIN)
+// POST /api/public/calculator/:token/statement/:id/restore
+router.post('/:token/statement/:id/restore', authenticateToken, requireRole('ADMIN'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token, id } = req.params;
+    const entryId = parseInt(id);
+
+    const event = await prisma.event.findUnique({
+      where: { calculatorToken: token },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    // Проверяем, что запись существует и принадлежит этому событию
+    const entry = await prisma.calculatorStatement.findFirst({
+      where: {
+        id: entryId,
+        eventId: event.id,
+      },
+    });
+
+    if (!entry) {
+      res.status(404).json({ error: 'Statement entry not found' });
+      return;
+    }
+
+    // Восстановление записи
+    const updatedEntry = await prisma.calculatorStatement.update({
+      where: { id: entryId },
+      data: { deletedAt: null },
+    });
+
+    res.json({
+      id: updatedEntry.id,
+      collectiveName: updatedEntry.collectiveName,
+      amount: Number(updatedEntry.amount),
+      method: updatedEntry.method,
+      paidFor: updatedEntry.paidFor,
+      deletedAt: updatedEntry.deletedAt,
+      createdAt: updatedEntry.createdAt,
+    });
+  } catch (error) {
+    console.error('Error restoring statement entry:', error);
     errorHandler(error as Error, req, res, () => {});
   }
 });

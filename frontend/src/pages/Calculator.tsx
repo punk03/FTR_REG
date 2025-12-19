@@ -40,7 +40,6 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import { useAuth } from '../context/AuthContext';
 import { createAppTheme } from '../theme';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 // API URL - use environment variable or default to relative path
@@ -59,7 +58,8 @@ const getNominationByParticipants = (count: number): string => {
 
 export const Calculator: React.FC = () => {
   const { token } = useParams<{ token: string }>();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   // Используем светлую тему для калькулятора (публичная страница) - мемоизируем
   const calculatorTheme = useMemo(() => createAppTheme(false), []);
   const isMobile = useMediaQuery(calculatorTheme.breakpoints.down('sm'));
@@ -111,6 +111,7 @@ export const Calculator: React.FC = () => {
   const [statementEntries, setStatementEntries] = useState<any[]>([]);
   const [statementStatistics, setStatementStatistics] = useState<any>(null);
   const [statementLoading, setStatementLoading] = useState(false);
+  const [showDeletedEntries, setShowDeletedEntries] = useState(false);
   const [statementFormData, setStatementFormData] = useState({
     collectiveName: '',
     amount: '',
@@ -350,12 +351,50 @@ export const Calculator: React.FC = () => {
       });
 
       // Обновляем список
-      await fetchStatement();
+      await fetchStatement(showDeletedEntries);
     } catch (err: any) {
       console.error('Error creating statement entry:', err);
       setError(err.response?.data?.error || 'Не удалось создать запись ведомости');
     } finally {
       setStatementSubmitting(false);
+    }
+  };
+
+  // Удаление записи ведомости (мягкое удаление)
+  const handleDeleteStatementEntry = async (entryId: number) => {
+    if (!token || !isAuthenticated) {
+      setError('Требуется авторизация');
+      return;
+    }
+
+    if (!window.confirm('Вы уверены, что хотите удалить эту запись? Запись можно будет восстановить позже.')) {
+      return;
+    }
+
+    try {
+      const url = API_URL ? `${API_URL}/api/public/calculator/${token}/statement/${entryId}` : `/api/public/calculator/${token}/statement/${entryId}`;
+      await api.delete(url);
+      await fetchStatement(showDeletedEntries);
+    } catch (err: any) {
+      console.error('Error deleting statement entry:', err);
+      setError(err.response?.data?.error || 'Не удалось удалить запись ведомости');
+    }
+  };
+
+  // Восстановление записи ведомости
+  const handleRestoreStatementEntry = async (entryId: number) => {
+    if (!token || !isAuthenticated) {
+      setError('Требуется авторизация');
+      return;
+    }
+
+    try {
+      const url = API_URL ? `${API_URL}/api/public/calculator/${token}/statement/${entryId}/restore` : `/api/public/calculator/${token}/statement/${entryId}/restore`;
+      await api.post(url);
+      await fetchStatement(showDeletedEntries);
+    } catch (err: any) {
+      console.error('Error restoring statement entry:', err);
+      setError(err.response?.data?.error || 'Не удалось восстановить запись ведомости');
     }
   };
 
