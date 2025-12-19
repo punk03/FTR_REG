@@ -33,6 +33,8 @@ import {
 } from '@mui/material';
 import { createAppTheme } from '../theme';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 // API URL - use environment variable or default to relative path
 // @ts-ignore - Vite environment variable
@@ -50,6 +52,7 @@ const getNominationByParticipants = (count: number): string => {
 
 export const Calculator: React.FC = () => {
   const { token } = useParams<{ token: string }>();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   // Используем светлую тему для калькулятора (публичная страница) - мемоизируем
   const calculatorTheme = useMemo(() => createAppTheme(false), []);
   const isMobile = useMediaQuery(calculatorTheme.breakpoints.down('sm'));
@@ -79,6 +82,18 @@ export const Calculator: React.FC = () => {
   const [combinedCalculationResult, setCombinedCalculationResult] = useState<any>(null);
   const searchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Состояния для вкладки ведомости
+  const [statementEntries, setStatementEntries] = useState<any[]>([]);
+  const [statementStatistics, setStatementStatistics] = useState<any>(null);
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [statementFormData, setStatementFormData] = useState({
+    collectiveName: '',
+    amount: '',
+    method: 'CASH' as 'CASH' | 'CARD' | 'TRANSFER',
+    paidFor: 'PERFORMANCE' as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
+  });
+  const [statementSubmitting, setStatementSubmitting] = useState(false);
 
   // Загрузка данных события
   useEffect(() => {
@@ -239,6 +254,79 @@ export const Calculator: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTab]); // Загружаем только при переключении вкладки
 
+  // Загрузка ведомости при переключении на вкладку ведомости
+  const fetchStatement = useCallback(async () => {
+    if (!token || !isAuthenticated) {
+      return;
+    }
+
+    setStatementLoading(true);
+    try {
+      const url = API_URL ? `${API_URL}/api/public/calculator/${token}/statement` : `/api/public/calculator/${token}/statement`;
+      const response = await api.get(url);
+      setStatementEntries(response.data.entries || []);
+      setStatementStatistics(response.data.statistics || null);
+    } catch (err: any) {
+      console.error('Error fetching statement:', err);
+      setError(err.response?.data?.error || 'Не удалось загрузить ведомость');
+    } finally {
+      setStatementLoading(false);
+    }
+  }, [token, isAuthenticated]);
+
+  useEffect(() => {
+    if (currentTab === 2 && isAuthenticated && !authLoading) {
+      fetchStatement();
+    }
+  }, [currentTab, isAuthenticated, authLoading, fetchStatement]);
+
+  // Создание записи ведомости
+  const handleCreateStatementEntry = async () => {
+    if (!token || !isAuthenticated) {
+      setError('Требуется авторизация');
+      return;
+    }
+
+    if (!statementFormData.collectiveName.trim()) {
+      setError('Введите название коллектива');
+      return;
+    }
+
+    if (!statementFormData.amount || parseFloat(statementFormData.amount) <= 0) {
+      setError('Введите корректную сумму');
+      return;
+    }
+
+    setStatementSubmitting(true);
+    setError(null);
+
+    try {
+      const url = API_URL ? `${API_URL}/api/public/calculator/${token}/statement` : `/api/public/calculator/${token}/statement`;
+      await api.post(url, {
+        collectiveName: statementFormData.collectiveName.trim(),
+        amount: parseFloat(statementFormData.amount),
+        method: statementFormData.method,
+        paidFor: statementFormData.paidFor,
+      });
+
+      // Очищаем форму
+      setStatementFormData({
+        collectiveName: '',
+        amount: '',
+        method: 'CASH',
+        paidFor: 'PERFORMANCE',
+      });
+
+      // Обновляем список
+      await fetchStatement();
+    } catch (err: any) {
+      console.error('Error creating statement entry:', err);
+      setError(err.response?.data?.error || 'Не удалось создать запись ведомости');
+    } finally {
+      setStatementSubmitting(false);
+    }
+  };
+
 
   // Расчет стоимости
   const handleCalculate = async () => {
@@ -369,7 +457,7 @@ export const Calculator: React.FC = () => {
           },
         }}
       >
-      <Container maxWidth={currentTab === 1 ? false : "md"} sx={{ py: { xs: 2, sm: 4 } }}>
+      <Container maxWidth={currentTab === 1 || currentTab === 2 ? false : "md"} sx={{ py: { xs: 2, sm: 4 } }}>
       <Paper
         elevation={3}
         sx={{
@@ -425,6 +513,7 @@ export const Calculator: React.FC = () => {
             <Tabs value={currentTab} onChange={(_, newValue) => setCurrentTab(newValue)} sx={{ mb: 3 }} className="no-print">
               <Tab label="Калькулятор" />
               <Tab label="Список номеров" />
+              {isAuthenticated && <Tab label="Ведомость" />}
             </Tabs>
 
             {error && (
@@ -1038,6 +1127,246 @@ export const Calculator: React.FC = () => {
                               ))}
                             </Box>
                           )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </Box>
+            )}
+
+            {/* Вкладка 3: Ведомость */}
+            {currentTab === 2 && (
+              <Box>
+                {!isAuthenticated ? (
+                  <Alert severity="warning">
+                    Для доступа к ведомости требуется авторизация. Пожалуйста, войдите в систему.
+                  </Alert>
+                ) : statementLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <>
+                    {/* Форма добавления записи */}
+                    <Card sx={{ mb: 3 }} className="no-print">
+                      <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                          Добавить запись в ведомость
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              label="Название коллектива"
+                              value={statementFormData.collectiveName}
+                              onChange={(e) =>
+                                setStatementFormData({
+                                  ...statementFormData,
+                                  collectiveName: e.target.value,
+                                })
+                              }
+                              required
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              fullWidth
+                              label="Сумма"
+                              type="number"
+                              value={statementFormData.amount}
+                              onChange={(e) =>
+                                setStatementFormData({
+                                  ...statementFormData,
+                                  amount: e.target.value,
+                                })
+                              }
+                              required
+                              inputProps={{ min: 0, step: 0.01 }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                              <InputLabel>Способ оплаты</InputLabel>
+                              <Select
+                                value={statementFormData.method}
+                                label="Способ оплаты"
+                                onChange={(e) =>
+                                  setStatementFormData({
+                                    ...statementFormData,
+                                    method: e.target.value as 'CASH' | 'CARD' | 'TRANSFER',
+                                  })
+                                }
+                              >
+                                <MenuItem value="CASH">Наличка</MenuItem>
+                                <MenuItem value="CARD">Карта</MenuItem>
+                                <MenuItem value="TRANSFER">Перевод</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <FormControl fullWidth>
+                              <InputLabel>Назначение</InputLabel>
+                              <Select
+                                value={statementFormData.paidFor}
+                                label="Назначение"
+                                onChange={(e) =>
+                                  setStatementFormData({
+                                    ...statementFormData,
+                                    paidFor: e.target.value as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
+                                  })
+                                }
+                              >
+                                <MenuItem value="PERFORMANCE">Рега</MenuItem>
+                                <MenuItem value="DIPLOMAS_MEDALS">ДМ</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              onClick={handleCreateStatementEntry}
+                              disabled={statementSubmitting}
+                            >
+                              {statementSubmitting ? 'Добавление...' : 'Добавить запись'}
+                            </Button>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+
+                    {/* Таблица записей */}
+                    {statementEntries.length === 0 ? (
+                      <Alert severity="info">Записи ведомости отсутствуют</Alert>
+                    ) : (
+                      <TableContainer component={Paper} sx={{ mb: 3 }}>
+                        <Table>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell sx={{ fontWeight: 600 }}>Коллектив</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Сумма</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Способ оплаты</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Назначение</TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>Дата</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {statementEntries.map((entry: any) => (
+                              <TableRow key={entry.id}>
+                                <TableCell>{entry.collectiveName}</TableCell>
+                                <TableCell>{formatCurrency(entry.amount)}</TableCell>
+                                <TableCell>
+                                  {entry.method === 'CASH'
+                                    ? 'Наличка'
+                                    : entry.method === 'CARD'
+                                    ? 'Карта'
+                                    : 'Перевод'}
+                                </TableCell>
+                                <TableCell>
+                                  {entry.paidFor === 'PERFORMANCE' ? 'Рега' : 'ДМ'}
+                                </TableCell>
+                                <TableCell>
+                                  {new Date(entry.createdAt).toLocaleDateString('ru-RU', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    )}
+
+                    {/* Итоговая статистика */}
+                    {statementStatistics && (
+                      <Card sx={{ backgroundColor: 'success.main', color: 'white' }}>
+                        <CardContent>
+                          <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, textAlign: 'center' }}>
+                            Итоговая статистика
+                          </Typography>
+
+                          {/* Общая сумма */}
+                          <Box sx={{ mb: 3, textAlign: 'center' }}>
+                            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                              {formatCurrency(statementStatistics.total)}
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                              Общая сумма
+                            </Typography>
+                          </Box>
+
+                          <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+
+                          {/* По способам оплаты */}
+                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                            По способам оплаты:
+                          </Typography>
+                          <Grid container spacing={2} sx={{ mb: 3 }}>
+                            <Grid item xs={12} sm={4}>
+                              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                  Наличка
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {formatCurrency(statementStatistics.byMethod.CASH)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                  Карта
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {formatCurrency(statementStatistics.byMethod.CARD)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={4}>
+                              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                  Перевод
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {formatCurrency(statementStatistics.byMethod.TRANSFER)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                          </Grid>
+
+                          <Divider sx={{ my: 3, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
+
+                          {/* По назначениям */}
+                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                            По назначениям:
+                          </Typography>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                  Рега
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {formatCurrency(statementStatistics.byPaidFor.PERFORMANCE)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <Box sx={{ textAlign: 'center', p: 2, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 1 }}>
+                                <Typography variant="body2" sx={{ opacity: 0.9, mb: 0.5 }}>
+                                  ДМ
+                                </Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {formatCurrency(statementStatistics.byPaidFor.DIPLOMAS_MEDALS)}
+                                </Typography>
+                              </Box>
+                            </Grid>
+                          </Grid>
                         </CardContent>
                       </Card>
                     )}

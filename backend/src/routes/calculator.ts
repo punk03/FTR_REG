@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { errorHandler } from '../middleware/errorHandler';
+import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -311,6 +312,187 @@ router.post('/:token/calculate-combined', async (req: Request, res: Response): P
       breakdown,
     });
   } catch (error) {
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// Защищенный endpoint для получения ведомости (требует авторизации)
+// GET /api/public/calculator/:token/statement
+router.get('/:token/statement', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+
+    const event = await prisma.event.findUnique({
+      where: { calculatorToken: token },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    // Получаем все записи ведомости для этого события
+    const entries = await prisma.accountingEntry.findMany({
+      where: {
+        OR: [
+          { registration: { eventId: event.id } },
+          { eventId: event.id, registrationId: null },
+        ],
+        deletedAt: null,
+      },
+      include: {
+        collective: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        registration: {
+          select: {
+            id: true,
+            collective: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Формируем список записей для ведомости
+    const statementEntries = entries.map((entry) => {
+      // Определяем название коллектива
+      let collectiveName = '';
+      if (entry.collective) {
+        collectiveName = entry.collective.name;
+      } else if (entry.registration?.collective) {
+        collectiveName = entry.registration.collective.name;
+      } else if (entry.description) {
+        collectiveName = entry.description;
+      }
+
+      return {
+        id: entry.id,
+        collectiveName,
+        amount: Number(entry.amount),
+        method: entry.method, // CASH, CARD, TRANSFER
+        paidFor: entry.paidFor, // PERFORMANCE, DIPLOMAS_MEDALS
+        createdAt: entry.createdAt,
+      };
+    });
+
+    // Подсчитываем статистику
+    const stats = {
+      byMethod: {
+        CASH: 0,
+        CARD: 0,
+        TRANSFER: 0,
+      },
+      byPaidFor: {
+        PERFORMANCE: 0,
+        DIPLOMAS_MEDALS: 0,
+      },
+      total: 0,
+    };
+
+    statementEntries.forEach((entry) => {
+      stats.byMethod[entry.method as keyof typeof stats.byMethod] += entry.amount;
+      stats.byPaidFor[entry.paidFor as keyof typeof stats.byPaidFor] += entry.amount;
+      stats.total += entry.amount;
+    });
+
+    res.json({
+      entries: statementEntries,
+      statistics: stats,
+    });
+  } catch (error) {
+    console.error('Error fetching statement:', error);
+    errorHandler(error as Error, req, res, () => {});
+  }
+});
+
+// Защищенный endpoint для создания записи ведомости (требует авторизации)
+// POST /api/public/calculator/:token/statement
+router.post('/:token/statement', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+    const { collectiveName, amount, method, paidFor } = req.body;
+
+    // Валидация
+    if (!collectiveName || typeof collectiveName !== 'string' || !collectiveName.trim()) {
+      res.status(400).json({ error: 'Название коллектива обязательно' });
+      return;
+    }
+
+    if (!amount || typeof amount !== 'number' || amount <= 0) {
+      res.status(400).json({ error: 'Сумма должна быть положительным числом' });
+      return;
+    }
+
+    if (!['CASH', 'CARD', 'TRANSFER'].includes(method)) {
+      res.status(400).json({ error: 'Способ оплаты должен быть: CASH, CARD или TRANSFER' });
+      return;
+    }
+
+    if (!['PERFORMANCE', 'DIPLOMAS_MEDALS'].includes(paidFor)) {
+      res.status(400).json({ error: 'Назначение должно быть: PERFORMANCE или DIPLOMAS_MEDALS' });
+      return;
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { calculatorToken: token },
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    // Ищем коллектив по названию или создаем запись с описанием
+    let collectiveId: number | null = null;
+    const collective = await prisma.collective.findFirst({
+      where: {
+        name: { equals: collectiveName.trim(), mode: 'insensitive' },
+      },
+    });
+
+    if (collective) {
+      collectiveId = collective.id;
+    }
+
+    // Создаем запись ведомости
+    const entry = await prisma.accountingEntry.create({
+      data: {
+        eventId: event.id,
+        collectiveId,
+        amount: amount,
+        method: method as 'CASH' | 'CARD' | 'TRANSFER',
+        paidFor: paidFor as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
+        description: collectiveId ? null : collectiveName.trim(),
+      },
+      include: {
+        collective: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      id: entry.id,
+      collectiveName: entry.collective?.name || entry.description || collectiveName,
+      amount: Number(entry.amount),
+      method: entry.method,
+      paidFor: entry.paidFor,
+      createdAt: entry.createdAt,
+    });
+  } catch (error) {
+    console.error('Error creating statement entry:', error);
     errorHandler(error as Error, req, res, () => {});
   }
 });
