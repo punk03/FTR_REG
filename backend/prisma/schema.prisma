@@ -95,10 +95,11 @@ model Event {
   createdAt                    DateTime    @default(now())
   updatedAt                    DateTime    @updatedAt
 
-  registrations     Registration[]
-  eventPrices       EventPrice[]
-  accountingEntries AccountingEntry[]
-  importErrors      ImportError[]
+  registrations         Registration[]
+  eventPrices           EventPrice[]
+  accountingEntries     AccountingEntry[]
+  importErrors          ImportError[]
+  calculatorStatements CalculatorStatement[]
 
   @@index([status])
   @@index([calculatorToken])
@@ -463,4 +464,21 @@ model ImportError {
 
   @@index([eventId])
   @@index([createdAt])
+}
+
+model CalculatorStatement {
+  id            Int           @id @default(autoincrement())
+  eventId       Int
+  collectiveName String        // Название коллектива (строка, не связь)
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod
+  paidFor       PaidFor
+  createdAt     DateTime      @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([createdAt])
+  @@index([method])
+  @@index([paidFor])
 }

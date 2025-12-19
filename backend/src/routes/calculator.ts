@@ -331,58 +331,23 @@ router.get('/:token/statement', authenticateToken, async (req: Request, res: Res
       return;
     }
 
-    // Получаем все записи ведомости для этого события
-    const entries = await prisma.accountingEntry.findMany({
+    // Получаем все записи ведомости для этого события (отдельная таблица, не связанная с регистрациями)
+    const entries = await prisma.calculatorStatement.findMany({
       where: {
-        OR: [
-          { registration: { eventId: event.id } },
-          { eventId: event.id, registrationId: null },
-        ],
-        deletedAt: null,
-      },
-      include: {
-        collective: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        registration: {
-          select: {
-            id: true,
-            collective: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
+        eventId: event.id,
       },
       orderBy: { createdAt: 'desc' },
     });
 
     // Формируем список записей для ведомости
-    const statementEntries = entries.map((entry) => {
-      // Определяем название коллектива
-      let collectiveName = '';
-      if (entry.collective) {
-        collectiveName = entry.collective.name;
-      } else if (entry.registration?.collective) {
-        collectiveName = entry.registration.collective.name;
-      } else if (entry.description) {
-        collectiveName = entry.description;
-      }
-
-      return {
-        id: entry.id,
-        collectiveName,
-        amount: Number(entry.amount),
-        method: entry.method, // CASH, CARD, TRANSFER
-        paidFor: entry.paidFor, // PERFORMANCE, DIPLOMAS_MEDALS
-        createdAt: entry.createdAt,
-      };
-    });
+    const statementEntries = entries.map((entry) => ({
+      id: entry.id,
+      collectiveName: entry.collectiveName,
+      amount: Number(entry.amount),
+      method: entry.method, // CASH, CARD, TRANSFER
+      paidFor: entry.paidFor, // PERFORMANCE, DIPLOMAS_MEDALS
+      createdAt: entry.createdAt,
+    }));
 
     // Подсчитываем статистику
     const stats = {
@@ -451,41 +416,20 @@ router.post('/:token/statement', authenticateToken, async (req: Request, res: Re
       return;
     }
 
-    // Ищем коллектив по названию или создаем запись с описанием
-    let collectiveId: number | null = null;
-    const collective = await prisma.collective.findFirst({
-      where: {
-        name: { equals: collectiveName.trim(), mode: 'insensitive' },
-      },
-    });
-
-    if (collective) {
-      collectiveId = collective.id;
-    }
-
-    // Создаем запись ведомости
-    const entry = await prisma.accountingEntry.create({
+    // Создаем запись ведомости в отдельной таблице (не связанной с регистрациями)
+    const entry = await prisma.calculatorStatement.create({
       data: {
         eventId: event.id,
-        collectiveId,
+        collectiveName: collectiveName.trim(),
         amount: amount,
         method: method as 'CASH' | 'CARD' | 'TRANSFER',
         paidFor: paidFor as 'PERFORMANCE' | 'DIPLOMAS_MEDALS',
-        description: collectiveId ? null : collectiveName.trim(),
-      },
-      include: {
-        collective: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
       },
     });
 
     res.json({
       id: entry.id,
-      collectiveName: entry.collective?.name || entry.description || collectiveName,
+      collectiveName: entry.collectiveName,
       amount: Number(entry.amount),
       method: entry.method,
       paidFor: entry.paidFor,
