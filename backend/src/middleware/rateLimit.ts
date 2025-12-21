@@ -21,10 +21,11 @@ export const paymentRateLimiter = rateLimit({
 // Rate limiter для импорта Excel
 export const importRateLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 минут
-  max: 3, // максимум 3 импорта за 5 минут
+  max: 20, // максимум 20 импортов за 5 минут (увеличено для удобства работы)
   message: 'Слишком много попыток импорта. Попробуйте позже через 5 минут.',
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: false, // Считаем все запросы, включая успешные
 });
 
 // Rate limiter для общих API запросов
