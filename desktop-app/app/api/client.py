@@ -78,6 +78,18 @@ class APIClient:
                 kwargs["json"] = data
             
             response = self.session.request(method, url, **kwargs)
+            
+            # Handle rate limiting (429) before raise_for_status
+            if response.status_code == 429:
+                retry_after = response.headers.get("Retry-After", "60")
+                try:
+                    retry_after_seconds = int(retry_after)
+                except ValueError:
+                    retry_after_seconds = 60
+                
+                error_msg = f"Слишком много запросов. Попробуйте через {retry_after_seconds} секунд."
+                raise APIError(error_msg, status_code=429, retry_after=retry_after_seconds)
+            
             response.raise_for_status()
             
             # Handle empty responses
@@ -96,7 +108,7 @@ class APIClient:
         
         except requests.exceptions.HTTPError as e:
             logger.error(f"HTTP error: {e}")
-            if response.status_code == 401:
+            if hasattr(e.response, 'status_code') and e.response.status_code == 401:
                 raise AuthenticationError("Authentication failed")
             raise APIError(f"HTTP error: {e}")
         

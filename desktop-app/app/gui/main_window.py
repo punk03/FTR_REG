@@ -354,7 +354,33 @@ class MainWindow(ctk.CTk):
                 self._show_main_content()
             else:
                 self.status_label.configure(text="Ошибка входа", text_color="red")
-        except (ConnectionError, APIError) as e:
+        except APIError as e:
+            # Handle rate limiting (429)
+            if e.status_code == 429:
+                retry_after = getattr(e, 'retry_after', 60)
+                self.status_label.configure(
+                    text=f"⏱ Слишком много попыток входа.\nПодождите {retry_after} секунд перед следующей попыткой.",
+                    text_color="orange"
+                )
+                # Disable login button temporarily
+                self.login_button.configure(state="disabled")
+                self.after(retry_after * 1000, lambda: (
+                    self.login_button.configure(state="normal"),
+                    self.status_label.configure(text="")
+                ))
+            else:
+                error_msg = str(e)
+                if "resolve" in error_msg.lower() or "nodename" in error_msg.lower() or "cannot connect" in error_msg.lower():
+                    self.status_label.configure(
+                        text="❌ Сервер недоступен. Проверьте:\n1. Адрес сервера в .env файле\n2. Интернет-соединение\n3. Доступность сервера",
+                        text_color="red"
+                    )
+                else:
+                    self.status_label.configure(
+                        text=f"Ошибка подключения: {error_msg}",
+                        text_color="red"
+                    )
+        except ConnectionError as e:
             error_msg = str(e)
             if "resolve" in error_msg.lower() or "nodename" in error_msg.lower() or "cannot connect" in error_msg.lower():
                 self.status_label.configure(
