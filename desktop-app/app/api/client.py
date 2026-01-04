@@ -152,5 +152,9 @@ class AuthenticationError(Exception):
 
 class APIError(Exception):
     """API error"""
-    pass
+    def __init__(self, message: str, status_code: Optional[int] = None, retry_after: Optional[int] = None):
+        self.message = message
+        self.status_code = status_code
+        self.retry_after = retry_after
+        super().__init__(self.message)
 
