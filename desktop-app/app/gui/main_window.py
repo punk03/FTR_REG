@@ -2,6 +2,7 @@
 import customtkinter as ctk
 from typing import Optional
 from app.services.auth_service import AuthService
+from app.api.client import AuthenticationError, ConnectionError
 from app.utils.logger import logger
 
 
