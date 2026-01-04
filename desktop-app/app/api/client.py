@@ -49,13 +49,19 @@ class APIClient:
         files: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Make HTTP request"""
-        # Ensure endpoint starts with / if base_url ends with /api
-        if self.base_url.endswith('/api'):
-            # If base_url already has /api, endpoint should start with /
-            endpoint = endpoint if endpoint.startswith('/') else f'/{endpoint}'
-            url = f"{self.base_url}{endpoint}"
+        # Frontend uses endpoints like '/api/auth/login' with empty or relative baseURL
+        # We use baseURL='http://host:port/api', so endpoints should NOT include /api
+        # If endpoint starts with /api, it means it's already the full path, use as-is
+        # Otherwise, construct URL normally
+        
+        if endpoint.startswith('/api'):
+            # Endpoint already includes /api, use it directly with baseURL
+            # This matches frontend behavior where endpoint='/api/auth/login'
+            url = f"{self.base_url.rstrip('/')}{endpoint}"
         else:
-            url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+            # Endpoint doesn't include /api, add it
+            endpoint = endpoint if endpoint.startswith('/') else f'/{endpoint}'
+            url = f"{self.base_url.rstrip('/')}{endpoint}"
         
         try:
             kwargs = {
