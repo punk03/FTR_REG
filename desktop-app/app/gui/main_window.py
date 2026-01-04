@@ -4,6 +4,8 @@ from typing import Optional
 from app.services.auth_service import AuthService
 from app.api.client import AuthenticationError, APIError
 from app.utils.logger import logger
+from app.gui.events_view import EventsView
+from app.gui.registrations_view import RegistrationsView
 
 
 class MainWindow(ctk.CTk):
@@ -164,37 +166,58 @@ class MainWindow(ctk.CTk):
         """Setup events tab"""
         events_frame = self.tabview.tab("События")
         
-        label = ctk.CTkLabel(events_frame, text="Управление событиями")
-        label.pack(pady=20)
-        
-        # TODO: Add events list and management
+        # Create events view
+        events_view = EventsView(events_frame, on_event_select=self._on_event_selected)
+        events_view.pack(fill="both", expand=True, padx=10, pady=10)
     
     def _setup_registrations_tab(self):
         """Setup registrations tab"""
         reg_frame = self.tabview.tab("Регистрации")
         
-        label = ctk.CTkLabel(reg_frame, text="Управление регистрациями")
-        label.pack(pady=20)
-        
-        # TODO: Add registrations list and management
+        # Create registrations view
+        registrations_view = RegistrationsView(reg_frame)
+        registrations_view.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    def _on_event_selected(self, event_id: int):
+        """Handle event selection"""
+        logger.info(f"Event selected: {event_id}")
+        # Could switch to registrations tab and filter by event
     
     def _setup_accounting_tab(self):
         """Setup accounting tab"""
         acc_frame = self.tabview.tab("Оплаты")
         
-        label = ctk.CTkLabel(acc_frame, text="Управление оплатами")
+        label = ctk.CTkLabel(
+            acc_frame,
+            text="Управление оплатами",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
         label.pack(pady=20)
         
-        # TODO: Add accounting entries list
+        info_label = ctk.CTkLabel(
+            acc_frame,
+            text="Функциональность оплат будет добавлена в следующей версии",
+            font=ctk.CTkFont(size=12)
+        )
+        info_label.pack(pady=10)
     
     def _setup_statistics_tab(self):
         """Setup statistics tab"""
         stats_frame = self.tabview.tab("Статистика")
         
-        label = ctk.CTkLabel(stats_frame, text="Статистика")
+        label = ctk.CTkLabel(
+            stats_frame,
+            text="Статистика",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
         label.pack(pady=20)
         
-        # TODO: Add statistics display
+        info_label = ctk.CTkLabel(
+            stats_frame,
+            text="Функциональность статистики будет добавлена в следующей версии",
+            font=ctk.CTkFont(size=12)
+        )
+        info_label.pack(pady=10)
     
     def _handle_login(self):
         """Handle login button click"""
