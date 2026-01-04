@@ -356,7 +356,7 @@ class MainWindow(ctk.CTk):
                 self.status_label.configure(text="Ошибка входа", text_color="red")
         except APIError as e:
             # Handle rate limiting (429)
-            if e.status_code == 429:
+            if hasattr(e, 'status_code') and e.status_code == 429:
                 retry_after = getattr(e, 'retry_after', 60)
                 self.status_label.configure(
                     text=f"⏱ Слишком много попыток входа.\nПодождите {retry_after} секунд перед следующей попыткой.",
