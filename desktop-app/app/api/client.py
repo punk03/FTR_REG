@@ -112,6 +112,9 @@ class APIClient:
                 raise AuthenticationError("Authentication failed")
             raise APIError(f"HTTP error: {e}")
         
+        except APIError:
+            # Re-raise APIError as-is
+            raise
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             raise APIError(f"Unexpected error: {e}")
