@@ -125,31 +125,21 @@ class EventsView(ctk.CTkFrame):
         card.pack(fill="x", padx=5, pady=8)
         card.grid_columnconfigure(0, weight=1)
         
+        # Top row: name and status
+        top_row = ctk.CTkFrame(card, fg_color="transparent")
+        top_row.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 5))
+        top_row.grid_columnconfigure(0, weight=1)
+        
         # Event name
         name_label = ctk.CTkLabel(
-            card,
+            top_row,
             text=event.name,
             font=ctk.CTkFont(size=18, weight="bold"),
             anchor="w"
         )
-        name_label.grid(row=0, column=0, sticky="ew", padx=15, pady=(15, 5))
-        
-        # Event dates
-        start_date = event.start_date.strftime("%d.%m.%Y") if event.start_date else "N/A"
-        end_date = event.end_date.strftime("%d.%m.%Y") if event.end_date else "N/A"
-        dates_label = ctk.CTkLabel(
-            card,
-            text=f"📆 С {start_date} по {end_date}",
-            font=ctk.CTkFont(size=14),
-            anchor="w",
-            text_color=("gray60", "gray40")
-        )
-        dates_label.grid(row=1, column=0, sticky="ew", padx=15, pady=5)
+        name_label.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
         
         # Status badge
-        status_frame = ctk.CTkFrame(card, fg_color="transparent")
-        status_frame.grid(row=0, column=1, rowspan=2, sticky="e", padx=15, pady=10)
-        
         status_colors = {
             "DRAFT": ("gray", "gray"),
             "ACTIVE": ("green", "darkgreen"),
@@ -164,7 +154,7 @@ class EventsView(ctk.CTkFrame):
         status_label_text = status_labels.get(event.status.value if event.status else "DRAFT", "Неизвестно")
         
         status_badge = ctk.CTkLabel(
-            status_frame,
+            top_row,
             text=status_label_text,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color=status_color[1],
@@ -173,7 +163,19 @@ class EventsView(ctk.CTkFrame):
             width=120,
             height=30
         )
-        status_badge.pack(padx=5)
+        status_badge.grid(row=0, column=1, padx=(10, 0), pady=0, sticky="e")
+        
+        # Event dates
+        start_date = event.start_date.strftime("%d.%m.%Y") if event.start_date else "N/A"
+        end_date = event.end_date.strftime("%d.%m.%Y") if event.end_date else "N/A"
+        dates_label = ctk.CTkLabel(
+            card,
+            text=f"📆 С {start_date} по {end_date}",
+            font=ctk.CTkFont(size=14),
+            anchor="w",
+            text_color=("gray60", "gray40")
+        )
+        dates_label.grid(row=1, column=0, sticky="ew", padx=15, pady=5)
         
         # Select button
         select_btn = ctk.CTkButton(
@@ -185,7 +187,8 @@ class EventsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=14, weight="bold"),
             corner_radius=8
         )
-        select_btn.grid(row=2, column=0, columnspan=2, padx=15, pady=(10, 15), sticky="ew")
+        select_btn.grid(row=2, column=0, padx=15, pady=(10, 15), sticky="e")
+        select_btn.lift()  # Ensure button is on top
     
     def _select_event(self, event: Event):
         """Select event"""

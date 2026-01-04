@@ -380,6 +380,19 @@ class RegistrationsView(ctk.CTkFrame):
             border_color=("gray80", "gray20")
         )
         row_frame.pack(fill="x", padx=5, pady=2)
+        row_frame.grid_columnconfigure(1, weight=1)
+        row_frame.grid_columnconfigure(2, weight=1)
+        if columns.get("notes", False):
+            # Find notes column index
+            notes_col = sum([
+                columns.get("number", True),
+                columns.get("collective", True),
+                columns.get("dance_name", True),
+                columns.get("status", True),
+                columns.get("payment_status", True),
+                columns.get("participants_count", False)
+            ])
+            row_frame.grid_columnconfigure(notes_col, weight=1)
         
         col = 0
         

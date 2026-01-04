@@ -251,6 +251,9 @@ class MainWindow(ctk.CTk):
         )
         self.tabview.pack(fill="both", expand=True, padx=10, pady=10)
         
+        # Ensure tabview is on top
+        self.tabview.lift()
+        
         # Add tabs with icons
         self.tabview.add("📅 События")
         self.tabview.add("📋 Регистрации")
