@@ -76,7 +76,7 @@ class APIClient:
         
         except requests.exceptions.ConnectionError as e:
             logger.error(f"Connection error: {e}")
-            raise ConnectionError(f"Cannot connect to server: {e}")
+            raise APIError(f"Cannot connect to server: {e}")
         
         except requests.exceptions.Timeout as e:
             logger.error(f"Request timeout: {e}")

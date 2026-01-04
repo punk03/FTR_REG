@@ -2,7 +2,7 @@
 import customtkinter as ctk
 from typing import Optional
 from app.services.auth_service import AuthService
-from app.api.client import AuthenticationError, ConnectionError
+from app.api.client import AuthenticationError, APIError
 from app.utils.logger import logger
 
 
@@ -214,9 +214,9 @@ class MainWindow(ctk.CTk):
                 self._show_main_content()
             else:
                 self.status_label.configure(text="Ошибка входа", text_color="red")
-        except ConnectionError as e:
+        except (ConnectionError, APIError) as e:
             error_msg = str(e)
-            if "resolve" in error_msg.lower() or "nodename" in error_msg.lower():
+            if "resolve" in error_msg.lower() or "nodename" in error_msg.lower() or "cannot connect" in error_msg.lower():
                 self.status_label.configure(
                     text="❌ Сервер недоступен. Проверьте:\n1. Адрес сервера в .env файле\n2. Интернет-соединение\n3. Доступность сервера",
                     text_color="red"
