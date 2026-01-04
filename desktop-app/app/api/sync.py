@@ -69,7 +69,7 @@ class SyncService:
         """Sync reference data (disciplines, nominations, ages, categories)"""
         try:
             # Sync disciplines
-            disciplines = self.api.get("/reference/disciplines") or []
+            disciplines = self.api.get("/api/reference/disciplines") or []
             for disc_data in disciplines:
                 disc = self.db.query(Discipline).filter(
                     Discipline.server_id == disc_data["id"]
