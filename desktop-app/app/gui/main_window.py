@@ -57,30 +57,30 @@ class MainWindow(ctk.CTk):
         self.login_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.login_frame.pack(fill="both", expand=True)
         
-        # Centered container
+        # Centered container - use pack with expand
         center_frame = ctk.CTkFrame(self.login_frame, fg_color="transparent")
-        center_frame.place(relx=0.5, rely=0.5, anchor="center")
+        center_frame.pack(expand=True, fill="both")
         
-        # Title with icon
-        title_frame = ctk.CTkFrame(center_frame, fg_color="transparent")
-        title_frame.pack(pady=20)
+        # Title with icon - pack directly without extra frame
+        title_container = ctk.CTkFrame(center_frame, fg_color="transparent")
+        title_container.pack(pady=20)
         
         title_icon = ctk.CTkLabel(
-            title_frame,
+            title_container,
             text="🎭",
             font=ctk.CTkFont(size=48)
         )
         title_icon.pack(pady=10)
         
         title = ctk.CTkLabel(
-            title_frame,
+            title_container,
             text="FTR Registration",
             font=ctk.CTkFont(size=32, weight="bold")
         )
         title.pack(pady=5)
         
         subtitle = ctk.CTkLabel(
-            title_frame,
+            title_container,
             text="Система управления регистрациями",
             font=ctk.CTkFont(size=14),
             text_color=("gray60", "gray40")
