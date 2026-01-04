@@ -53,6 +53,18 @@ class AuthService:
         """Check if user is authenticated"""
         return self.token is not None and self.current_user is not None
     
+    def enable_offline_mode(self):
+        """Enable offline mode without authentication"""
+        # Set a dummy user for offline mode
+        self.current_user = {
+            "id": 0,
+            "name": "Оффлайн режим",
+            "email": "offline@local",
+            "role": "REGISTRATOR"
+        }
+        self.token = None
+        logger.info("Offline mode enabled")
+    
     def get_user(self) -> Optional[Dict[str, Any]]:
         """Get current user"""
         return self.current_user

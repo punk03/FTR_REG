@@ -90,13 +90,26 @@ class MainWindow(ctk.CTk):
         )
         login_button.pack(pady=20)
         
-        # Status label
+        # Status label (with word wrap)
         self.status_label = ctk.CTkLabel(
             self.login_frame,
             text="",
-            text_color="red"
+            text_color="red",
+            wraplength=400,
+            justify="left"
         )
-        self.status_label.pack(pady=10)
+        self.status_label.pack(pady=10, padx=20)
+        
+        # Offline mode button
+        offline_button = ctk.CTkButton(
+            self.login_frame,
+            text="Работать оффлайн (без авторизации)",
+            command=self._handle_offline_mode,
+            width=300,
+            fg_color="gray",
+            hover_color="darkgray"
+        )
+        offline_button.pack(pady=10)
         
         # Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self._handle_login())
@@ -191,18 +204,67 @@ class MainWindow(ctk.CTk):
             self.status_label.configure(text="Введите email и пароль")
             return
         
+        # Disable login button during request
+        self.status_label.configure(text="Подключение к серверу...", text_color="blue")
+        
         try:
             result = self.auth_service.login(email, password)
             if result.get("success"):
                 self._show_main_content()
             else:
-                self.status_label.configure(text="Ошибка входа")
+                self.status_label.configure(text="Ошибка входа", text_color="red")
+        except ConnectionError as e:
+            error_msg = str(e)
+            if "resolve" in error_msg.lower() or "nodename" in error_msg.lower():
+                self.status_label.configure(
+                    text="❌ Сервер недоступен. Проверьте:\n1. Адрес сервера в .env файле\n2. Интернет-соединение\n3. Доступность сервера",
+                    text_color="red"
+                )
+            else:
+                self.status_label.configure(
+                    text=f"❌ Не удалось подключиться к серверу.\nПроверьте настройки в .env файле.",
+                    text_color="red"
+                )
+            logger.error(f"Connection error: {e}")
+        except AuthenticationError as e:
+            self.status_label.configure(text="❌ Неверный email или пароль", text_color="red")
+            logger.error(f"Authentication error: {e}")
         except Exception as e:
             logger.error(f"Login error: {e}")
-            self.status_label.configure(text=f"Ошибка: {str(e)}")
+            self.status_label.configure(
+                text=f"❌ Ошибка: {str(e)[:100]}",
+                text_color="red"
+            )
     
     def _handle_logout(self):
         """Handle logout"""
         self.auth_service.logout()
         self._show_login()
+    
+    def _handle_offline_mode(self):
+        """Handle offline mode - work without authentication"""
+        # Check if we have any data in local DB
+        from app.database.session import get_db_session
+        from app.database.models import Event
+        
+        db = get_db_session()
+        try:
+            events_count = db.query(Event).count()
+            if events_count > 0:
+                # We have data, allow offline mode
+                self.auth_service.enable_offline_mode()
+                self._show_main_content()
+            else:
+                self.status_label.configure(
+                    text="⚠️ Оффлайн режим недоступен:\nНет данных в локальной БД.\nСначала нужно синхронизироваться с сервером.\n\nПроверьте:\n1. Правильность адреса сервера в .env\n2. Доступность сервера",
+                    text_color="orange"
+                )
+        except Exception as e:
+            logger.error(f"Error checking offline mode: {e}")
+            self.status_label.configure(
+                text="⚠️ Ошибка проверки оффлайн режима",
+                text_color="red"
+            )
+        finally:
+            db.close()
 
