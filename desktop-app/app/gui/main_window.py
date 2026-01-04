@@ -216,9 +216,8 @@ class MainWindow(ctk.CTk):
             corner_radius=8
         )
         self.sync_button.grid(row=0, column=2, sticky="", padx=10, pady=10)
-        # Ensure button is clickable
-        top_bar.update_idletasks()
-        self.sync_button.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        top_bar.after(10, lambda: self.sync_button.lift())
         
         # Sync status label
         self.sync_status_label = ctk.CTkLabel(
@@ -241,9 +240,8 @@ class MainWindow(ctk.CTk):
             corner_radius=8
         )
         logout_button.grid(row=0, column=4, sticky="e", padx=15, pady=10)
-        # Ensure button is clickable
-        top_bar.update_idletasks()
-        logout_button.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        top_bar.after(10, lambda: logout_button.lift())
         
         # Update grid column weights
         top_bar.grid_columnconfigure(1, weight=1)

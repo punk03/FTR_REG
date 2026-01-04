@@ -44,9 +44,8 @@ class EventsView(ctk.CTkFrame):
             corner_radius=8
         )
         refresh_btn.grid(row=0, column=1, sticky="e", padx=10, pady=10)
-        # Ensure button is clickable
-        header_frame.update_idletasks()
-        refresh_btn.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        header_frame.after(10, lambda: refresh_btn.lift())
         
         # Events scrollable frame
         self.events_scrollable = ctk.CTkScrollableFrame(self)
