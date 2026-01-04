@@ -7,6 +7,20 @@ from app.utils.config import settings
 from app.utils.logger import logger
 
 
+class AuthenticationError(Exception):
+    """Authentication error"""
+    pass
+
+
+class APIError(Exception):
+    """API error"""
+    def __init__(self, message: str, status_code: Optional[int] = None, retry_after: Optional[int] = None):
+        self.message = message
+        self.status_code = status_code
+        self.retry_after = retry_after
+        super().__init__(self.message)
+
+
 class APIClient:
     """API client for communicating with the server"""
     
@@ -146,18 +160,4 @@ class APIClient:
             return response is not None
         except Exception:
             return False
-
-
-class AuthenticationError(Exception):
-    """Authentication error"""
-    pass
-
-
-class APIError(Exception):
-    """API error"""
-    def __init__(self, message: str, status_code: Optional[int] = None, retry_after: Optional[int] = None):
-        self.message = message
-        self.status_code = status_code
-        self.retry_after = retry_after
-        super().__init__(self.message)
 
