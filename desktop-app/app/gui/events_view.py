@@ -181,9 +181,13 @@ class EventsView(ctk.CTkFrame):
         )
         dates_label.grid(row=1, column=0, sticky="ew", padx=15, pady=5)
         
-        # Select button
+        # Select button - use separate frame to avoid overlap
+        button_frame = ctk.CTkFrame(card, fg_color="transparent")
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=15, pady=(10, 15))
+        button_frame.grid_columnconfigure(0, weight=1)
+        
         select_btn = ctk.CTkButton(
-            card,
+            button_frame,
             text="👉 Выбрать",
             command=lambda e=event: self._select_event(e),
             width=150,
@@ -191,9 +195,9 @@ class EventsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=14, weight="bold"),
             corner_radius=8
         )
-        select_btn.grid(row=2, column=0, padx=15, pady=(10, 15), sticky="e")
+        select_btn.grid(row=0, column=1, sticky="e")
         # Ensure button is clickable
-        card.update_idletasks()
+        button_frame.update_idletasks()
         select_btn.lift()
         select_btn.lift()  # Ensure button is on top
     

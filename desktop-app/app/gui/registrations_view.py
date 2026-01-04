@@ -33,17 +33,18 @@ class RegistrationsView(ctk.CTkFrame):
         )
         title_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
         
-        # Controls frame
-        controls_frame = ctk.CTkFrame(self, fg_color="transparent")
+        # Controls frame - use regular frame, not transparent
+        controls_frame = ctk.CTkFrame(self)
         controls_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=5)
         controls_frame.grid_columnconfigure(1, weight=1)
         
-        # Event selector
-        ctk.CTkLabel(
+        # Event selector label
+        event_label = ctk.CTkLabel(
             controls_frame,
             text="Событие:",
             font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        )
+        event_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
         
         self.event_var = ctk.StringVar(value="Выберите событие")
         self.event_dropdown = ctk.CTkComboBox(
@@ -67,7 +68,7 @@ class RegistrationsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=12),
             corner_radius=8
         )
-        settings_btn.grid(row=0, column=2, padx=5, pady=5)
+        settings_btn.grid(row=0, column=2, padx=5, pady=5, sticky="e")
         # Ensure button is clickable
         controls_frame.update_idletasks()
         settings_btn.lift()
@@ -82,7 +83,7 @@ class RegistrationsView(ctk.CTkFrame):
             font=ctk.CTkFont(size=12),
             corner_radius=8
         )
-        refresh_btn.grid(row=0, column=3, padx=5, pady=5)
+        refresh_btn.grid(row=0, column=3, padx=5, pady=5, sticky="e")
         # Ensure button is clickable
         controls_frame.update_idletasks()
         refresh_btn.lift()

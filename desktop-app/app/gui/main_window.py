@@ -187,35 +187,29 @@ class MainWindow(ctk.CTk):
             fg_color=("gray85", "gray17")
         )
         top_bar.pack(fill="x", padx=0, pady=0)
-        top_bar.grid_columnconfigure(1, weight=1)
+        top_bar.grid_columnconfigure(1, weight=1)  # User label column
+        top_bar.grid_columnconfigure(3, weight=0)  # Status label column
         
-        # User info frame
-        user_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
-        user_frame.grid(row=0, column=0, sticky="w", padx=15, pady=10)
-        
+        # User info - directly in top_bar to avoid frame overlap
         user = self.auth_service.get_user()
         if user:
             user_icon = ctk.CTkLabel(
-                user_frame,
+                top_bar,
                 text="👤",
                 font=ctk.CTkFont(size=16)
             )
-            user_icon.pack(side="left", padx=5)
+            user_icon.grid(row=0, column=0, sticky="w", padx=(15, 5), pady=10)
             
             user_label = ctk.CTkLabel(
-                user_frame,
+                top_bar,
                 text=f"{user.get('name', 'Unknown')} ({user.get('role', 'USER')})",
                 font=ctk.CTkFont(size=14, weight="bold")
             )
-            user_label.pack(side="left", padx=5)
+            user_label.grid(row=0, column=1, sticky="w", padx=5, pady=10)
         
-        # Center controls frame
-        controls_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
-        controls_frame.grid(row=0, column=1, sticky="", padx=10, pady=10)
-        
-        # Sync button
+        # Sync button - directly in top_bar
         self.sync_button = ctk.CTkButton(
-            controls_frame,
+            top_bar,
             text="🔄 Синхронизировать",
             command=self._handle_sync,
             width=180,
@@ -223,25 +217,22 @@ class MainWindow(ctk.CTk):
             font=ctk.CTkFont(size=13, weight="bold"),
             corner_radius=8
         )
-        self.sync_button.pack(side="left", padx=5)
+        self.sync_button.grid(row=0, column=2, sticky="", padx=10, pady=10)
         # Ensure button is clickable
-        controls_frame.update_idletasks()
+        top_bar.update_idletasks()
         self.sync_button.lift()
         
         # Sync status label
         self.sync_status_label = ctk.CTkLabel(
-            controls_frame,
+            top_bar,
             text="",
             font=ctk.CTkFont(size=12)
         )
-        self.sync_status_label.pack(side="left", padx=10)
+        self.sync_status_label.grid(row=0, column=3, sticky="w", padx=10, pady=10)
         
-        # Logout button frame
-        logout_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
-        logout_frame.grid(row=0, column=2, sticky="e", padx=15, pady=10)
-        
+        # Logout button - directly in top_bar
         logout_button = ctk.CTkButton(
-            logout_frame,
+            top_bar,
             text="🚪 Выйти",
             command=self._handle_logout,
             width=120,
@@ -251,10 +242,13 @@ class MainWindow(ctk.CTk):
             font=ctk.CTkFont(size=13, weight="bold"),
             corner_radius=8
         )
-        logout_button.pack(side="right")
+        logout_button.grid(row=0, column=4, sticky="e", padx=15, pady=10)
         # Ensure button is clickable
-        logout_frame.update_idletasks()
+        top_bar.update_idletasks()
         logout_button.lift()
+        
+        # Update grid column weights
+        top_bar.grid_columnconfigure(1, weight=1)
         
         # Auto-sync on startup
         self.after(1000, self._auto_sync_on_startup)
