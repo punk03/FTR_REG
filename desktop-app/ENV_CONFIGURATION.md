@@ -5,17 +5,21 @@
 ### API Configuration (Настройки API)
 
 #### `API_BASE_URL`
-**Описание:** Базовый URL вашего сервера API
+**Описание:** Базовый URL вашего **ВЕБ-ИНТЕРФЕЙСА** (frontend), который проксирует запросы к backend
+
+**ВАЖНО:** Используйте адрес **frontend**, а не backend напрямую! Frontend автоматически проксирует запросы к backend.
 
 **Примеры:**
-- Локальный сервер: `http://localhost:5000/api`
+- Локальный frontend (Docker): `http://localhost:3000/api`
 - Удаленный сервер: `http://your-domain.com/api`
 - Сервер с HTTPS: `https://your-domain.com/api`
+- По IP адресу: `http://192.168.1.100:3000/api`
 
 **Как узнать адрес:**
-1. Если сервер запущен локально (через docker-compose), обычно это `http://localhost:5000/api`
-2. Если сервер на удаленном сервере, укажите его домен/IP
-3. Проверьте в настройках вашего веб-приложения или спросите у администратора
+1. Если frontend запущен локально (через docker-compose), обычно это `http://localhost:3000/api`
+2. Если frontend на удаленном сервере, используйте тот же адрес, что и для веб-интерфейса в браузере + `/api`
+3. Проверьте в браузере адресную строку при работе с веб-версией - используйте тот же адрес
+4. Спросите у администратора адрес frontend (веб-интерфейса)
 
 #### `API_TIMEOUT`
 **Описание:** Таймаут запросов к API в секундах
@@ -105,9 +109,9 @@
 
 ## Примеры конфигурации
 
-### Пример 1: Локальный сервер (разработка)
+### Пример 1: Локальный frontend (разработка)
 ```env
-API_BASE_URL=http://localhost:5000/api
+API_BASE_URL=http://localhost:3000/api
 API_TIMEOUT=30
 SYNC_INTERVAL=60
 AUTO_SYNC=true
@@ -118,11 +122,24 @@ APP_NAME=FTR Registration
 APP_VERSION=1.0.0
 ```
 
-### Пример 2: Удаленный сервер (продакшн)
+### Пример 2: Удаленный frontend (продакшн)
 ```env
-API_BASE_URL=https://ftr-registration.example.com/api
+API_BASE_URL=https://ftr.lilfil.ru/api
 API_TIMEOUT=60
 SYNC_INTERVAL=300
+AUTO_SYNC=true
+DB_PATH=./data/ftr_registration.db
+LOG_LEVEL=INFO
+LOG_FILE=./logs/app.log
+APP_NAME=FTR Registration
+APP_VERSION=1.0.0
+```
+
+### Пример 3: Frontend по IP адресу
+```env
+API_BASE_URL=http://192.168.1.100:3000/api
+API_TIMEOUT=30
+SYNC_INTERVAL=60
 AUTO_SYNC=true
 DB_PATH=./data/ftr_registration.db
 LOG_LEVEL=INFO

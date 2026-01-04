@@ -14,18 +14,20 @@ pip3 install -r requirements.txt
 cp .env.example .env
 ```
 
-### Минимальная настройка (для локального сервера):
+### Минимальная настройка:
 
-Откройте файл `.env` и убедитесь, что указан правильный адрес:
+Откройте файл `.env` и укажите адрес **ВЕБ-ИНТЕРФЕЙСА** (frontend):
 
 ```env
-API_BASE_URL=http://localhost:3001/api
+API_BASE_URL=http://localhost:3000/api
 ```
 
-**Важно:** 
-- Если ваш backend запущен через Docker на порту 3001 → используйте `http://localhost:3001/api`
-- Если backend на другом порту → измените порт
-- Если сервер удаленный → укажите его адрес (например, `https://your-server.com/api`)
+**ВАЖНО:** 
+- Используйте адрес **frontend** (веб-интерфейса), а не backend напрямую!
+- Frontend проксирует запросы к backend автоматически
+- Если frontend на порту 3000 → `http://localhost:3000/api`
+- Если frontend на другом порту → измените порт
+- Если сервер удаленный → укажите адрес frontend (например, `http://your-domain.com/api` или `https://your-domain.com/api`)
 
 ### Как узнать адрес сервера?
 

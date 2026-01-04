@@ -10,7 +10,7 @@ Failed to resolve 'back.ftr.lilfil.ru'
 
 ### Решения:
 
-#### 1. Проверьте адрес сервера в .env
+#### 1. Проверьте адрес frontend в .env
 
 Откройте файл `.env` и проверьте `API_BASE_URL`:
 
@@ -19,21 +19,25 @@ cd desktop-app
 cat .env | grep API_BASE_URL
 ```
 
+**ВАЖНО:** Используйте адрес **frontend** (веб-интерфейса), а не backend!
+
 **Возможные варианты:**
 
-- **Локальный сервер (Docker):**
+- **Локальный frontend (Docker):**
   ```env
-  API_BASE_URL=http://localhost:3001/api
+  API_BASE_URL=http://localhost:3000/api
   ```
 
-- **Удаленный сервер с IP:**
+- **Удаленный frontend с IP:**
   ```env
-  API_BASE_URL=http://192.168.1.100:3001/api
+  API_BASE_URL=http://192.168.1.100:3000/api
   ```
 
-- **Удаленный сервер с доменом:**
+- **Удаленный frontend с доменом:**
   ```env
   API_BASE_URL=https://your-domain.com/api
+  # или
+  API_BASE_URL=http://your-domain.com/api
   ```
 
 #### 2. Проверьте доступность сервера
