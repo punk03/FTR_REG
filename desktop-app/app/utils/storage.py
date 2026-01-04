@@ -76,3 +76,26 @@ def clear_auth_data() -> bool:
         return _storage.save(data)
     return True
 
+
+def save_display_settings(settings: Dict[str, Any]) -> bool:
+    """Save display settings"""
+    data = _storage.load()
+    data["display_settings"] = settings
+    return _storage.save(data)
+
+
+def load_display_settings() -> Dict[str, Any]:
+    """Load display settings"""
+    data = _storage.load()
+    return data.get("display_settings", {
+        "registration_columns": {
+            "number": True,
+            "collective": True,
+            "dance_name": True,
+            "status": True,
+            "payment_status": True,
+            "participants_count": False,
+            "notes": False,
+        }
+    })
+
