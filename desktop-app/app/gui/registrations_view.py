@@ -6,7 +6,7 @@ from app.database.models import Registration, Event
 from app.utils.logger import logger
 
 
-class RegistrationsView(ctk.CTkScrollableFrame):
+class RegistrationsView(ctk.CTkFrame):
     """Registrations list view"""
     
     def __init__(self, parent, event_id: Optional[int] = None):
@@ -45,9 +45,9 @@ class RegistrationsView(ctk.CTkScrollableFrame):
         )
         refresh_btn.pack(side="left", padx=5)
         
-        # Registrations table frame
-        self.table_frame = ctk.CTkFrame(self)
-        self.table_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Registrations scrollable frame
+        self.scrollable_frame = ctk.CTkScrollableFrame(self)
+        self.scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Load events for dropdown
         self._load_events()
@@ -87,12 +87,13 @@ class RegistrationsView(ctk.CTkScrollableFrame):
     
     def refresh_registrations(self):
         """Refresh registrations list"""
+        # Clear existing widgets
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+        
         if not self.event_id:
-            # Clear table
-            for widget in self.table_frame.winfo_children():
-                widget.destroy()
             no_event_label = ctk.CTkLabel(
-                self.table_frame,
+                self.scrollable_frame,
                 text="Выберите событие для просмотра регистраций",
                 font=ctk.CTkFont(size=14)
             )
@@ -109,9 +110,10 @@ class RegistrationsView(ctk.CTkScrollableFrame):
                 
                 if not event:
                     error_label = ctk.CTkLabel(
-                        self.table_frame,
-                        text="Событие не найдено в локальной БД",
-                        text_color="red"
+                        self.scrollable_frame,
+                        text="Событие не найдено в локальной БД. Синхронизируйтесь с сервером.",
+                        text_color="red",
+                        wraplength=600
                     )
                     error_label.pack(pady=20)
                     return
@@ -126,21 +128,18 @@ class RegistrationsView(ctk.CTkScrollableFrame):
         except Exception as e:
             logger.error(f"Error loading registrations: {e}")
             error_label = ctk.CTkLabel(
-                self.table_frame,
+                self.scrollable_frame,
                 text=f"Ошибка загрузки регистраций: {e}",
-                text_color="red"
+                text_color="red",
+                wraplength=600
             )
             error_label.pack(pady=20)
     
     def _render_registrations(self, registrations: List[Registration]):
         """Render registrations table"""
-        # Clear existing widgets
-        for widget in self.table_frame.winfo_children():
-            widget.destroy()
-        
         if not registrations:
             no_regs_label = ctk.CTkLabel(
-                self.table_frame,
+                self.scrollable_frame,
                 text="Нет регистраций для этого события",
                 font=ctk.CTkFont(size=14)
             )
@@ -148,7 +147,7 @@ class RegistrationsView(ctk.CTkScrollableFrame):
             return
         
         # Create table headers
-        headers_frame = ctk.CTkFrame(self.table_frame)
+        headers_frame = ctk.CTkFrame(self.scrollable_frame)
         headers_frame.pack(fill="x", padx=5, pady=5)
         
         headers = ["№", "Коллектив", "Название", "Статус", "Оплата"]
@@ -169,7 +168,7 @@ class RegistrationsView(ctk.CTkScrollableFrame):
     
     def _create_registration_row(self, reg: Registration):
         """Create registration table row"""
-        row_frame = ctk.CTkFrame(self.table_frame)
+        row_frame = ctk.CTkFrame(self.scrollable_frame)
         row_frame.pack(fill="x", padx=5, pady=2)
         
         # Number

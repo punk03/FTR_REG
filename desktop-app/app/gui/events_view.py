@@ -33,9 +33,9 @@ class EventsView(ctk.CTkScrollableFrame):
         )
         refresh_btn.pack(pady=10)
         
-        # Events list frame
-        self.events_frame = ctk.CTkFrame(self)
-        self.events_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Events list scrollable frame
+        self.events_scrollable = ctk.CTkScrollableFrame(self)
+        self.events_scrollable.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Load events
         self.refresh_events()
@@ -51,8 +51,11 @@ class EventsView(ctk.CTkScrollableFrame):
                 db.close()
         except Exception as e:
             logger.error(f"Error loading events: {e}")
+            # Clear and show error
+            for widget in self.events_scrollable.winfo_children():
+                widget.destroy()
             error_label = ctk.CTkLabel(
-                self.events_frame,
+                self.events_scrollable,
                 text=f"Ошибка загрузки событий: {e}",
                 text_color="red"
             )
@@ -61,14 +64,15 @@ class EventsView(ctk.CTkScrollableFrame):
     def _render_events(self):
         """Render events list"""
         # Clear existing widgets
-        for widget in self.events_frame.winfo_children():
+        for widget in self.events_scrollable.winfo_children():
             widget.destroy()
         
         if not self.events:
             no_events_label = ctk.CTkLabel(
-                self.events_frame,
-                text="Нет событий. Синхронизируйтесь с сервером.",
-                font=ctk.CTkFont(size=14)
+                self.events_scrollable,
+                text="Нет событий. Нажмите 'Синхронизировать' для загрузки данных с сервера.",
+                font=ctk.CTkFont(size=14),
+                wraplength=600
             )
             no_events_label.pack(pady=20)
             return
@@ -79,7 +83,7 @@ class EventsView(ctk.CTkScrollableFrame):
     
     def _create_event_card(self, event: Event):
         """Create event card"""
-        card = ctk.CTkFrame(self.events_frame)
+        card = ctk.CTkFrame(self.events_scrollable)
         card.pack(fill="x", padx=5, pady=5)
         
         # Event name

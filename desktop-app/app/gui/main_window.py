@@ -125,7 +125,7 @@ class MainWindow(ctk.CTk):
         self.content_frame = ctk.CTkFrame(self.main_container)
         self.content_frame.pack(fill="both", expand=True)
         
-        # Top bar with user info and logout
+        # Top bar with user info, sync status and logout
         top_bar = ctk.CTkFrame(self.content_frame)
         top_bar.pack(fill="x", padx=10, pady=10)
         
@@ -138,6 +138,23 @@ class MainWindow(ctk.CTk):
             )
             user_label.pack(side="left", padx=10)
         
+        # Sync button
+        self.sync_button = ctk.CTkButton(
+            top_bar,
+            text="Синхронизировать",
+            command=self._handle_sync,
+            width=150
+        )
+        self.sync_button.pack(side="left", padx=10)
+        
+        # Sync status label
+        self.sync_status_label = ctk.CTkLabel(
+            top_bar,
+            text="",
+            font=ctk.CTkFont(size=12)
+        )
+        self.sync_status_label.pack(side="left", padx=10)
+        
         logout_button = ctk.CTkButton(
             top_bar,
             text="Выйти",
@@ -145,6 +162,9 @@ class MainWindow(ctk.CTk):
             width=100
         )
         logout_button.pack(side="right", padx=10)
+        
+        # Auto-sync on startup
+        self.after(1000, self._auto_sync_on_startup)
         
         # Tab view for different sections
         self.tabview = ctk.CTkTabview(self.content_frame)
@@ -167,21 +187,77 @@ class MainWindow(ctk.CTk):
         events_frame = self.tabview.tab("События")
         
         # Create events view
-        events_view = EventsView(events_frame, on_event_select=self._on_event_selected)
-        events_view.pack(fill="both", expand=True, padx=10, pady=10)
+        self.events_view = EventsView(events_frame, on_event_select=self._on_event_selected)
+        self.events_view.pack(fill="both", expand=True, padx=10, pady=10)
     
     def _setup_registrations_tab(self):
         """Setup registrations tab"""
         reg_frame = self.tabview.tab("Регистрации")
         
         # Create registrations view
-        registrations_view = RegistrationsView(reg_frame)
-        registrations_view.pack(fill="both", expand=True, padx=10, pady=10)
+        self.registrations_view = RegistrationsView(reg_frame)
+        self.registrations_view.pack(fill="both", expand=True, padx=10, pady=10)
     
     def _on_event_selected(self, event_id: int):
         """Handle event selection"""
         logger.info(f"Event selected: {event_id}")
-        # Could switch to registrations tab and filter by event
+        # Switch to registrations tab and filter by event
+        self.tabview.set("Регистрации")
+        # Refresh registrations view with selected event
+        if hasattr(self, 'registrations_view'):
+            self.registrations_view.event_id = event_id
+            self.registrations_view.refresh_registrations()
+    
+    def _handle_sync(self):
+        """Handle manual sync"""
+        self.sync_button.configure(state="disabled", text="Синхронизация...")
+        self.sync_status_label.configure(text="Синхронизация...", text_color="blue")
+        
+        try:
+            from app.database.session import get_db_session
+            from app.api.sync import SyncService
+            
+            db = get_db_session()
+            try:
+                sync_service = SyncService(self.auth_service.api, db)
+                result = sync_service.sync_all()
+                
+                if result.get("success"):
+                    self.sync_status_label.configure(
+                        text=f"✓ Синхронизировано: {result['synced']}",
+                        text_color="green"
+                    )
+                    # Refresh views
+                    if hasattr(self, 'events_view'):
+                        self.events_view.refresh_events()
+                    if hasattr(self, 'registrations_view'):
+                        self.registrations_view._load_events()
+                        self.registrations_view.refresh_registrations()
+                else:
+                    errors = result.get("errors", [])
+                    self.sync_status_label.configure(
+                        text=f"⚠ Ошибки: {len(errors)}",
+                        text_color="orange"
+                    )
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Sync error: {e}")
+            self.sync_status_label.configure(
+                text=f"✗ Ошибка: {str(e)[:50]}",
+                text_color="red"
+            )
+        finally:
+            self.sync_button.configure(state="normal", text="Синхронизировать")
+            # Clear status after 5 seconds
+            self.after(5000, lambda: self.sync_status_label.configure(text=""))
+    
+    def _auto_sync_on_startup(self):
+        """Auto-sync on startup if enabled"""
+        from app.utils.config import settings
+        
+        if settings.auto_sync and self.auth_service.is_authenticated():
+            self._handle_sync()
     
     def _setup_accounting_tab(self):
         """Setup accounting tab"""
