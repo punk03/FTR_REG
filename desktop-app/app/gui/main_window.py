@@ -371,6 +371,14 @@ class MainWindow(ctk.CTk):
         if hasattr(self, 'registrations_view'):
             self.registrations_view._load_events()
             self.registrations_view.refresh_registrations()
+        if hasattr(self, 'accounting_view'):
+            self.accounting_view.refresh_events()
+            if self.accounting_view.event_id:
+                self.accounting_view.refresh_accounting()
+        if hasattr(self, 'statistics_view'):
+            self.statistics_view.refresh_events()
+            if self.statistics_view.event_id:
+                self.statistics_view.refresh_statistics()
     
     def _auto_sync_on_startup(self):
         """Auto-sync on startup if enabled"""
