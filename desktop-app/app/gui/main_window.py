@@ -57,13 +57,12 @@ class MainWindow(ctk.CTk):
         self.login_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.login_frame.pack(fill="both", expand=True)
         
-        # Centered container - use pack with expand, NO transparent frame
-        # Pack title and form directly in login_frame with spacing
-        spacer_top = ctk.CTkFrame(self.login_frame, fg_color="transparent", height=50)
-        spacer_top.pack(fill="x")
+        # Centered container - use pack with expand
+        center_frame = ctk.CTkFrame(self.login_frame, fg_color="transparent")
+        center_frame.pack(expand=True, fill="both")
         
-        # Title with icon - pack directly without extra frame
-        title_container = ctk.CTkFrame(self.login_frame, fg_color="transparent")
+        # Title with icon
+        title_container = ctk.CTkFrame(center_frame, fg_color="transparent")
         title_container.pack(pady=20)
         
         title_icon = ctk.CTkLabel(
