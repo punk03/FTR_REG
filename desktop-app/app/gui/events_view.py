@@ -47,9 +47,18 @@ class EventsView(ctk.CTkFrame):
         # Ensure button is clickable - use after to lift after rendering
         header_frame.after(100, lambda: refresh_btn.lift())
         
-        # Events scrollable frame
-        self.events_scrollable = ctk.CTkScrollableFrame(self)
+        # Events scrollable frame - optimized for performance
+        self.events_scrollable = ctk.CTkScrollableFrame(
+            self,
+            scrollbar_button_color=("gray70", "gray30"),
+            scrollbar_button_hover_color=("gray60", "gray40")
+        )
         self.events_scrollable.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # Performance optimization: limit visible items
+        self.max_visible_items = 50
+        self.all_events = []
+        self.displayed_events = []
         self.events_scrollable.grid_columnconfigure(0, weight=1)
         
         # Status label
@@ -97,7 +106,7 @@ class EventsView(ctk.CTkFrame):
             )
     
     def _render_events(self):
-        """Render events list"""
+        """Render events list with performance optimization"""
         # Clear existing widgets
         for widget in self.events_scrollable.winfo_children():
             widget.destroy()
@@ -113,9 +122,63 @@ class EventsView(ctk.CTkFrame):
             no_events_label.pack(pady=40)
             return
         
+        # Store all events
+        self.all_events = self.events.copy()
+        
+        # Limit initial display for performance
+        self.displayed_events = self.all_events[:self.max_visible_items]
+        
         # Create event cards with better performance
-        for idx, event in enumerate(self.events):
+        for idx, event in enumerate(self.displayed_events):
             self._create_event_card(event, idx)
+        
+        # Add "Load more" button if there are more events
+        if len(self.all_events) > len(self.displayed_events):
+            load_more_btn = ctk.CTkButton(
+                self.events_scrollable,
+                text=f"📄 Показать ещё ({len(self.all_events) - len(self.displayed_events)} событий)",
+                command=self._load_more_events,
+                width=300,
+                height=40,
+                font=ctk.CTkFont(size=14),
+                corner_radius=8,
+                fg_color=("gray70", "gray30"),
+                hover_color=("gray60", "gray40")
+            )
+            load_more_btn.pack(pady=10)
+            self.events_scrollable.after(100, lambda: load_more_btn.lift())
+    
+    def _load_more_events(self):
+        """Load more events"""
+        current_count = len(self.displayed_events)
+        next_batch = self.all_events[current_count:current_count + self.max_visible_items]
+        
+        if next_batch:
+            for idx, event in enumerate(next_batch):
+                self._create_event_card(event, current_count + idx)
+            self.displayed_events.extend(next_batch)
+            
+            # Update or remove "Load more" button
+            for widget in self.events_scrollable.winfo_children():
+                if isinstance(widget, ctk.CTkButton) and "Показать ещё" in widget.cget("text"):
+                    widget.destroy()
+                    break
+            
+            # Add new "Load more" button if needed
+            if len(self.all_events) > len(self.displayed_events):
+                load_more_btn = ctk.CTkButton(
+                    self.events_scrollable,
+                    text=f"📄 Показать ещё ({len(self.all_events) - len(self.displayed_events)} событий)",
+                    command=self._load_more_events,
+                    width=300,
+                    height=40,
+                    font=ctk.CTkFont(size=14),
+                    corner_radius=8,
+                    fg_color=("gray70", "gray30"),
+                    hover_color=("gray60", "gray40")
+                )
+                load_more_btn.pack(pady=10)
+                self.events_scrollable.after(100, lambda: load_more_btn.lift())
     
     def _create_event_card(self, event: Event, index: int):
         """Create event card"""

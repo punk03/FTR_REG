@@ -86,9 +86,18 @@ class RegistrationsView(ctk.CTkFrame):
         # Ensure button is clickable - use after to lift after rendering
         controls_frame.after(100, lambda: refresh_btn.lift())
         
-        # Registrations scrollable frame
-        self.scrollable_frame = ctk.CTkScrollableFrame(self)
+        # Registrations scrollable frame - optimized for performance
+        self.scrollable_frame = ctk.CTkScrollableFrame(
+            self,
+            scrollbar_button_color=("gray70", "gray30"),
+            scrollbar_button_hover_color=("gray60", "gray40")
+        )
         self.scrollable_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # Performance optimization: limit visible items
+        self.max_visible_items = 100
+        self.all_registrations = []
+        self.displayed_registrations = []
         self.scrollable_frame.grid_columnconfigure(0, weight=1)
         
         # Status label
@@ -216,6 +225,10 @@ class RegistrationsView(ctk.CTkFrame):
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         
+        # Reset displayed registrations
+        self.all_registrations = []
+        self.displayed_registrations = []
+        
         if not self.event_id:
             self.status_label.configure(text="", text_color="gray")
             no_event_label = ctk.CTkLabel(
@@ -253,9 +266,15 @@ class RegistrationsView(ctk.CTkFrame):
                 
                 registrations = db.query(Registration).filter(
                     Registration.event_id == event.id
-                ).order_by(Registration.created_at.desc()).limit(500).all()  # Limit for performance
+                ).order_by(Registration.created_at.desc()).all()
                 
-                self._render_registrations(registrations)
+                # Store all registrations
+                self.all_registrations = registrations
+                
+                # Limit initial display for performance
+                self.displayed_registrations = registrations[:self.max_visible_items]
+                
+                self._render_registrations(self.displayed_registrations)
                 self.status_label.configure(
                     text=f"✓ Загружено регистраций: {len(registrations)}",
                     text_color="green"
@@ -278,7 +297,7 @@ class RegistrationsView(ctk.CTkFrame):
             )
     
     def _render_registrations(self, registrations: List[Registration]):
-        """Render registrations table"""
+        """Render registrations table with performance optimization"""
         if not registrations:
             no_regs_label = ctk.CTkLabel(
                 self.scrollable_frame,

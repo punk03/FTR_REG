@@ -400,65 +400,19 @@ class MainWindow(ctk.CTk):
         """Setup accounting tab"""
         acc_frame = self.tabview.tab("💰 Оплаты")
         
-        # Centered content
-        content_frame = ctk.CTkFrame(acc_frame, fg_color="transparent")
-        content_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
-        icon_label = ctk.CTkLabel(
-            content_frame,
-            text="💰",
-            font=ctk.CTkFont(size=64)
-        )
-        icon_label.pack(pady=20)
-        
-        label = ctk.CTkLabel(
-            content_frame,
-            text="Управление оплатами",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        label.pack(pady=10)
-        
-        info_label = ctk.CTkLabel(
-            content_frame,
-            text="Функциональность оплат будет добавлена в следующей версии",
-            font=ctk.CTkFont(size=14),
-            text_color=("gray60", "gray40"),
-            wraplength=400,
-            justify="center"
-        )
-        info_label.pack(pady=10)
+        # Create accounting view
+        from app.gui.accounting_view import AccountingView
+        self.accounting_view = AccountingView(acc_frame)
+        self.accounting_view.pack(fill="both", expand=True, padx=10, pady=10)
     
     def _setup_statistics_tab(self):
         """Setup statistics tab"""
         stats_frame = self.tabview.tab("📊 Статистика")
         
-        # Centered content
-        content_frame = ctk.CTkFrame(stats_frame, fg_color="transparent")
-        content_frame.place(relx=0.5, rely=0.5, anchor="center")
-        
-        icon_label = ctk.CTkLabel(
-            content_frame,
-            text="📊",
-            font=ctk.CTkFont(size=64)
-        )
-        icon_label.pack(pady=20)
-        
-        label = ctk.CTkLabel(
-            content_frame,
-            text="Статистика",
-            font=ctk.CTkFont(size=24, weight="bold")
-        )
-        label.pack(pady=10)
-        
-        info_label = ctk.CTkLabel(
-            content_frame,
-            text="Функциональность статистики будет добавлена в следующей версии",
-            font=ctk.CTkFont(size=14),
-            text_color=("gray60", "gray40"),
-            wraplength=400,
-            justify="center"
-        )
-        info_label.pack(pady=10)
+        # Create statistics view
+        from app.gui.statistics_view import StatisticsView
+        self.statistics_view = StatisticsView(stats_frame)
+        self.statistics_view.pack(fill="both", expand=True, padx=10, pady=10)
     
     def _handle_login(self):
         """Handle login button click"""
