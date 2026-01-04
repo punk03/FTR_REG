@@ -16,6 +16,7 @@ class AuthService:
     def login(self, email: str, password: str) -> Dict[str, Any]:
         """Login user"""
         try:
+            # Use /auth/login (without /api) since baseURL already includes /api
             response = self.api.post("/auth/login", data={
                 "email": email,
                 "password": password,

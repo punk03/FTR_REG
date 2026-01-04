@@ -49,7 +49,13 @@ class APIClient:
         files: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Make HTTP request"""
-        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        # Ensure endpoint starts with / if base_url ends with /api
+        if self.base_url.endswith('/api'):
+            # If base_url already has /api, endpoint should start with /
+            endpoint = endpoint if endpoint.startswith('/') else f'/{endpoint}'
+            url = f"{self.base_url}{endpoint}"
+        else:
+            url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         
         try:
             kwargs = {
