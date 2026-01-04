@@ -393,8 +393,8 @@ class RegistrationsView(ctk.CTkFrame):
             headers_frame.grid_columnconfigure(col, weight=1)
             col += 1
         
-        # Create registration rows (limit for performance)
-        for reg in registrations[:200]:  # Show max 200 rows for performance
+        # Create registration rows
+        for reg in registrations:
             self._create_registration_row(reg, columns)
     
     def _create_registration_row(self, reg: Registration, columns: Dict[str, bool]):
