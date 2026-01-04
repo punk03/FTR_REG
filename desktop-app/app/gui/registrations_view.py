@@ -176,8 +176,8 @@ class RegistrationsView(ctk.CTkFrame):
             checkbox.pack(pady=8, anchor="w")
             checkboxes[key] = var
         
-        # Buttons
-        buttons_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        # Buttons - use regular frame, not transparent
+        buttons_frame = ctk.CTkFrame(dialog)
         buttons_frame.pack(fill="x", padx=20, pady=15)
         
         def save_settings():

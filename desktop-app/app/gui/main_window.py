@@ -87,8 +87,8 @@ class MainWindow(ctk.CTk):
         )
         subtitle.pack(pady=5)
         
-        # Form frame - pack directly in login_frame
-        form_frame = ctk.CTkFrame(self.login_frame, corner_radius=15)
+        # Form frame
+        form_frame = ctk.CTkFrame(center_frame, corner_radius=15)
         form_frame.pack(pady=30, padx=40)
         
         # Email entry
