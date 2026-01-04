@@ -41,6 +41,10 @@ class SyncService:
             events_count = self.sync_events()
             result["synced"]["events"] = events_count
             
+            # Sync collectives (needed for registrations)
+            collectives_count = self.sync_collectives()
+            result["synced"]["collectives"] = collectives_count
+            
             # Sync registrations for each event
             events = self.db.query(Event).filter(Event.server_id.isnot(None)).all()
             for event in events:
@@ -256,6 +260,22 @@ class SyncService:
         # Update leaders and trainers
         # (This is simplified - you may need to handle this more carefully)
     
+    def _ensure_collective_exists(self, collective_id: int, collective_data: Optional[Dict[str, Any]] = None):
+        """Ensure collective exists in local DB"""
+        collective = self.db.query(Collective).filter(
+            Collective.server_id == collective_id
+        ).first()
+        
+        if not collective:
+            collective = Collective(server_id=collective_id)
+            if collective_data:
+                collective.name = collective_data.get("name", f"Collective {collective_id}")
+            else:
+                collective.name = f"Collective {collective_id}"
+            self.db.add(collective)
+            self.db.commit()
+            logger.info(f"Created collective {collective_id}: {collective.name}")
+    
     def _get_local_id(self, model_class, server_id: Optional[int]) -> Optional[int]:
         """Get local ID from server ID"""
         if not server_id:
@@ -265,7 +285,12 @@ class SyncService:
             model_class.server_id == server_id
         ).first()
         
-        return obj.id if obj else None
+        if not obj:
+            # Log warning but don't fail - some references might not be synced yet
+            logger.warning(f"Reference not found: {model_class.__name__} with server_id={server_id}")
+            return None
+        
+        return obj.id
     
     def sync_accounting_entries(self) -> int:
         """Sync accounting entries"""
