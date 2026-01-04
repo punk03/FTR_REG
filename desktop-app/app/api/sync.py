@@ -42,10 +42,6 @@ class SyncService:
             events_count = self.sync_events()
             result["synced"]["events"] = events_count
             
-            # Sync collectives (needed for registrations)
-            collectives_count = self.sync_collectives()
-            result["synced"]["collectives"] = collectives_count
-            
             # Sync registrations for each event
             events = self.db.query(Event).filter(Event.server_id.isnot(None)).all()
             for event in events:
