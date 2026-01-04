@@ -20,9 +20,9 @@ class MainWindow(ctk.CTk):
         self.title("FTR Registration")
         self.geometry("1200x800")
         
-        # Configure appearance
-        ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
+        # Configure appearance - force dark theme
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("dark-blue")
         
         # Create UI
         self._create_ui()
@@ -54,16 +54,38 @@ class MainWindow(ctk.CTk):
         if self.content_frame:
             self.content_frame.destroy()
         
-        self.login_frame = ctk.CTkFrame(self.main_container)
+        self.login_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.login_frame.pack(fill="both", expand=True)
         
-        # Title
-        title = ctk.CTkLabel(
-            self.login_frame,
-            text="FTR Registration",
-            font=ctk.CTkFont(size=24, weight="bold")
+        # Centered container
+        center_frame = ctk.CTkFrame(self.login_frame, fg_color="transparent")
+        center_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Title with icon
+        title_frame = ctk.CTkFrame(center_frame, fg_color="transparent")
+        title_frame.pack(pady=20)
+        
+        title_icon = ctk.CTkLabel(
+            title_frame,
+            text="🎭",
+            font=ctk.CTkFont(size=48)
         )
-        title.pack(pady=20)
+        title_icon.pack(pady=10)
+        
+        title = ctk.CTkLabel(
+            title_frame,
+            text="FTR Registration",
+            font=ctk.CTkFont(size=32, weight="bold")
+        )
+        title.pack(pady=5)
+        
+        subtitle = ctk.CTkLabel(
+            title_frame,
+            text="Система управления регистрациями",
+            font=ctk.CTkFont(size=14),
+            text_color=("gray60", "gray40")
+        )
+        subtitle.pack(pady=5)
         
         # Email entry
         email_label = ctk.CTkLabel(self.login_frame, text="Email:")
@@ -180,7 +202,7 @@ class MainWindow(ctk.CTk):
         self.tabview.add("Оплаты")
         self.tabview.add("Статистика")
         
-        # TODO: Add content to each tab
+        # Setup tabs
         self._setup_events_tab()
         self._setup_registrations_tab()
         self._setup_accounting_tab()
@@ -188,7 +210,7 @@ class MainWindow(ctk.CTk):
     
     def _setup_events_tab(self):
         """Setup events tab"""
-        events_frame = self.tabview.tab("События")
+        events_frame = self.tabview.tab("📅 События")
         
         # Create events view
         self.events_view = EventsView(events_frame, on_event_select=self._on_event_selected)
@@ -196,7 +218,7 @@ class MainWindow(ctk.CTk):
     
     def _setup_registrations_tab(self):
         """Setup registrations tab"""
-        reg_frame = self.tabview.tab("Регистрации")
+        reg_frame = self.tabview.tab("📋 Регистрации")
         
         # Create registrations view
         self.registrations_view = RegistrationsView(reg_frame)
@@ -306,37 +328,65 @@ class MainWindow(ctk.CTk):
     
     def _setup_accounting_tab(self):
         """Setup accounting tab"""
-        acc_frame = self.tabview.tab("Оплаты")
+        acc_frame = self.tabview.tab("💰 Оплаты")
+        
+        # Centered content
+        content_frame = ctk.CTkFrame(acc_frame, fg_color="transparent")
+        content_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        icon_label = ctk.CTkLabel(
+            content_frame,
+            text="💰",
+            font=ctk.CTkFont(size=64)
+        )
+        icon_label.pack(pady=20)
         
         label = ctk.CTkLabel(
-            acc_frame,
+            content_frame,
             text="Управление оплатами",
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=24, weight="bold")
         )
-        label.pack(pady=20)
+        label.pack(pady=10)
         
         info_label = ctk.CTkLabel(
-            acc_frame,
+            content_frame,
             text="Функциональность оплат будет добавлена в следующей версии",
-            font=ctk.CTkFont(size=12)
+            font=ctk.CTkFont(size=14),
+            text_color=("gray60", "gray40"),
+            wraplength=400,
+            justify="center"
         )
         info_label.pack(pady=10)
     
     def _setup_statistics_tab(self):
         """Setup statistics tab"""
-        stats_frame = self.tabview.tab("Статистика")
+        stats_frame = self.tabview.tab("📊 Статистика")
+        
+        # Centered content
+        content_frame = ctk.CTkFrame(stats_frame, fg_color="transparent")
+        content_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        icon_label = ctk.CTkLabel(
+            content_frame,
+            text="📊",
+            font=ctk.CTkFont(size=64)
+        )
+        icon_label.pack(pady=20)
         
         label = ctk.CTkLabel(
-            stats_frame,
+            content_frame,
             text="Статистика",
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=24, weight="bold")
         )
-        label.pack(pady=20)
+        label.pack(pady=10)
         
         info_label = ctk.CTkLabel(
-            stats_frame,
+            content_frame,
             text="Функциональность статистики будет добавлена в следующей версии",
-            font=ctk.CTkFont(size=12)
+            font=ctk.CTkFont(size=14),
+            text_color=("gray60", "gray40"),
+            wraplength=400,
+            justify="center"
         )
         info_label.pack(pady=10)
     
