@@ -19,8 +19,16 @@
 
 ### Установка зависимостей
 
+**Windows:**
 ```bash
 pip install -r requirements.txt
+```
+
+**macOS/Linux:**
+```bash
+pip3 install -r requirements.txt
+# или
+python3 -m pip install -r requirements.txt
 ```
 
 ## Запуск
