@@ -83,7 +83,7 @@ class SyncService:
                 # Update other fields if needed
             
             # Sync nominations
-            nominations = self.api.get("/reference/nominations") or []
+            nominations = self.api.get("/api/reference/nominations") or []
             for nom_data in nominations:
                 nom = self.db.query(Nomination).filter(
                     Nomination.server_id == nom_data["id"]
@@ -96,7 +96,7 @@ class SyncService:
                 nom.name = nom_data["name"]
             
             # Sync ages
-            ages = self.api.get("/reference/ages") or []
+            ages = self.api.get("/api/reference/ages") or []
             for age_data in ages:
                 age = self.db.query(Age).filter(
                     Age.server_id == age_data["id"]
@@ -109,7 +109,7 @@ class SyncService:
                 age.name = age_data["name"]
             
             # Sync categories
-            categories = self.api.get("/reference/categories") or []
+            categories = self.api.get("/api/reference/categories") or []
             for cat_data in categories:
                 cat = self.db.query(Category).filter(
                     Category.server_id == cat_data["id"]
@@ -132,7 +132,9 @@ class SyncService:
     def sync_events(self) -> int:
         """Sync events from server"""
         try:
-            events_data = self.api.get("/events") or []
+            # Use /api/reference/events endpoint (same as frontend)
+            response = self.api.get("/api/reference/events")
+            events_data = response if isinstance(response, list) else (response.get("events", []) if response else [])
             count = 0
             
             for event_data in events_data:
