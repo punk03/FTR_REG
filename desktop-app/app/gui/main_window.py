@@ -87,47 +87,67 @@ class MainWindow(ctk.CTk):
         )
         subtitle.pack(pady=5)
         
+        # Form frame
+        form_frame = ctk.CTkFrame(center_frame, corner_radius=15)
+        form_frame.pack(pady=30, padx=40)
+        
         # Email entry
-        email_label = ctk.CTkLabel(self.login_frame, text="Email:")
-        email_label.pack(pady=(10, 5))
+        email_label = ctk.CTkLabel(
+            form_frame,
+            text="📧 Email:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        email_label.pack(pady=(20, 5), padx=30)
         
         self.email_entry = ctk.CTkEntry(
-            self.login_frame,
-            width=300,
-            placeholder_text="Введите email"
+            form_frame,
+            width=350,
+            height=40,
+            placeholder_text="Введите email",
+            font=ctk.CTkFont(size=14),
+            corner_radius=8
         )
-        self.email_entry.pack(pady=5)
+        self.email_entry.pack(pady=5, padx=30)
         
         # Password entry
-        password_label = ctk.CTkLabel(self.login_frame, text="Пароль:")
-        password_label.pack(pady=(10, 5))
+        password_label = ctk.CTkLabel(
+            form_frame,
+            text="🔒 Пароль:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        password_label.pack(pady=(15, 5), padx=30)
         
         self.password_entry = ctk.CTkEntry(
-            self.login_frame,
-            width=300,
+            form_frame,
+            width=350,
+            height=40,
+            placeholder_text="Введите пароль",
             show="*",
-            placeholder_text="Введите пароль"
+            font=ctk.CTkFont(size=14),
+            corner_radius=8
         )
-        self.password_entry.pack(pady=5)
+        self.password_entry.pack(pady=5, padx=30)
         
         # Login button
-        login_button = ctk.CTkButton(
-            self.login_frame,
-            text="Войти",
+        self.login_button = ctk.CTkButton(
+            form_frame,
+            text="🚀 Войти",
             command=self._handle_login,
-            width=300
+            width=350,
+            height=45,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            corner_radius=8
         )
-        login_button.pack(pady=20)
+        self.login_button.pack(pady=(20, 10), padx=30)
         
-        # Status label (with word wrap)
+        # Status label
         self.status_label = ctk.CTkLabel(
-            self.login_frame,
+            form_frame,
             text="",
-            text_color="red",
-            wraplength=400,
-            justify="left"
+            font=ctk.CTkFont(size=12),
+            wraplength=350
         )
-        self.status_label.pack(pady=10, padx=20)
+        self.status_label.pack(pady=10, padx=30)
         
         # Offline mode button
         offline_button = ctk.CTkButton(
@@ -152,42 +172,72 @@ class MainWindow(ctk.CTk):
         self.content_frame.pack(fill="both", expand=True)
         
         # Top bar with user info, sync status and logout
-        top_bar = ctk.CTkFrame(self.content_frame)
-        top_bar.pack(fill="x", padx=10, pady=10)
+        top_bar = ctk.CTkFrame(
+            self.content_frame,
+            corner_radius=0,
+            fg_color=("gray85", "gray17")
+        )
+        top_bar.pack(fill="x", padx=0, pady=0)
+        top_bar.grid_columnconfigure(1, weight=1)
+        
+        # User info frame
+        user_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
+        user_frame.grid(row=0, column=0, sticky="w", padx=15, pady=10)
         
         user = self.auth_service.get_user()
         if user:
-            user_label = ctk.CTkLabel(
-                top_bar,
-                text=f"Пользователь: {user.get('name', 'Unknown')}",
-                font=ctk.CTkFont(size=14)
+            user_icon = ctk.CTkLabel(
+                user_frame,
+                text="👤",
+                font=ctk.CTkFont(size=16)
             )
-            user_label.pack(side="left", padx=10)
+            user_icon.pack(side="left", padx=5)
+            
+            user_label = ctk.CTkLabel(
+                user_frame,
+                text=f"{user.get('name', 'Unknown')} ({user.get('role', 'USER')})",
+                font=ctk.CTkFont(size=14, weight="bold")
+            )
+            user_label.pack(side="left", padx=5)
+        
+        # Center controls frame
+        controls_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
+        controls_frame.grid(row=0, column=1, sticky="", padx=10, pady=10)
         
         # Sync button
         self.sync_button = ctk.CTkButton(
-            top_bar,
-            text="Синхронизировать",
+            controls_frame,
+            text="🔄 Синхронизировать",
             command=self._handle_sync,
-            width=150
+            width=180,
+            height=35,
+            font=ctk.CTkFont(size=13, weight="bold")
         )
-        self.sync_button.pack(side="left", padx=10)
+        self.sync_button.pack(side="left", padx=5)
         
         # Sync status label
         self.sync_status_label = ctk.CTkLabel(
-            top_bar,
+            controls_frame,
             text="",
             font=ctk.CTkFont(size=12)
         )
         self.sync_status_label.pack(side="left", padx=10)
         
+        # Logout button frame
+        logout_frame = ctk.CTkFrame(top_bar, fg_color="transparent")
+        logout_frame.grid(row=0, column=2, sticky="e", padx=15, pady=10)
+        
         logout_button = ctk.CTkButton(
-            top_bar,
-            text="Выйти",
+            logout_frame,
+            text="🚪 Выйти",
             command=self._handle_logout,
-            width=100
+            width=120,
+            height=35,
+            fg_color=("gray65", "gray45"),
+            hover_color=("gray55", "gray35"),
+            font=ctk.CTkFont(size=13, weight="bold")
         )
-        logout_button.pack(side="right", padx=10)
+        logout_button.pack(side="right")
         
         # Auto-sync on startup
         self.after(1000, self._auto_sync_on_startup)
@@ -233,7 +283,7 @@ class MainWindow(ctk.CTk):
         """Handle event selection"""
         logger.info(f"Event selected: {event_id}")
         # Switch to registrations tab and filter by event
-        self.tabview.set("Регистрации")
+        self.tabview.set("📋 Регистрации")
         # Refresh registrations view with selected event
         if hasattr(self, 'registrations_view'):
             self.registrations_view.event_id = event_id
