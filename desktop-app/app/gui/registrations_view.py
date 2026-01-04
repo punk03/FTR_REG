@@ -69,9 +69,8 @@ class RegistrationsView(ctk.CTkFrame):
             corner_radius=8
         )
         settings_btn.grid(row=0, column=2, padx=5, pady=5, sticky="e")
-        # Ensure button is clickable
-        controls_frame.update_idletasks()
-        settings_btn.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        controls_frame.after(10, lambda: settings_btn.lift())
         
         # Refresh button
         refresh_btn = ctk.CTkButton(
@@ -84,9 +83,8 @@ class RegistrationsView(ctk.CTkFrame):
             corner_radius=8
         )
         refresh_btn.grid(row=0, column=3, padx=5, pady=5, sticky="e")
-        # Ensure button is clickable
-        controls_frame.update_idletasks()
-        refresh_btn.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        controls_frame.after(10, lambda: refresh_btn.lift())
         
         # Registrations scrollable frame
         self.scrollable_frame = ctk.CTkScrollableFrame(self)

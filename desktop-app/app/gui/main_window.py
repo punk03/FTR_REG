@@ -139,9 +139,8 @@ class MainWindow(ctk.CTk):
             corner_radius=8
         )
         self.login_button.pack(pady=(20, 10), padx=30)
-        # Ensure button is clickable
-        form_frame.update_idletasks()
-        self.login_button.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        form_frame.after(10, lambda: self.login_button.lift())
         
         # Status label
         self.status_label = ctk.CTkLabel(
@@ -165,9 +164,8 @@ class MainWindow(ctk.CTk):
             corner_radius=8
         )
         offline_button.pack(pady=10, padx=30)
-        # Ensure button is clickable
-        form_frame.update_idletasks()
-        offline_button.lift()
+        # Ensure button is clickable - use after to lift after rendering
+        form_frame.after(10, lambda: offline_button.lift())
         
         # Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self._handle_login())
