@@ -28,6 +28,7 @@ class SyncService:
                 "registrations": 0,
                 "accounting_entries": 0,
                 "reference_data": 0,
+                "collectives": 0,
             },
             "errors": [],
         }
@@ -192,6 +193,16 @@ class SyncService:
                     break
                 
                 for reg_data in registrations:
+                    # Skip if required fields are missing
+                    if not reg_data.get("eventId") or not reg_data.get("disciplineId") or not reg_data.get("nominationId") or not reg_data.get("ageId"):
+                        logger.warning(f"Skipping registration {reg_data.get('id')}: missing required fields")
+                        continue
+                    
+                    # Sync collective if needed
+                    if reg_data.get("collectiveId"):
+                        collective_data = reg_data.get("collective")
+                        self._ensure_collective_exists(reg_data.get("collectiveId"), collective_data)
+                    
                     reg = self.db.query(Registration).filter(
                         Registration.server_id == reg_data["id"]
                     ).first()
@@ -201,10 +212,15 @@ class SyncService:
                         self.db.add(reg)
                     
                     # Update registration data
-                    self._update_registration_from_data(reg, reg_data)
-                    reg.sync_status = SyncStatus.SYNCED
-                    reg.last_synced_at = datetime.utcnow()
-                    total_count += 1
+                    try:
+                        self._update_registration_from_data(reg, reg_data)
+                        reg.sync_status = SyncStatus.SYNCED
+                        reg.last_synced_at = datetime.utcnow()
+                        total_count += 1
+                    except Exception as e:
+                        logger.error(f"Error updating registration {reg_data.get('id')}: {e}")
+                        # Continue with next registration
+                        continue
                 
                 # Check if there are more pages
                 pagination = registrations_data.get("pagination", {})
