@@ -56,6 +56,9 @@ class AuthService:
         
         except AuthenticationError:
             raise
+        except APIError as e:
+            # Re-raise API errors (including 429) as-is
+            raise
         except Exception as e:
             logger.error(f"Login error: {e}", exc_info=True)
             raise AuthenticationError(f"Login failed: {e}")
