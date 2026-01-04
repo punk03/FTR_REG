@@ -25,13 +25,29 @@ class AuthService:
             if not response:
                 raise AuthenticationError("Invalid response from server")
             
-            self.token = response.get("token")
+            # Backend returns { accessToken, refreshToken, user }
+            # Check for both 'token' and 'accessToken' for compatibility
+            self.token = response.get("accessToken") or response.get("token")
             self.current_user = response.get("user")
             
-            if self.token:
-                self.api.set_token(self.token)
+            if not self.token:
+                logger.error(f"No token in response: {response.keys()}")
+                raise AuthenticationError("No token received from server")
             
-            logger.info(f"User logged in: {email}")
+            if not self.current_user:
+                logger.error(f"No user in response: {response.keys()}")
+                raise AuthenticationError("No user data received from server")
+            
+            # Set token in API client
+            self.api.set_token(self.token)
+            
+            # Store refresh token if provided
+            refresh_token = response.get("refreshToken")
+            if refresh_token:
+                # Could store in config or memory for future use
+                pass
+            
+            logger.info(f"User logged in: {email}, token received: {bool(self.token)}")
             return {
                 "success": True,
                 "user": self.current_user,
@@ -41,7 +57,7 @@ class AuthService:
         except AuthenticationError:
             raise
         except Exception as e:
-            logger.error(f"Login error: {e}")
+            logger.error(f"Login error: {e}", exc_info=True)
             raise AuthenticationError(f"Login failed: {e}")
     
     def logout(self):
