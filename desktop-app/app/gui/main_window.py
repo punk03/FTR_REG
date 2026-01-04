@@ -255,9 +255,26 @@ class MainWindow(ctk.CTk):
     def _auto_sync_on_startup(self):
         """Auto-sync on startup if enabled"""
         from app.utils.config import settings
+        from app.database.session import get_db_session
+        from app.database.models import Event
         
-        if settings.auto_sync and self.auth_service.is_authenticated():
-            self._handle_sync()
+        # Check if we have any data
+        db = get_db_session()
+        try:
+            events_count = db.query(Event).count()
+            if events_count == 0 and settings.auto_sync and self.auth_service.is_authenticated():
+                # No data, try to sync
+                logger.info("No local data found, starting auto-sync...")
+                self._handle_sync()
+            elif events_count > 0:
+                # We have data, refresh views
+                logger.info(f"Found {events_count} events in local DB")
+                if hasattr(self, 'events_view'):
+                    self.events_view.refresh_events()
+        except Exception as e:
+            logger.error(f"Error checking local data: {e}")
+        finally:
+            db.close()
     
     def _setup_accounting_tab(self):
         """Setup accounting tab"""
