@@ -58,11 +58,12 @@ class MainWindow(ctk.CTk):
         self.login_frame.pack(fill="both", expand=True)
         
         # Centered container - use pack with expand
-        center_frame = ctk.CTkFrame(self.login_frame, fg_color="transparent")
+        # Use regular frame instead of transparent to avoid click interception
+        center_frame = ctk.CTkFrame(self.login_frame)
         center_frame.pack(expand=True, fill="both")
         
-        # Title with icon
-        title_container = ctk.CTkFrame(center_frame, fg_color="transparent")
+        # Title with icon - use regular frame
+        title_container = ctk.CTkFrame(center_frame)
         title_container.pack(pady=20)
         
         title_icon = ctk.CTkLabel(
@@ -191,19 +192,23 @@ class MainWindow(ctk.CTk):
         # User info - directly in top_bar to avoid frame overlap
         user = self.auth_service.get_user()
         if user:
+            # User info frame - use regular frame
+            user_info_frame = ctk.CTkFrame(top_bar)
+            user_info_frame.grid(row=0, column=0, sticky="w", padx=15, pady=10)
+            
             user_icon = ctk.CTkLabel(
-                top_bar,
+                user_info_frame,
                 text="👤",
                 font=ctk.CTkFont(size=16)
             )
-            user_icon.grid(row=0, column=0, sticky="w", padx=(15, 5), pady=10)
+            user_icon.pack(side="left", padx=5)
             
             user_label = ctk.CTkLabel(
-                top_bar,
+                user_info_frame,
                 text=f"{user.get('name', 'Unknown')} ({user.get('role', 'USER')})",
                 font=ctk.CTkFont(size=14, weight="bold")
             )
-            user_label.grid(row=0, column=1, sticky="w", padx=5, pady=10)
+            user_label.pack(side="left", padx=5)
         
         # Sync button - directly in top_bar
         self.sync_button = ctk.CTkButton(
