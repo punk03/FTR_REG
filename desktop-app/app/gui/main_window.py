@@ -154,14 +154,20 @@ class MainWindow(ctk.CTk):
         
         # Offline mode button
         offline_button = ctk.CTkButton(
-            self.login_frame,
-            text="Работать оффлайн (без авторизации)",
+            form_frame,
+            text="📴 Работать оффлайн (без авторизации)",
             command=self._handle_offline_mode,
-            width=300,
+            width=350,
+            height=35,
             fg_color="gray",
-            hover_color="darkgray"
+            hover_color="darkgray",
+            font=ctk.CTkFont(size=12),
+            corner_radius=8
         )
-        offline_button.pack(pady=10)
+        offline_button.pack(pady=10, padx=30)
+        # Ensure button is clickable
+        form_frame.update_idletasks()
+        offline_button.lift()
         
         # Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self._handle_login())
