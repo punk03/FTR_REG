@@ -193,14 +193,19 @@ class MainWindow(ctk.CTk):
         self.after(1000, self._auto_sync_on_startup)
         
         # Tab view for different sections
-        self.tabview = ctk.CTkTabview(self.content_frame)
+        self.tabview = ctk.CTkTabview(
+            self.content_frame,
+            corner_radius=10,
+            border_width=2,
+            border_color=("gray70", "gray30")
+        )
         self.tabview.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Add tabs
-        self.tabview.add("События")
-        self.tabview.add("Регистрации")
-        self.tabview.add("Оплаты")
-        self.tabview.add("Статистика")
+        # Add tabs with icons
+        self.tabview.add("📅 События")
+        self.tabview.add("📋 Регистрации")
+        self.tabview.add("💰 Оплаты")
+        self.tabview.add("📊 Статистика")
         
         # Setup tabs
         self._setup_events_tab()
