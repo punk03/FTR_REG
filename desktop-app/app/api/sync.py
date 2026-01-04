@@ -221,8 +221,11 @@ class SyncService:
     def _update_registration_from_data(self, reg: Registration, data: Dict[str, Any]):
         """Update registration from API data"""
         # Map API data to model
+        # Note: user_id is not synced as we don't have User model in local DB
+        # collective_id can be None if collective not synced yet
         reg.event_id = self._get_local_id(Event, data.get("eventId"))
-        reg.collective_id = self._get_local_id(Collective, data.get("collectiveId"))
+        collective_id = self._get_local_id(Collective, data.get("collectiveId"))
+        reg.collective_id = collective_id  # Can be None
         reg.discipline_id = self._get_local_id(Discipline, data.get("disciplineId"))
         reg.nomination_id = self._get_local_id(Nomination, data.get("nominationId"))
         reg.age_id = self._get_local_id(Age, data.get("ageId"))

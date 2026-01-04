@@ -195,9 +195,9 @@ class Registration(Base):
     server_id = Column(Integer, unique=True, nullable=True, index=True)
     
     # Foreign keys
-    user_id = Column(Integer, nullable=False)
+    user_id = Column(Integer, nullable=True)  # Can be None for synced registrations
     event_id = Column(Integer, ForeignKey("events.id"), nullable=False, index=True)
-    collective_id = Column(Integer, ForeignKey("collectives.id"), nullable=False, index=True)
+    collective_id = Column(Integer, ForeignKey("collectives.id"), nullable=True, index=True)  # Can be None if collective not synced yet
     discipline_id = Column(Integer, ForeignKey("disciplines.id"), nullable=False)
     nomination_id = Column(Integer, ForeignKey("nominations.id"), nullable=False)
     age_id = Column(Integer, ForeignKey("ages.id"), nullable=False)
