@@ -151,6 +151,7 @@ model Person {
 
   @@unique([fullName, role])
   @@index([fullName, role])
+  @@index([fullName]) // Для поиска по имени без роли
 }
 
 model Discipline {
@@ -257,7 +258,18 @@ model Registration {
   @@index([collectiveId])
   @@index([userId])
   @@index([paymentStatus])
+  @@index([status])
   @@index([diplomasDataDeletedAt])
+  @@index([danceName])
+  @@index([createdAt])
+  @@index([blockNumber])
+  @@index([number])
+  // Составные индексы для оптимизации частых запросов
+  @@index([eventId, paymentStatus])
+  @@index([eventId, status])
+  @@index([eventId, createdAt])
+  @@index([eventId, collectiveId])
+  @@index([eventId, blockNumber, number])
 }
 
 model DraftRegistration {
@@ -305,6 +317,8 @@ model RegistrationLeader {
   person       Person       @relation(fields: [personId], references: [id])
 
   @@unique([registrationId, personId])
+  @@index([registrationId])
+  @@index([personId])
 }
 
 model RegistrationTrainer {
@@ -317,6 +331,8 @@ model RegistrationTrainer {
   person       Person       @relation(fields: [personId], references: [id])
 
   @@unique([registrationId, personId])
+  @@index([registrationId])
+  @@index([personId])
 }
 
 model Participant {
