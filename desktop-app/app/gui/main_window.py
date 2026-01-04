@@ -211,46 +211,70 @@ class MainWindow(ctk.CTk):
     def _handle_sync(self):
         """Handle manual sync"""
         self.sync_button.configure(state="disabled", text="Синхронизация...")
-        self.sync_status_label.configure(text="Синхронизация...", text_color="blue")
+        self.sync_status_label.configure(text="Синхронизация с сервером...", text_color="blue")
         
-        try:
-            from app.database.session import get_db_session
-            from app.api.sync import SyncService
-            
-            db = get_db_session()
+        def do_sync():
             try:
-                sync_service = SyncService(self.auth_service.api, db)
-                result = sync_service.sync_all()
+                from app.database.session import get_db_session
+                from app.api.sync import SyncService
                 
-                if result.get("success"):
+                db = get_db_session()
+                try:
+                    sync_service = SyncService(self.auth_service.api, db)
+                    result = sync_service.sync_all()
+                    
+                    if result.get("success"):
+                        synced = result.get("synced", {})
+                        events_count = synced.get("events", 0)
+                        regs_count = synced.get("registrations", 0)
+                        
+                        status_text = f"✓ Синхронизировано: событий {events_count}, регистраций {regs_count}"
+                        self.sync_status_label.configure(
+                            text=status_text,
+                            text_color="green"
+                        )
+                        
+                        # Refresh views
+                        self.after(100, lambda: self._refresh_all_views())
+                    else:
+                        errors = result.get("errors", [])
+                        error_msg = errors[0] if errors else "Неизвестная ошибка"
+                        self.sync_status_label.configure(
+                            text=f"⚠ Ошибка: {error_msg[:60]}",
+                            text_color="orange"
+                        )
+                finally:
+                    db.close()
+            except Exception as e:
+                logger.error(f"Sync error: {e}", exc_info=True)
+                error_msg = str(e)
+                if "Cannot connect" in error_msg or "resolve" in error_msg.lower():
                     self.sync_status_label.configure(
-                        text=f"✓ Синхронизировано: {result['synced']}",
-                        text_color="green"
+                        text="✗ Сервер недоступен. Проверьте подключение.",
+                        text_color="red"
                     )
-                    # Refresh views
-                    if hasattr(self, 'events_view'):
-                        self.events_view.refresh_events()
-                    if hasattr(self, 'registrations_view'):
-                        self.registrations_view._load_events()
-                        self.registrations_view.refresh_registrations()
                 else:
-                    errors = result.get("errors", [])
                     self.sync_status_label.configure(
-                        text=f"⚠ Ошибки: {len(errors)}",
-                        text_color="orange"
+                        text=f"✗ Ошибка: {error_msg[:50]}",
+                        text_color="red"
                     )
             finally:
-                db.close()
-        except Exception as e:
-            logger.error(f"Sync error: {e}")
-            self.sync_status_label.configure(
-                text=f"✗ Ошибка: {str(e)[:50]}",
-                text_color="red"
-            )
-        finally:
-            self.sync_button.configure(state="normal", text="Синхронизировать")
-            # Clear status after 5 seconds
-            self.after(5000, lambda: self.sync_status_label.configure(text=""))
+                self.sync_button.configure(state="normal", text="Синхронизировать")
+                # Clear status after 10 seconds
+                self.after(10000, lambda: self.sync_status_label.configure(text=""))
+        
+        # Run sync in a thread to avoid blocking UI
+        import threading
+        thread = threading.Thread(target=do_sync, daemon=True)
+        thread.start()
+    
+    def _refresh_all_views(self):
+        """Refresh all views"""
+        if hasattr(self, 'events_view'):
+            self.events_view.refresh_events()
+        if hasattr(self, 'registrations_view'):
+            self.registrations_view._load_events()
+            self.registrations_view.refresh_registrations()
     
     def _auto_sync_on_startup(self):
         """Auto-sync on startup if enabled"""
