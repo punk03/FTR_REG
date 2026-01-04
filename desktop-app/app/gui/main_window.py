@@ -27,11 +27,15 @@ class MainWindow(ctk.CTk):
         # Create UI
         self._create_ui()
         
-        # Check authentication
-        if not self.auth_service.is_authenticated():
-            self._show_login()
-        else:
-            self._show_main_content()
+        # Try to load saved authentication
+        if self.auth_service.load_saved_auth():
+            # Validate token
+            if self.auth_service.is_token_valid():
+                self._show_main_content()
+                return
+        
+        # Show login if no saved auth or token invalid
+        self._show_login()
     
     def _create_ui(self):
         """Create UI components"""

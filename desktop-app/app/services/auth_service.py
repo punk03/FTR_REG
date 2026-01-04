@@ -1,8 +1,9 @@
 """Authentication service"""
 from typing import Optional, Dict, Any
-from app.api.client import APIClient, AuthenticationError
+from app.api.client import APIClient, AuthenticationError, APIError
 from app.utils.logger import logger
 from app.utils.config import settings
+from app.utils.storage import save_auth_data, load_auth_data, clear_auth_data
 
 
 class AuthService:
