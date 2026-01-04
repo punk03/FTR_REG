@@ -40,9 +40,13 @@ class EventsView(ctk.CTkFrame):
             command=self.refresh_events,
             width=150,
             height=35,
-            font=ctk.CTkFont(size=14, weight="bold")
+            font=ctk.CTkFont(size=14, weight="bold"),
+            corner_radius=8
         )
         refresh_btn.grid(row=0, column=1, sticky="e", padx=10, pady=10)
+        # Ensure button is clickable
+        header_frame.update_idletasks()
+        refresh_btn.lift()
         
         # Events scrollable frame
         self.events_scrollable = ctk.CTkScrollableFrame(self)
@@ -188,6 +192,9 @@ class EventsView(ctk.CTkFrame):
             corner_radius=8
         )
         select_btn.grid(row=2, column=0, padx=15, pady=(10, 15), sticky="e")
+        # Ensure button is clickable
+        card.update_idletasks()
+        select_btn.lift()
         select_btn.lift()  # Ensure button is on top
     
     def _select_event(self, event: Event):

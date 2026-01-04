@@ -64,9 +64,13 @@ class RegistrationsView(ctk.CTkFrame):
             command=self._show_settings,
             width=120,
             height=35,
-            font=ctk.CTkFont(size=12)
+            font=ctk.CTkFont(size=12),
+            corner_radius=8
         )
         settings_btn.grid(row=0, column=2, padx=5, pady=5)
+        # Ensure button is clickable
+        controls_frame.update_idletasks()
+        settings_btn.lift()
         
         # Refresh button
         refresh_btn = ctk.CTkButton(
@@ -75,9 +79,13 @@ class RegistrationsView(ctk.CTkFrame):
             command=self.refresh_registrations,
             width=120,
             height=35,
-            font=ctk.CTkFont(size=12)
+            font=ctk.CTkFont(size=12),
+            corner_radius=8
         )
         refresh_btn.grid(row=0, column=3, padx=5, pady=5)
+        # Ensure button is clickable
+        controls_frame.update_idletasks()
+        refresh_btn.lift()
         
         # Registrations scrollable frame
         self.scrollable_frame = ctk.CTkScrollableFrame(self)

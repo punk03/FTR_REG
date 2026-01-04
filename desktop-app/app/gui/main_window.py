@@ -139,6 +139,9 @@ class MainWindow(ctk.CTk):
             corner_radius=8
         )
         self.login_button.pack(pady=(20, 10), padx=30)
+        # Ensure button is clickable
+        form_frame.update_idletasks()
+        self.login_button.lift()
         
         # Status label
         self.status_label = ctk.CTkLabel(
@@ -211,9 +214,13 @@ class MainWindow(ctk.CTk):
             command=self._handle_sync,
             width=180,
             height=35,
-            font=ctk.CTkFont(size=13, weight="bold")
+            font=ctk.CTkFont(size=13, weight="bold"),
+            corner_radius=8
         )
         self.sync_button.pack(side="left", padx=5)
+        # Ensure button is clickable
+        controls_frame.update_idletasks()
+        self.sync_button.lift()
         
         # Sync status label
         self.sync_status_label = ctk.CTkLabel(
@@ -235,9 +242,13 @@ class MainWindow(ctk.CTk):
             height=35,
             fg_color=("gray65", "gray45"),
             hover_color=("gray55", "gray35"),
-            font=ctk.CTkFont(size=13, weight="bold")
+            font=ctk.CTkFont(size=13, weight="bold"),
+            corner_radius=8
         )
         logout_button.pack(side="right")
+        # Ensure button is clickable
+        logout_frame.update_idletasks()
+        logout_button.lift()
         
         # Auto-sync on startup
         self.after(1000, self._auto_sync_on_startup)
