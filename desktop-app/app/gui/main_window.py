@@ -140,7 +140,7 @@ class MainWindow(ctk.CTk):
         )
         self.login_button.pack(pady=(20, 10), padx=30)
         # Ensure button is clickable - use after to lift after rendering
-        form_frame.after(10, lambda: self.login_button.lift())
+        form_frame.after(100, lambda: self.login_button.lift())
         
         # Status label
         self.status_label = ctk.CTkLabel(
@@ -165,7 +165,7 @@ class MainWindow(ctk.CTk):
         )
         offline_button.pack(pady=10, padx=30)
         # Ensure button is clickable - use after to lift after rendering
-        form_frame.after(10, lambda: offline_button.lift())
+        form_frame.after(100, lambda: offline_button.lift())
         
         # Bind Enter key
         self.password_entry.bind("<Return>", lambda e: self._handle_login())
@@ -217,7 +217,7 @@ class MainWindow(ctk.CTk):
         )
         self.sync_button.grid(row=0, column=2, sticky="", padx=10, pady=10)
         # Ensure button is clickable - use after to lift after rendering
-        top_bar.after(10, lambda: self.sync_button.lift())
+        top_bar.after(100, lambda: self.sync_button.lift())
         
         # Sync status label
         self.sync_status_label = ctk.CTkLabel(
@@ -241,7 +241,7 @@ class MainWindow(ctk.CTk):
         )
         logout_button.grid(row=0, column=4, sticky="e", padx=15, pady=10)
         # Ensure button is clickable - use after to lift after rendering
-        top_bar.after(10, lambda: logout_button.lift())
+        top_bar.after(100, lambda: logout_button.lift())
         
         # Update grid column weights
         top_bar.grid_columnconfigure(1, weight=1)

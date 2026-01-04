@@ -45,7 +45,7 @@ class EventsView(ctk.CTkFrame):
         )
         refresh_btn.grid(row=0, column=1, sticky="e", padx=10, pady=10)
         # Ensure button is clickable - use after to lift after rendering
-        header_frame.after(10, lambda: refresh_btn.lift())
+        header_frame.after(100, lambda: refresh_btn.lift())
         
         # Events scrollable frame
         self.events_scrollable = ctk.CTkScrollableFrame(self)
@@ -191,9 +191,8 @@ class EventsView(ctk.CTkFrame):
             corner_radius=8
         )
         select_btn.grid(row=2, column=0, columnspan=2, padx=15, pady=(10, 15), sticky="e")
-        # Ensure button is clickable - update and lift after grid
-        card.after(10, lambda: select_btn.lift())
-        select_btn.lift()  # Ensure button is on top
+        # Ensure button is clickable - use after to lift after rendering
+        card.after(100, lambda: select_btn.lift())
     
     def _select_event(self, event: Event):
         """Select event"""
