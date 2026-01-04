@@ -179,7 +179,7 @@ class SyncService:
             
             while True:
                 registrations_data = self.api.get(
-                    "/registrations",
+                    "/api/registrations",
                     params={"eventId": event_id, "page": page, "limit": limit}
                 ) or {}
                 
